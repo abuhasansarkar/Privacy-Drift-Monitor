@@ -26,7 +26,7 @@ documents. There is no product code yet.
 
 | | |
 |---|---|
-| Exists | `src/app/` (default scaffold page + layout), `src/app/globals.css`, `next.config.ts` (empty), `tsconfig.json`, `eslint.config.mjs`, `PLAN.md`, `UI_DESIGN_PROMPTS.md` |
+| Exists | `src/app/` (default scaffold page + layout), `src/app/globals.css`, `next.config.ts` (empty), `tsconfig.json`, `eslint.config.mjs`, `PLAN.md`, `UI_DESIGN_PROMPTS.md`, `dev-doc/` |
 | Does **not** exist yet | the monorepo (`apps/`, `packages/`), Prisma schema, the worker, the scanner, auth, billing, any route group, any UI component |
 
 Everything in `PLAN.md` Part XII §12.1 is a **target**, not a description. Never write or
@@ -64,6 +64,11 @@ grep -n "^# Part" PLAN.md             # part boundaries only
 **Rule:** before implementing a feature, read the part that specifies it. Do not invent a
 design the plan already fixes. If this file and `PLAN.md` disagree, `PLAN.md` wins. If the
 code and `PLAN.md` disagree, say so explicitly rather than silently diverging.
+
+`dev-doc/` reorganizes the plan into build order: `dev-doc/phases/` is the step-by-step
+sequence (Phase 0 → 7) and `dev-doc/features/` holds one working sheet per feature with build
+steps, acceptance criteria and failure modes. Start there to find *what to do next*; go to
+`PLAN.md` for the full specification of *how*. Tick the checkboxes as work lands.
 
 `UI_DESIGN_PROMPTS.md` is the companion image-generation prompt pack for the visual design;
 it encodes the same tokens as Part XI and must stay in sync with them.

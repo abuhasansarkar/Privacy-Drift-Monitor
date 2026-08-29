@@ -3426,7 +3426,11 @@ export default clerkMiddleware(async (auth, req) => {
 });
 
 export const config = {
-  matcher: ['/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ico|woff2?)).*)', '/(api|trpc)(.*)'],
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ico|woff2?)).*)',
+    '/(api|trpc)(.*)',
+    '/__clerk/:path*',   // Clerk auto-proxy path — required, after the API matcher
+  ],
 };
 // NOTE: no `runtime` export — setting it in a proxy file throws in Next 16.
 ```
