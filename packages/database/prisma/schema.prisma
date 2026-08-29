@@ -1,0 +1,1513 @@
+// Privacy Drift Monitor — data model
+// Spec: PLAN.md Part V. Read §5.1 (principles) and §5.3 (index rationale) before editing.
+//
+// Rules that are load-bearing, not stylistic:
+//   1. Every tenant-owned row carries `agencyId`, even when reachable via a parent.
+//      This makes tenant scoping one indexed predicate on every query, and makes an
+//      accidental cross-tenant join impossible to write without noticing.
+//   2. Evidence tables are insert-only. No `updatedAt`. Corrections supersede, never update.
+//   3. Money is integer minor units. Never Float.
+//   4. All timestamps are UTC. Display timezone lives on Agency/User.
+//
+// NOTE ON IDS: `uuid()` emits v4. Prisma 5.14+ supports `uuid(7)` for time-ordered ids with
+// better index locality (§5.1). Switch globally once you have confirmed your Prisma version
+// supports it — do not mix the two.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Identity & Tenancy ─────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  clerkUserId  String    @unique
+  email        String    @unique
+  firstName    String?
+  lastName     String?
+  avatarUrl    String?
+  timezone     String    @default("Europe/London")
+  isSuperAdmin Boolean   @default(false)
+  lastActiveAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  memberships     AgencyMember[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  assignedIssues  Issue[]          @relation("IssueAssignee")
+  createdReports  Report[]         @relation("ReportCreator")
+  preferences     UserPreference[]
+  sentInvitations Invitation[]     @relation("InvitationInviter")
+
+  @@index([clerkUserId])
+  @@index([email])
+  @@map("users")
+}
+
+model Agency {
+  id              String       @id @default(uuid())
+  clerkOrgId      String       @unique
+  name            String
+  slug            String       @unique
+  websiteUrl      String?
+  timezone        String       @default("Europe/London")
+  dateFormat      String       @default("DD/MM/YYYY")
+  agencyType      String?
+  status          AgencyStatus @default(ACTIVE)
+  suspendedAt     DateTime?
+  suspendedReason String?
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  members              AgencyMember[]
+  clients              Client[]
+  websites             Website[]
+  websiteGroups        WebsiteGroup[]
+  scans                Scan[]
+  issues               Issue[]
+  reports              Report[]
+  invitations          Invitation[]
+  auditLogs            AuditLog[]
+  subscription         Subscription?
+  branding             AgencyBranding?
+  scanSettings         AgencyScanSettings?
+  aiSettings           AgencyAiSettings?
+  notificationPrefs    NotificationPreference[]
+  alertRules           AlertRule[]
+  usageRecords         UsageRecord[]
+  aiRequests           AIRequest[]
+  driftEvents          PrivacyDriftEvent[]
+  ignoreRules          IgnoreRule[]
+  driftSuppressions    DriftSuppression[]
+  featureFlagOverrides FeatureFlagOverride[]
+  portalUsers          PortalUser[]
+
+  @@index([clerkOrgId])
+  @@index([slug])
+  @@index([status])
+  @@map("agencies")
+}
+
+enum AgencyStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+model AgencyMember {
+  id       String       @id @default(uuid())
+  agencyId String
+  userId   String
+  role     AgencyRole   @default(VIEWER)
+  status   MemberStatus @default(ACTIVE)
+  /// If non-empty, this member may only access these website ids (PLAN.md §6.2).
+  websiteScope String[] @default([])
+  joinedAt DateTime     @default(now())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, userId])
+  @@index([agencyId, role])
+  @@index([userId])
+  @@map("agency_members")
+}
+
+enum AgencyRole {
+  OWNER
+  ADMIN
+  MANAGER
+  DEVELOPER
+  VIEWER
+}
+
+enum MemberStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Invitation {
+  id          String     @id @default(uuid())
+  agencyId    String
+  email       String
+  role        AgencyRole
+  /// Stored hashed, never in plaintext.
+  token       String     @unique
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime   @default(now())
+
+  agency    Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation("InvitationInviter", fields: [invitedById], references: [id])
+
+  @@unique([agencyId, email])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+model AgencyBranding {
+  id                String   @id @default(uuid())
+  agencyId          String   @unique
+  companyName       String?
+  logoLightUrl      String?
+  logoDarkUrl       String?
+  primaryColor      String   @default("#2563eb")
+  accentColor       String   @default("#0ea5e9")
+  contactEmail      String?
+  contactPhone      String?
+  reportFooterText  String?
+  customDisclaimer  String?
+  portalWelcomeText String?
+  updatedAt         DateTime @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("agency_branding")
+}
+
+model AgencyScanSettings {
+  id                    String           @id @default(uuid())
+  agencyId              String           @unique
+  defaultFrequency      ScanFrequency    @default(WEEKLY)
+  defaultPageLimit      Int              @default(1)
+  defaultPriority       ScanPriority     @default(NORMAL)
+  screenshotPolicy      ScreenshotPolicy @default(ON_CHANGE)
+  respectRobots         Boolean          @default(true)
+  userAgentSuffix       String?
+  /// Domains excluded from third-party classification, e.g. the agency's own CDN.
+  ignoredDomains        String[]         @default([])
+  evidenceRetentionDays Int?
+  updatedAt             DateTime         @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("agency_scan_settings")
+}
+
+enum ScreenshotPolicy {
+  ALWAYS
+  ON_CHANGE
+  NEVER
+}
+
+model AgencyAiSettings {
+  id                  String      @id @default(uuid())
+  agencyId            String      @unique
+  aiEnabled           Boolean     @default(true)
+  autoExplainCritical Boolean     @default(true)
+  modelTier           AiModelTier @default(STANDARD)
+  monthlyCreditCap    Int?
+  featureToggles      Json        @default("{}")
+  updatedAt           DateTime    @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("agency_ai_settings")
+}
+
+enum AiModelTier {
+  STANDARD
+  ADVANCED
+}
+
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  agencyId  String
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agencyId, key])
+  @@map("user_preferences")
+}
+
+// ───────────────────────────── Clients & Websites ─────────────────────────────
+
+model Client {
+  id            String    @id @default(uuid())
+  agencyId      String
+  name          String
+  slug          String
+  logoUrl       String?
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  /// INTERNAL ONLY — never rendered in the client portal or in reports.
+  notes         String?
+  portalEnabled Boolean   @default(false)
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  agency      Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  websites    Website[]
+  reports     Report[]
+  portalUsers PortalUser[]
+
+  @@unique([agencyId, slug])
+  @@index([agencyId, archivedAt])
+  @@map("clients")
+}
+
+model WebsiteGroup {
+  id        String   @id @default(uuid())
+  agencyId  String
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+
+  agency   Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  websites Website[]
+
+  @@unique([agencyId, name])
+  @@map("website_groups")
+}
+
+model Website {
+  id       String  @id @default(uuid())
+  agencyId String
+  clientId String?
+  groupId  String?
+
+  /// Canonical monitored URL — the form actually reached after redirects.
+  url               String
+  /// Exactly what the user typed. Kept for support and for drift on the input itself.
+  originalUrl       String
+  /// eTLD+1 via the Public Suffix List. Third-party classification and drift both need it.
+  registrableDomain String
+  host              String
+  label             String?
+  faviconUrl        String?
+
+  monitoringStatus MonitoringStatus @default(ACTIVE)
+  scanFrequency    ScanFrequency    @default(WEEKLY)
+  scanPriority     ScanPriority     @default(NORMAL)
+  monitoredPaths   String[]         @default(["/"])
+  alertProfile     AlertProfile     @default(DEFAULT)
+  /// Per-site consent adapter + selector overrides. The escape hatch for bespoke CMPs.
+  consentOverride  Json?
+  /// Reference into the secret store. NEVER the credential itself.
+  basicAuthSecretRef String?
+  /// null = inherit the agency setting
+  respectRobots    Boolean?
+
+  healthScore          Int?
+  scoreConfidence      ScoreConfidence?
+  lastScanId           String?
+  lastScanAt           DateTime?
+  lastSuccessfulScanAt DateTime?
+  /// Single source of truth for scheduling. Pausing sets this to null (§7.5).
+  nextScanAt           DateTime?
+  baselineScanId       String?
+  consecutiveFailures  Int              @default(0)
+  detectedCmpId        String?
+
+  /// Denormalized counters — maintained INSIDE the same transaction as the change (§5.4).
+  openIssueCount     Int @default(0)
+  criticalIssueCount Int @default(0)
+  trackerCount       Int @default(0)
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  agency       Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client       Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  group        WebsiteGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  scans        Scan[]
+  issues       Issue[]
+  driftEvents  PrivacyDriftEvent[]
+  reports      Report[]
+  ignoreRules  IgnoreRule[]
+  suppressions DriftSuppression[]
+
+  @@unique([agencyId, url])
+  @@index([agencyId, monitoringStatus, archivedAt])
+  @@index([agencyId, clientId])
+  @@index([agencyId, healthScore])
+  /// The scheduler's hot query — runs every minute across all tenants (§5.3).
+  @@index([nextScanAt, monitoringStatus])
+  @@index([registrableDomain])
+  @@map("websites")
+}
+
+enum MonitoringStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+enum ScanFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  MANUAL
+}
+
+enum ScanPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum AlertProfile {
+  DEFAULT
+  CRITICAL_ONLY
+  SILENT
+}
+
+enum ScoreConfidence {
+  FULL
+  PARTIAL
+}
+
+// ───────────────────────────── Scans & Evidence ─────────────────────────────
+
+model Scan {
+  id        String @id @default(uuid())
+  agencyId  String
+  websiteId String
+
+  status        ScanStatus  @default(QUEUED)
+  trigger       ScanTrigger
+  triggeredById String?
+  /// Prevents a double-submitted manual scan creating two runs.
+  idempotencyKey String?    @unique
+
+  queuedAt    DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  durationMs  Int?
+  queueWaitMs Int?
+
+  scannerVersion String
+  browserVersion String?
+  workerId       String?
+  userAgent      String?
+  viewportWidth  Int?
+  viewportHeight Int?
+
+  detectedCmpId      String?
+  detectedCmpName    String?
+  detectedCmpVersion String?
+  cmpConfidence      Float?
+
+  pagesScanned          Int @default(0)
+  requestCount          Int @default(0)
+  thirdPartyDomainCount Int @default(0)
+  cookieCount           Int @default(0)
+  storageKeyCount       Int @default(0)
+  trackerCount          Int @default(0)
+  issueCount            Int @default(0)
+
+  healthScore     Int?
+  scoreConfidence ScoreConfidence?
+  /// [{ component, penalty, reason, issueIds }] — the UI renders exactly this (§4.12).
+  scoreBreakdown  Json?
+  /// Normalized sets consumed by the drift engine (§4.10).
+  fingerprints    Json?
+
+  errorCode    String?
+  errorMessage String?
+  errorPhase   String?
+
+  createdAt DateTime @default(now())
+
+  agency        Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  website       Website             @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  phases        ScanPhase[]
+  pages         ScanPage[]
+  requests      NetworkRequest[]
+  cookies       CookieRecord[]
+  storage       StorageEntry[]
+  detections    TrackerDetection[]
+  screenshots   Screenshot[]
+  consoleLogs   ConsoleLog[]
+  issues        Issue[]
+  evidence      IssueEvidence[]
+  driftEvents   PrivacyDriftEvent[] @relation("DriftCurrentScan")
+  driftPrevious PrivacyDriftEvent[] @relation("DriftPreviousScan")
+
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([websiteId, createdAt(sort: Desc)])
+  /// Drift's "previous COMPLETED scan" lookup — composite avoids filter-then-sort.
+  @@index([websiteId, status, finishedAt(sort: Desc)])
+  @@index([status, queuedAt])
+  @@map("scans")
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum ScanTrigger {
+  SCHEDULED
+  MANUAL
+  VERIFICATION
+  ONBOARDING
+  API
+  FREE_PUBLIC
+}
+
+model ScanPhase {
+  id               String       @id @default(uuid())
+  scanId           String
+  agencyId         String
+  phase            ConsentPhase
+  status           PhaseStatus
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  durationMs       Int?
+  actionMethod     String?
+  actionConfidence Float?
+  selectorUsed     String?
+  elementText      String?
+  inIframe         Boolean      @default(false)
+  bannerDismissed  Boolean?
+  errorCode        String?
+  errorMessage     String?
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, phase])
+  @@index([scanId])
+  @@map("scan_phases")
+}
+
+enum ConsentPhase {
+  NO_CONSENT
+  REJECT_ALL
+  ACCEPT_ALL
+  WITHDRAW
+}
+
+enum PhaseStatus {
+  EXECUTED
+  /// Could not be tested. NEVER treat as a pass (Part 0 §0.2 P6).
+  UNDETERMINED
+  SKIPPED
+  FAILED
+}
+
+model ScanPage {
+  id         String  @id @default(uuid())
+  scanId     String
+  agencyId   String
+  url        String
+  path       String
+  status     Int?
+  loadTimeMs Int?
+  errorCode  String?
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@map("scan_pages")
+}
+
+model NetworkRequest {
+  id           String       @id @default(uuid())
+  scanId       String
+  agencyId     String
+  pageUrl      String
+  /// The single most important field in the system (§4.5).
+  consentPhase ConsentPhase
+
+  /// Sanitized — query strings stripped entirely (Part X §10.6).
+  url               String
+  method            String
+  resourceType      String
+  host              String
+  registrableDomain String
+  isThirdParty      Boolean
+  status            Int?
+  failureText       String?
+  initiatorType     String?
+  initiatorUrl      String?
+  /// Offset from navigation start, not wall-clock — makes scans comparable.
+  timestampMs       Int
+  transferSize      Int?
+  redirectChain     String[] @default([])
+  /// Count only. Header values are never stored.
+  setCookieCount    Int      @default(0)
+  trackerVendorId   String?
+
+  createdAt DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId, consentPhase])
+  @@index([scanId, isThirdParty])
+  @@index([scanId, registrableDomain])
+  @@index([scanId, trackerVendorId])
+  @@map("network_requests")
+}
+
+model CookieRecord {
+  id            String       @id @default(uuid())
+  scanId        String
+  agencyId      String
+  consentPhase  ConsentPhase
+  /// after_nav | after_settle | after_action | phase_end — diffing these gives us *when*
+  /// a cookie appeared relative to the consent action (§4.5).
+  snapshotPoint String
+
+  name         String
+  domain       String
+  path         String
+  isSession    Boolean
+  durationDays Int?
+  secure       Boolean
+  httpOnly     Boolean
+  sameSite     String?
+  isThirdParty Boolean
+  valueHash    String?
+  valueLength  Int?
+  /// ONLY for allowlisted consent-signal cookies, where the value IS the diagnostic.
+  valueRaw     String?
+
+  trackerVendorId String?
+  category        TrackerCategory @default(UNKNOWN)
+
+  createdAt DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId, consentPhase])
+  @@index([scanId, category])
+  @@index([scanId, name])
+  @@map("cookie_records")
+}
+
+model StorageEntry {
+  id              String       @id @default(uuid())
+  scanId          String
+  agencyId        String
+  consentPhase    ConsentPhase
+  storageType     String
+  key             String
+  /// Keys only. Values commonly contain tokens and personal data.
+  valueLength     Int?
+  valueHash       String?
+  origin          String
+  trackerVendorId String?
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId, consentPhase])
+  @@map("storage_entries")
+}
+
+model ConsoleLog {
+  id        String   @id @default(uuid())
+  scanId    String
+  agencyId  String
+  level     String
+  message   String
+  source    String?
+  createdAt DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@map("console_logs")
+}
+
+model Screenshot {
+  id           String       @id @default(uuid())
+  scanId       String
+  agencyId     String
+  consentPhase ConsentPhase
+  kind         String
+  s3Key        String
+  width        Int
+  height       Int
+  sizeBytes    Int
+  createdAt    DateTime     @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId, consentPhase])
+  @@map("screenshots")
+}
+
+// ───────────────────────────── Trackers ─────────────────────────────
+
+/// GLOBAL, not tenant-scoped. Curated knowledge base.
+model TrackerVendor {
+  id                     String          @id @default(uuid())
+  slug                   String          @unique
+  name                   String
+  vendorCompany          String?
+  category               TrackerCategory
+  riskLevel              RiskLevel
+  domainPatterns         String[]
+  scriptPatterns         String[]
+  cookiePatterns         String[]
+  storagePatterns        String[]
+  requestPathPatterns    String[]
+  documentationUrl       String?
+  privacyPolicyUrl       String?
+  dataProcessingLocation String?
+  baseConfidence         Float           @default(0.9)
+  aliases                String[]        @default([])
+  /// Services that may legitimately load pre-consent (CMP, bot challenge, payment fraud).
+  /// Downgrades a pre-consent detection from Critical to Info. Curated manually, never inferred.
+  isEssentialCandidate   Boolean         @default(false)
+  isActive               Boolean         @default(true)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  detections TrackerDetection[]
+
+  @@index([category])
+  @@index([slug])
+  @@map("tracker_vendors")
+}
+
+enum TrackerCategory {
+  NECESSARY
+  ANALYTICS
+  MARKETING
+  ADVERTISING
+  FUNCTIONAL
+  SOCIAL
+  UNKNOWN
+}
+
+enum RiskLevel {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model TrackerDetection {
+  id            String       @id @default(uuid())
+  scanId        String
+  agencyId      String
+  websiteId     String
+  vendorId      String?
+  /// Set when vendorId is null — unknown third parties are recorded, never dropped.
+  unknownDomain String?
+  consentPhase  ConsentPhase
+  firstSeenAtMs Int
+  requestCount  Int          @default(1)
+  matchedVia    String
+  confidence    Float
+  /// Two independent signal types matched the same vendor. Required for Critical (§4.8).
+  corroborated  Boolean      @default(false)
+  evidenceSummary Json
+
+  createdAt DateTime @default(now())
+
+  scan   Scan           @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  vendor TrackerVendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([scanId, consentPhase])
+  @@index([websiteId, vendorId])
+  @@index([agencyId, vendorId])
+  @@index([unknownDomain])
+  @@map("tracker_detections")
+}
+
+// ───────────────────────────── Issues & Drift ─────────────────────────────
+
+model Issue {
+  id          String @id @default(uuid())
+  agencyId    String
+  websiteId   String
+  firstScanId String
+  lastScanId  String
+
+  ruleId      String
+  /// Bump on rule logic change; stored so a finding traces to the rule that produced it.
+  ruleVersion Int
+  /// sha256(ruleId + websiteId + normalizedSubject). Identity across scans (§6.5).
+  fingerprint String
+  category    IssueCategory
+  severity    Severity
+  status      IssueStatus @default(NEW)
+  confidence  Float
+
+  /// Deterministic, rule-authored. NEVER AI-generated — must read identically every time.
+  title             String
+  message           String
+  technicalReason   String
+  recommendedAction String
+
+  assignedToId    String?
+  firstDetectedAt DateTime
+  lastSeenAt      DateTime
+  occurrenceCount Int      @default(1)
+
+  acknowledgedAt     DateTime?
+  acknowledgedById   String?
+  resolvedAt         DateTime?
+  resolvedById       String?
+  resolution         IssueResolution?
+  resolutionNote     String?
+  ignoredAt          DateTime?
+  ignoredById        String?
+  ignoreReason       String?
+  verifiedAt         DateTime?
+  verificationScanId String?
+
+  driftEventId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agency     Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  website    Website         @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  scan       Scan            @relation(fields: [lastScanId], references: [id], onDelete: Cascade)
+  assignedTo User?           @relation("IssueAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  evidence   IssueEvidence[]
+  activities IssueActivity[]
+  aiOutputs  AIRequest[]
+  feedback   IssueFeedback[]
+
+  /// CORRECTNESS, not just speed — this is what prevents duplicate issues across scans.
+  @@unique([websiteId, fingerprint])
+  @@index([agencyId, status, severity])
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([websiteId, status])
+  @@index([assignedToId, status])
+  @@index([ruleId])
+  @@map("issues")
+}
+
+enum IssueCategory {
+  PRE_CONSENT_TRACKING
+  CONSENT_FAILURE
+  CONSENT_MISSING
+  COOKIE_BEHAVIOR
+  NEW_TRACKER
+  UNKNOWN_VENDOR
+  DRIFT
+  SCAN_HEALTH
+  TRANSPORT_SECURITY
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum IssueStatus {
+  NEW
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  VERIFIED
+  IGNORED
+  REOPENED
+  /// Confidence below threshold — shown in a separate "Needs review" section, not as an issue.
+  UNVERIFIED
+}
+
+enum IssueResolution {
+  FIXED
+  FALSE_POSITIVE
+  WONT_FIX
+  EXPECTED_BEHAVIOR
+}
+
+/// Insert-only. No updatedAt by design.
+model IssueEvidence {
+  id                   String       @id @default(uuid())
+  issueId              String
+  scanId               String
+  agencyId             String
+  kind                 EvidenceKind
+  pageUrl              String
+  consentPhase         ConsentPhase
+  observedAtMs         Int
+  detectionRuleId      String
+  detectionRuleVersion Int
+  confidence           Float
+  payload              Json
+  s3Key                String?
+  createdAt            DateTime     @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  scan  Scan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([issueId])
+  @@index([scanId])
+  @@index([agencyId])
+  @@map("issue_evidence")
+}
+
+enum EvidenceKind {
+  NETWORK_REQUEST
+  COOKIE
+  STORAGE_ENTRY
+  SCREENSHOT
+  CONSOLE_ERROR
+  CONSENT_ACTION
+  DRIFT_DIFF
+}
+
+model IssueActivity {
+  id        String   @id @default(uuid())
+  issueId   String
+  agencyId  String
+  actorId   String?
+  actorType String
+  type      String
+  fromValue String?
+  toValue   String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, createdAt])
+  @@map("issue_activities")
+}
+
+/// Drives the per-rule false-positive rate in /admin/issues — the input for rule tuning.
+model IssueFeedback {
+  id          String   @id @default(uuid())
+  issueId     String
+  agencyId    String
+  userId      String
+  ruleId      String
+  ruleVersion Int
+  verdict     String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, verdict])
+  @@map("issue_feedback")
+}
+
+model IgnoreRule {
+  id          String    @id @default(uuid())
+  agencyId    String
+  /// null = agency-wide
+  websiteId   String?
+  scope       String
+  ruleId      String?
+  vendorId    String?
+  fingerprint String?
+  reason      String
+  createdById String
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  agency  Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  website Website? @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId, websiteId])
+  @@map("ignore_rules")
+}
+
+model PrivacyDriftEvent {
+  id             String @id @default(uuid())
+  agencyId       String
+  websiteId      String
+  currentScanId  String
+  /// Always a COMPLETED scan. Comparing against PARTIAL manufactures phantom removals (§4.10).
+  previousScanId String
+
+  changeType       DriftChangeType
+  severity         Severity
+  summary          String
+  addedItems       Json            @default("[]")
+  removedItems     Json            @default("[]")
+  beforeValue      Json?
+  afterValue       Json?
+  issueId          String?
+  acknowledged     Boolean         @default(false)
+  acknowledgedById String?
+  aiSummary        String?
+
+  detectedAt DateTime @default(now())
+
+  agency       Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  website      Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  currentScan  Scan    @relation("DriftCurrentScan", fields: [currentScanId], references: [id], onDelete: Cascade)
+  previousScan Scan    @relation("DriftPreviousScan", fields: [previousScanId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId, detectedAt(sort: Desc)])
+  @@index([websiteId, detectedAt(sort: Desc)])
+  @@index([agencyId, changeType, detectedAt(sort: Desc)])
+  @@index([agencyId, severity, detectedAt(sort: Desc)])
+  @@map("privacy_drift_events")
+}
+
+enum DriftChangeType {
+  TRACKER_ADDED
+  TRACKER_REMOVED
+  UNKNOWN_VENDOR_ADDED
+  COOKIE_ADDED
+  COOKIE_REMOVED
+  THIRD_PARTY_DOMAIN_ADDED
+  THIRD_PARTY_DOMAIN_REMOVED
+  SCRIPT_ADDED
+  SCRIPT_REMOVED
+  CONSENT_BEHAVIOR_CHANGED
+  CONSENT_REGRESSION
+  CMP_CHANGED
+  CMP_REMOVED
+  TRACKER_COUNT_DELTA
+  SCORE_DROP
+}
+
+/// "Yes, we added Hotjar deliberately" — suppresses a fingerprint from future *_ADDED events.
+model DriftSuppression {
+  id          String          @id @default(uuid())
+  agencyId    String
+  websiteId   String
+  changeType  DriftChangeType
+  fingerprint String
+  reason      String?
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  agency  Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, changeType, fingerprint])
+  @@map("drift_suppressions")
+}
+
+// ───────────────────────────── Reports & Notifications ─────────────────────────────
+
+model Report {
+  id          String @id @default(uuid())
+  agencyId    String
+  clientId    String?
+  websiteId   String?
+  createdById String
+
+  type        ReportType
+  status      ReportStatus @default(QUEUED)
+  name        String
+  periodStart DateTime?
+  periodEnd   DateTime?
+  options     Json         @default("{}")
+  /// Branding frozen at generation time, so a re-download years later renders as sent.
+  brandingSnapshot Json?
+  idempotencyKey   String? @unique
+
+  s3Key            String?
+  sizeBytes        Int?
+  pageCount        Int?
+  generatedAt      DateTime?
+  errorCode        String?
+  errorMessage     String?
+  downloadCount    Int       @default(0)
+  lastDownloadedAt DateTime?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  agency    Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client    Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  website   Website?      @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  createdBy User          @relation("ReportCreator", fields: [createdById], references: [id])
+  shares    ReportShare[]
+
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([agencyId, clientId])
+  @@index([status])
+  @@map("reports")
+}
+
+enum ReportType {
+  SCAN
+  ISSUE
+  MONTHLY_MONITORING
+  WEBSITE_HEALTH
+  PRIVACY_DRIFT
+}
+
+enum ReportStatus {
+  QUEUED
+  GENERATING
+  READY
+  FAILED
+}
+
+model ReportShare {
+  id          String    @id @default(uuid())
+  reportId    String
+  agencyId    String
+  token       String    @unique
+  expiresAt   DateTime
+  createdById String
+  revokedAt   DateTime?
+  accessCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("report_shares")
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  agencyId   String
+  userId     String
+  type       NotificationType
+  severity   Severity         @default(INFO)
+  title      String
+  body       String
+  linkUrl    String?
+  entityType String?
+  entityId   String?
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt(sort: Desc)])
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  CRITICAL_ISSUE
+  NEW_TRACKER
+  CONSENT_REGRESSION
+  PRIVACY_DRIFT
+  SCAN_FAILED
+  SCAN_PARTIAL
+  WEBSITE_UNREACHABLE
+  REPORT_READY
+  REPORT_FAILED
+  MEMBER_JOINED
+  TRIAL_ENDING
+  PAYMENT_FAILED
+  PLAN_CHANGED
+  AI_QUOTA_WARNING
+  USAGE_LIMIT_WARNING
+}
+
+model NotificationPreference {
+  id        String           @id @default(uuid())
+  agencyId  String
+  userId    String
+  type      NotificationType
+  inApp     Boolean          @default(true)
+  email     Boolean          @default(true)
+  digest    DigestFrequency  @default(IMMEDIATE)
+  updatedAt DateTime         @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agencyId, type])
+  @@map("notification_preferences")
+}
+
+enum DigestFrequency {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+  NEVER
+}
+
+model AlertRule {
+  id           String             @id @default(uuid())
+  agencyId     String
+  name         String
+  enabled      Boolean            @default(true)
+  scopeType    String
+  scopeId      String?
+  triggerTypes NotificationType[]
+  minSeverity  Severity           @default(HIGH)
+  channels     String[]           @default(["email", "in_app"])
+  digest       DigestFrequency    @default(IMMEDIATE)
+  /// 'HH:mm' in the AGENCY timezone.
+  quietHoursStart String?
+  quietHoursEnd   String?
+  recipients      String[]        @default([])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  agency  Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  history AlertHistory[]
+
+  @@index([agencyId, enabled])
+  @@map("alert_rules")
+}
+
+model AlertHistory {
+  id           String           @id @default(uuid())
+  alertRuleId  String?
+  agencyId     String
+  type         NotificationType
+  channel      String
+  recipients   String[]
+  entityType   String?
+  entityId     String?
+  status       String
+  providerId   String?
+  deliveredAt  DateTime?
+  openedAt     DateTime?
+  errorMessage String?
+  createdAt    DateTime         @default(now())
+
+  alertRule AlertRule? @relation(fields: [alertRuleId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@map("alert_history")
+}
+
+// ───────────────────────────── Client Portal ─────────────────────────────
+
+model PortalUser {
+  id              String           @id @default(uuid())
+  agencyId        String
+  clientId        String
+  email           String
+  name            String?
+  status          PortalUserStatus @default(INVITED)
+  invitedById     String
+  /// Stored hashed.
+  inviteToken     String?          @unique
+  inviteExpiresAt DateTime?
+  lastLoginAt     DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
+
+  agency   Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client   Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sessions PortalSession[]
+
+  @@unique([clientId, email])
+  @@index([agencyId])
+  @@map("portal_users")
+}
+
+enum PortalUserStatus {
+  INVITED
+  ACTIVE
+  REVOKED
+}
+
+model PortalSession {
+  id           String    @id @default(uuid())
+  portalUserId String
+  agencyId     String
+  clientId     String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  ipHash       String?
+  userAgent    String?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  portalUser PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("portal_sessions")
+}
+
+// ───────────────────────────── Billing ─────────────────────────────
+
+/// GLOBAL, not tenant-scoped.
+model Plan {
+  id          String  @id @default(uuid())
+  key         String  @unique
+  name        String
+  description String?
+  isPublic    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  stripeProductId      String?
+  stripePriceMonthlyId String?
+  stripePriceAnnualId  String?
+  /// Integer minor units. Never Float.
+  priceMonthlyCents    Int
+  priceAnnualCents     Int
+  currency             String  @default("usd")
+
+  /// EntitlementSet — see PLAN.md §9.2. Read only via EntitlementService.
+  entitlements Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id       String @id @default(uuid())
+  agencyId String @unique
+  planId   String
+
+  stripeCustomerId     String             @unique
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(TRIALING)
+  interval             BillingInterval    @default(MONTHLY)
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEndsAt        DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  canceledAt         DateTime?
+  endedAt            DateTime?
+
+  /// Admin-granted extras layered over plan defaults.
+  entitlementOverrides Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  @@index([status])
+  @@index([stripeCustomerId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAUSED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+model UsageRecord {
+  id          String      @id @default(uuid())
+  agencyId    String
+  /// Aligned to the Stripe billing period, not the calendar month.
+  periodStart DateTime
+  periodEnd   DateTime
+  metric      UsageMetric
+  quantity    Int         @default(0)
+  updatedAt   DateTime    @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  /// CORRECTNESS — the upsert target. Makes double-counting impossible under concurrency.
+  @@unique([agencyId, periodStart, metric])
+  @@index([agencyId, metric])
+  @@map("usage_records")
+}
+
+enum UsageMetric {
+  SCANS
+  AI_CREDITS
+  REPORTS
+  STORAGE_BYTES
+  WEBSITES
+  SEATS
+}
+
+/// GLOBAL. Webhook idempotency + replay.
+model StripeWebhookEvent {
+  id            String    @id @default(uuid())
+  stripeEventId String    @unique
+  type          String
+  status        String
+  payload       Json
+  error         String?
+  attempts      Int       @default(0)
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([type, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("stripe_webhook_events")
+}
+
+// ───────────────────────────── AI ─────────────────────────────
+
+model AIRequest {
+  id       String          @id @default(uuid())
+  agencyId String
+  userId   String?
+  feature  AIFeature
+  provider String
+  model    String
+  status   AIRequestStatus @default(PENDING)
+
+  entityType String?
+  entityId   String?
+  issueId    String?
+
+  /// sha256(feature + promptVersion + canonicalJson(context)) — the cache key.
+  inputHash        String
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  costMicroCents   Int?
+  latencyMs        Int?
+
+  output           Json?
+  validationErrors Json?
+  errorCode        String?
+  errorMessage     String?
+  fromCache        Boolean @default(false)
+  feedbackScore    Int?
+
+  createdAt DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  issue  Issue? @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([agencyId, feature])
+  @@index([inputHash])
+  @@index([status])
+  @@map("ai_requests")
+}
+
+enum AIFeature {
+  EXPLAIN_ISSUE
+  RECOMMEND_FIX
+  SUMMARIZE_DRIFT
+  CLIENT_MESSAGE
+  CLASSIFY_TRACKER
+  ROOT_CAUSE
+  DEVELOPER_TASK
+  WEBSITE_SUMMARY
+}
+
+enum AIRequestStatus {
+  PENDING
+  SUCCESS
+  VALIDATION_FAILED
+  PROVIDER_ERROR
+  RATE_LIMITED
+  CACHED
+}
+
+// ───────────────────────────── Platform ─────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  agencyId   String?
+  userId     String?
+  actorType  String
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ipHash     String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  agency Agency? @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+/// GLOBAL.
+model FeatureFlag {
+  id             String   @id @default(uuid())
+  key            String   @unique
+  description    String?
+  enabled        Boolean  @default(false)
+  rolloutPercent Int      @default(0)
+  planKeys       String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  overrides FeatureFlagOverride[]
+
+  @@map("feature_flags")
+}
+
+model FeatureFlagOverride {
+  id        String   @id @default(uuid())
+  flagId    String
+  agencyId  String
+  enabled   Boolean
+  createdAt DateTime @default(now())
+
+  flag   FeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  agency Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([flagId, agencyId])
+  @@map("feature_flag_overrides")
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  level     String
+  service   String
+  message   String
+  context   Json?
+  agencyId  String?
+  scanId    String?
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt(sort: Desc)])
+  @@index([service, createdAt(sort: Desc)])
+  @@map("system_logs")
+}
+
+/// Pre-tenant: anonymous lead-generation scans. Purged after 7 days.
+model FreeScan {
+  id                String     @id @default(uuid())
+  token             String     @unique
+  url               String
+  registrableDomain String
+  ipHash            String
+  status            ScanStatus @default(QUEUED)
+  healthScore       Int?
+  resultSummary     Json?
+  email             String?
+  convertedAgencyId String?
+  expiresAt         DateTime
+  createdAt         DateTime   @default(now())
+
+  @@index([token])
+  @@index([registrableDomain, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([expiresAt])
+  @@map("free_scans")
+}

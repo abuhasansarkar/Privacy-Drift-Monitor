@@ -12,8 +12,8 @@ pipeline, tenancy model and evidence schema are built once, correctly.
 
 | # | Task | Effort | Feature doc | Status |
 |---|---|---|---|---|
-| 0.1 | Convert the scaffold to a pnpm + Turborepo monorepo; move `src/` → `apps/web/src/` | S | — | ⬜ |
-| 0.2 | Create all ten `packages/*` with shared tsconfig/eslint presets, strict mode everywhere | S | — | ⬜ |
+| 0.1 | ~~Convert to a pnpm + Turborepo monorepo; move `src/` → `apps/web/src/`~~ **CHANGED — see below** | S | — | ⏭️ |
+| 0.2 | Create `packages/*` with shared tsconfig/eslint presets, strict mode everywhere | S | — | 🟡 |
 | 0.3 | `packages/database`: Prisma init, full schema, first migration, seed script | M | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | ⬜ |
 | 0.4 | `packages/shared`: error taxonomy, Pino logger, rate limiter, circuit breaker, permissions, copy module | M | [22-observability-ops](../features/22-observability-ops.md) | ⬜ |
 | 0.5 | `packages/schemas`: base Zod schemas and shared enums | S | — | ⬜ |
@@ -25,15 +25,28 @@ pipeline, tenancy model and evidence schema are built once, correctly.
 
 ## Step-by-step
 
-### 1. Monorepo conversion (0.1, 0.2)
+### 1. Repository structure (0.1, 0.2)
 
-- [ ] `pnpm-workspace.yaml`, `turbo.json`, root `package.json` with the pipeline
-- [ ] Move the scaffold into `apps/web/`; verify `@/*` → `./src/*` still resolves
-- [ ] Create `apps/worker/` bootstrap (empty entrypoint for now)
+> **DECISION CHANGED.** No `apps/` layer. The Next.js app stays at the repo root in the
+> default `create-next-app` layout (`src/`). Only `packages/*` are workspace members.
+> Full rationale and accepted cost in PLAN.md Part X §10.9.
+>
+> ```
+> drift-monitor/
+> ├── src/              Next.js app — default structure
+> ├── packages/         shared with the Phase 2 worker
+> ├── worker/           separate Node process (added in Phase 2)
+> └── package.json      one package
+> ```
+
+- [x] `pnpm-workspace.yaml` declaring `packages/*` only
 - [ ] Create `packages/`: `database`, `scanner`, `ai`, `billing`, `email`, `reports`,
       `storage`, `schemas`, `shared`, `ui`, `config`
-- [ ] `packages/config` holds the shared eslint / tsconfig / tailwind presets; every other
-      package extends them. `strict: true` everywhere, no exceptions.
+- [ ] `packages/config` holds the shared eslint / tsconfig presets; every other package
+      extends them. `strict: true` everywhere, no exceptions.
+- [ ] `worker/` bootstrap — deferred to Phase 2, not needed yet
+- [ ] No Turborepo — a single package has nothing to orchestrate. Root scripts call
+      `pnpm --filter @pdm/database …` directly.
 
 > ⚠️ Do **not** add a `webpack` key to `next.config.ts` — Turbopack is the default for both
 > `next dev` and `next build` in Next 16, and a webpack config makes the build fail.

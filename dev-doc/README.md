@@ -51,12 +51,26 @@ phase doc, pick a task, then open the feature doc it points to for the full spec
 
 ## Current status
 
-The repo is a stock `create-next-app` scaffold plus planning documents. **Phase 0 has not
-started.** Nothing in `features/` is built.
+**Phase 0 is in progress.** The scaffold is still flat (`src/` at the repo root, not yet moved
+to `apps/web/`), but several Phase 0 tasks have landed. Nothing in `features/` is built.
+
+Done so far:
+
+| Task | State | Note |
+|---|---|---|
+| 0.1 monorepo conversion | 🟡 | `pnpm-workspace.yaml`, `turbo.json`, `.npmrc`, `packages/config` exist — but `src/` has **not** been moved to `apps/web/`, and the root `package.json` is still the Next app |
+| 0.6 Clerk integration | 🟡 | `proxy.ts`, `(auth)/login` + `(auth)/signup` catch-alls, `ClerkProvider`, `SiteHeader`, and a Clerk-only `server/auth/context.ts` are in place. **Missing:** webhook sync and the real `requireAgencyContext()` — both blocked on 0.3 |
+| 0.7 docker-compose | ✅ | postgres, redis, minio (+ bucket init), mailpit |
+| `.env.example` | ✅ | Canonical list per Part X §10.10 |
+| 0.2–0.5, 0.8–0.10 | ⬜ | Not started |
+
+**Immediate next:** finish 0.1 (move `src/` → `apps/web/`) *before* starting 0.3, because
+`packages/database` belongs in the workspace and restructuring after Prisma and the worker
+exist is far more disruptive.
 
 | Phase | Goal | Status |
 |---|---|---|
-| [Phase 0](phases/phase-0-foundation.md) | Monorepo, schema, auth, design system, CI | ⬜ Not started |
+| [Phase 0](phases/phase-0-foundation.md) | Monorepo, schema, auth, design system, CI | 🟡 In progress |
 | [Phase 1](phases/phase-1-core-saas-shell.md) | Clients + websites, no scanning yet | ⬜ Not started |
 | [Phase 2](phases/phase-2-scanner.md) | A real scan runs end to end | ⬜ Not started |
 | [Phase 3](phases/phase-3-intelligence.md) | Evidence becomes findings, drift, score | ⬜ Not started |

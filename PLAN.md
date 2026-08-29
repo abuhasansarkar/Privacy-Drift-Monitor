@@ -5284,7 +5284,34 @@ public/free-scans/{token}/screenshot.webp        # 7-day lifecycle rule
 
 ## 10.9 Repository, Docker, and Local Development
 
-### Monorepo decision
+### Repository structure
+
+> **DECISION CHANGED (superseding the analysis below).** The project uses a **single
+> package at the repo root** — the default `create-next-app` layout with `src/` — plus
+> `packages/*` as pnpm workspace members for code shared with the Phase 2 worker:
+>
+> ```
+> drift-monitor/
+> ├── src/                Next.js app (default structure)
+> ├── packages/           shared: database, scanner, ai, billing, …
+> ├── worker/             separate Node process (Phase 2)
+> └── package.json        one package
+> ```
+>
+> **Rationale:** the constraint that actually matters is that the worker must be a
+> separate long-running process sharing the Prisma schema and scanner code. `packages/*`
+> satisfies that on its own; `apps/web` was not load-bearing. Dropping it removes a layer
+> of indirection for a solo/small team.
+>
+> **Accepted cost:** with one `package.json`, the web Docker image would pull Playwright's
+> browser binaries (~400 MB) that it never uses. Mitigate with
+> `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` in the web image build (Phase 7). Turborepo is not
+> used — a single package has nothing to orchestrate.
+>
+> **Revisit if:** a second deployable app appears (a public API service, a docs site), or
+> the team grows past ~4 engineers and independent deploy cadences start to matter.
+
+The original monorepo analysis is retained below for context.
 
 **pnpm workspaces + Turborepo.** Justified concretely:
 - `packages/scanner` must be imported by both `apps/worker` (real scans) and `apps/web` (URL validation, free-scan orchestration). Publishing it privately or duplicating it would be worse.
