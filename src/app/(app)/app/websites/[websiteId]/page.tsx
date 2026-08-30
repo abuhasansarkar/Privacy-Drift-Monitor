@@ -2,16 +2,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { t } from "@pdm/shared/copy";
 import { can } from "@pdm/shared/permissions";
+import { Can } from "@/components/can";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HealthScore } from "@/components/ui/health-score";
 import { MutedBadge, SeverityBadge, StatusBadge } from "@/components/ui/severity-badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { ScanStatusBadge } from "@/components/scans/scan-phases";
+import { StartScanButton } from "@/components/scans/start-scan-button";
+import { DataList, type Column, type Row } from "@/components/ui/data-list";
 import { WebsiteActions } from "@/components/websites/website-actions";
-import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
+import {
+  formatDateTime,
+  formatDuration,
+  formatNumber,
+  formatRelative,
+} from "@/lib/format";
 import { FREQUENCY_LABEL, MONITORING_LABEL, MONITORING_TONE } from "@/lib/labels";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getWebsiteDetail } from "@/server/queries/detail";
+import { getWebsiteScans } from "@/server/queries/scans";
 
 /**
  * WEBSITE DETAIL — §3.6, Phase 1 task 1.6.
@@ -21,10 +31,9 @@ import { getWebsiteDetail } from "@/server/queries/detail";
  * raise NOT_FOUND, not FORBIDDEN — a 403 confirms the id exists somewhere the
  * caller cannot see.
  *
- * ⚠️ NO SCAN HISTORY TAB YET. Scans arrive in Phase 2. The section below says
- * "no scans yet" from the absence of a `lastScanAt`, which is a fact this row
- * carries — it does not render an empty scan table implying the scanner ran and
- * found nothing (P1/P5).
+ * ⚠️ THE SCAN HISTORY LISTS OUTCOMES, NOT VERDICTS. Each row shows COMPLETED /
+ * PARTIAL / FAILED as recorded — a PARTIAL scan is never collapsed into a tick,
+ * because an incomplete recording must not read as a clean one (P5/P6).
  */
 export default async function WebsiteDetailPage({
   params,
@@ -35,7 +44,15 @@ export default async function WebsiteDetailPage({
   const website = await getWebsiteDetail(ctx, websiteId);
   if (!website) notFound();
 
+  const scans = await getWebsiteScans(ctx, websiteId);
   const now = new Date();
+
+  const scanColumns: Column[] = [
+    { key: "started", label: t("scans.columnStarted") },
+    { key: "outcome", label: t("scans.columnStatus") },
+    { key: "requests", label: t("scans.columnRequests"), align: "end" },
+    { key: "duration", label: t("scans.columnDuration"), align: "end", hideBelow: "lg" },
+  ];
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
@@ -56,12 +73,17 @@ export default async function WebsiteDetailPage({
           )
         }
         actions={
-          <WebsiteActions
-            websiteId={website.id}
-            monitoringStatus={website.monitoringStatus}
-            canUpdate={can(ctx.role, "website:update")}
-            canArchive={can(ctx.role, "website:delete")}
-          />
+          <div className="flex flex-wrap items-start gap-2">
+            <Can role={ctx.role} permission="scan:trigger">
+              <StartScanButton websiteId={website.id} />
+            </Can>
+            <WebsiteActions
+              websiteId={website.id}
+              monitoringStatus={website.monitoringStatus}
+              canUpdate={can(ctx.role, "website:update")}
+              canArchive={can(ctx.role, "website:delete")}
+            />
+          </div>
         }
       />
 
@@ -181,14 +203,44 @@ export default async function WebsiteDetailPage({
 
       <Card>
         <CardHeader title={t("websites.scanHistoryTitle")} />
-        <EmptyState
-          title={t("websites.scanHistoryTitle")}
-          body={
-            website.lastScanAt
-              ? t("empty.scanHistoryPending")
-              : t("empty.noScansYet")
-          }
-        />
+        {scans.length === 0 ? (
+          <EmptyState
+            title={t("websites.scanHistoryTitle")}
+            body={t("empty.noScansYet")}
+          />
+        ) : (
+          <DataList
+            caption={t("websites.scanHistoryTitle")}
+            columns={scanColumns}
+            rows={scans.map((scan): Row => ({
+              id: scan.id,
+              href: `/app/websites/${website.id}/scans/${scan.id}`,
+              primary: scan.startedAt ? (
+                <time dateTime={scan.startedAt.toISOString()}>
+                  {formatDateTime(scan.startedAt, ctx.timezone)}
+                </time>
+              ) : (
+                <span className="text-muted-foreground">{t("scans.queued")}</span>
+              ),
+              secondary: scan.trigger,
+              cells: {
+                outcome: <ScanStatusBadge status={scan.status} />,
+                requests: (
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatNumber(scan.requestCount)}
+                  </span>
+                ),
+                duration: (
+                  <span className="tabular-nums text-muted-foreground">
+                    {scan.durationMs
+                      ? formatDuration(Math.round(scan.durationMs / 1000))
+                      : "—"}
+                  </span>
+                ),
+              },
+            }))}
+          />
+        )}
       </Card>
     </div>
   );

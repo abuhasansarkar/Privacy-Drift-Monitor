@@ -1,0 +1,24 @@
+{
+  "name": "@pdm/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pdm/scanner": "*",
+    "@pdm/shared": "*",
+    "@pdm/database": "*",
+    "@pdm/storage": "*"
+  },
+  "devDependencies": {
+    "@pdm/config": "*",
+    "@types/node": "^20",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

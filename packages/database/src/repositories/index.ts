@@ -1,6 +1,7 @@
 import { forAgency, type TenantClient } from "../tenant";
 import { auditRepository, type AuditRepository } from "./audit.repository";
 import { clientRepository, type ClientRepository } from "./client.repository";
+import { scanRepository, type ScanRepository } from "./scan.repository";
 import { websiteRepository, type WebsiteRepository } from "./website.repository";
 
 /**
@@ -23,6 +24,7 @@ export interface Repositories {
   agencyId: string;
   websites: WebsiteRepository;
   clients: ClientRepository;
+  scans: ScanRepository;
   audit: AuditRepository;
 }
 
@@ -33,14 +35,21 @@ export function repositoriesFor(agencyId: string): Repositories {
     agencyId,
     websites: websiteRepository(db, agencyId),
     clients: clientRepository(db, agencyId),
+    scans: scanRepository(db, agencyId),
     audit: auditRepository(db),
   };
 }
 
-export { auditRepository, clientRepository, websiteRepository };
-export type { AuditRepository, ClientRepository, WebsiteRepository };
+export { auditRepository, clientRepository, scanRepository, websiteRepository };
+export type {
+  AuditRepository,
+  ClientRepository,
+  ScanRepository,
+  WebsiteRepository,
+};
 export type { AuditAction, AuditEntry } from "./audit.repository";
 export type { ClientListRow } from "./client.repository";
+export type { ScanCompletion, ScanEvidence } from "./scan.repository";
 export type { WebsiteListRow } from "./website.repository";
 export {
   cursorSlice,

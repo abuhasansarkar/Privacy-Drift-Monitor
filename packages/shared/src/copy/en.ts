@@ -92,6 +92,10 @@ export const en = {
     /** Never "no issues found" — a site with no scan has no result, not a clean one. */
     noScansYet:
       "This website hasn't been scanned yet. The first scan runs on its next scheduled check.",
+    /** A FAILED scan has no evidence because nothing was recorded — say that. */
+    noEvidenceFailedScan:
+      "This scan didn't complete, so no requests were recorded.",
+    noRequestsRecorded: "No requests were recorded during this scan.",
     scanHistoryPending:
       "Scan history arrives with the scanner. This website has been checked, but per-scan detail isn't available yet.",
   },
@@ -149,6 +153,47 @@ export const en = {
     bandFair: "Fair",
     bandPoor: "Poor",
     bandCritical: "Needs review",
+  },
+
+  /** §3.9 — scan detail and progress. */
+  scans: {
+    title: "Scans",
+    scanNow: "Scan now",
+    scanning: "Starting scan",
+    alreadyRunning: "A scan is already running for this website.",
+    running: "Running",
+    queued: "Queued",
+    statusCompleted: "Completed",
+    statusPartial: "Partial",
+    statusFailed: "Failed",
+    statusCancelled: "Cancelled",
+    /** §11.8 — PARTIAL is explained, never left as a bare label. */
+    partialBanner:
+      "Some consent journeys couldn't be completed on this scan. Results below cover only the journeys that ran.",
+    phaseNoConsent: "No consent",
+    phaseRejectAll: "Reject All",
+    phaseAcceptAll: "Accept All",
+    phaseWithdraw: "Withdraw",
+    columnStarted: "Started",
+    columnDuration: "Duration",
+    columnRequests: "Requests",
+    columnStatus: "Outcome",
+    requestsTitle: "Recorded requests",
+    columnTime: "Time",
+    columnRequest: "Request",
+    columnType: "Type",
+    columnConsentState: "Consent state",
+    beforeConsent: "Before consent",
+    firstParty: "First-party",
+    viewScan: "View scan",
+  },
+
+  /** PhaseStatus → the outcome vocabulary. Never pass/fail (§1.12). */
+  phaseStatus: {
+    EXECUTED: "Completed",
+    UNDETERMINED: "Could not be determined",
+    SKIPPED: "Not run",
+    FAILED: "Failed",
   },
 
   filters: {

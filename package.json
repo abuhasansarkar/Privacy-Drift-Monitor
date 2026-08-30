@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "worker"
   ],
   "scripts": {
     "dev": "next dev",
@@ -22,7 +23,8 @@
     "db:deploy": "npm run migrate:deploy -w @pdm/database",
     "db:reset": "npm run migrate:reset -w @pdm/database",
     "db:seed": "npm run seed -w @pdm/database",
-    "db:studio": "npm run studio -w @pdm/database"
+    "db:studio": "npm run studio -w @pdm/database",
+    "worker": "npm run dev -w @pdm/worker"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.3",

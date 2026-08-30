@@ -9,7 +9,12 @@
     "./types": "./src/types.ts",
     "./net/guard": "./src/net/guard.ts",
     "./privacy/sanitize": "./src/privacy/sanitize.ts",
-    "./browser/pool": "./src/browser/pool.ts"
+    "./browser/pool": "./src/browser/pool.ts",
+    "./scan": "./src/scan.ts",
+    "./queue/queues": "./src/queue/queues.ts",
+    "./consent/adapter": "./src/consent/adapter.ts",
+    "./queue/worker": "./src/queue/worker.ts",
+    "./record/screenshots": "./src/record/screenshots.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -18,7 +23,8 @@
     "bullmq": "^6.3.2",
     "ioredis": "^6.0.0",
     "ipaddr.js": "^2",
-    "playwright": "^1.62.1"
+    "playwright": "^1.62.1",
+    "tldts": "^6.1.86"
   },
   "devDependencies": {
     "@pdm/config": "*",
