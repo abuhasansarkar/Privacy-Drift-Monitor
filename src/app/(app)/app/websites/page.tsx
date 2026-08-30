@@ -19,7 +19,11 @@ import {
   StatusBadge,
 } from "@/components/ui/severity-badge";
 import { formatNumber, formatRelative } from "@/lib/format";
-import { FREQUENCY_LABEL, MONITORING_LABEL } from "@/lib/labels";
+import {
+  FREQUENCY_LABEL,
+  MONITORING_LABEL,
+  MONITORING_TONE,
+} from "@/lib/labels";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getWebsiteList } from "@/server/queries/lists";
 
@@ -34,12 +38,6 @@ import { getWebsiteList } from "@/server/queries/lists";
  * scan says "never scanned" rather than showing a zero score. Both are the same
  * rule: the list never implies a monitoring result the scanner did not produce.
  */
-
-const MONITORING_TONE = {
-  ACTIVE: "success",
-  PAUSED: "muted",
-  ERROR: "warning",
-} as const;
 
 export default async function WebsitesPage({
   searchParams,
@@ -61,9 +59,9 @@ export default async function WebsitesPage({
     { key: "monitoring", label: t("websites.columnMonitoring") },
   ];
 
-  // No `href` yet — the detail page is still to be built. See the dashboard.
   const rows: Row[] = page.items.map((site) => ({
     id: site.id,
+    href: `/app/websites/${site.id}`,
     primary: <span className="font-mono text-mono">{site.url}</span>,
     secondary: site.label ?? site.client?.name ?? undefined,
     dimmed: site.monitoringStatus === "PAUSED" || site.archivedAt !== null,

@@ -8,13 +8,17 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./net/guard": "./src/net/guard.ts",
-    "./privacy/sanitize": "./src/privacy/sanitize.ts"
+    "./privacy/sanitize": "./src/privacy/sanitize.ts",
+    "./browser/pool": "./src/browser/pool.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ipaddr.js": "^2"
+    "bullmq": "^6.3.2",
+    "ioredis": "^6.0.0",
+    "ipaddr.js": "^2",
+    "playwright": "^1.62.1"
   },
   "devDependencies": {
     "@pdm/config": "*",

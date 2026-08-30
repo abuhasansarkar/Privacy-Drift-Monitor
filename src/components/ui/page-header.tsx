@@ -12,8 +12,10 @@ export function PageHeader({
   subtitle,
   actions,
 }: {
-  title: string;
-  subtitle?: string;
+  // ReactNode, not string: a detail page's title is a monospaced URL and its
+  // subtitle is a link to the client, and neither survives being flattened.
+  title: ReactNode;
+  subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
   return (

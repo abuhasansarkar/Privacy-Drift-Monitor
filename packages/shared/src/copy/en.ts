@@ -87,6 +87,13 @@ export const en = {
       "Invite your team so they can review and resolve issues.",
     noWebsites:
       "Add your first client website to start monitoring privacy behavior.",
+    noWebsitesForClient:
+      "No websites are assigned to this client yet.",
+    /** Never "no issues found" — a site with no scan has no result, not a clean one. */
+    noScansYet:
+      "This website hasn't been scanned yet. The first scan runs on its next scheduled check.",
+    scanHistoryPending:
+      "Scan history arrives with the scanner. This website has been checked, but per-scan detail isn't available yet.",
   },
 
   /** §11.8 — user language, and every one offers a next action. */
@@ -153,6 +160,14 @@ export const en = {
   clients: {
     addClient: "Add client",
     saving: "Adding client",
+    contactTitle: "Contact",
+    contactNameLabel: "Contact name",
+    notesLabel: "Internal notes",
+    addedLabel: "Client added",
+    portalOn: "Portal enabled",
+    /** Archiving keeps history — the notice says so, because the word alarms people. */
+    archivedNotice:
+      "This client is archived. Its websites keep their scan history and its reports stay available.",
     nameLabel: "Client name",
     namePlaceholder: "Acme Dental",
     contactEmailLabel: "Contact email (optional)",
@@ -186,6 +201,24 @@ export const en = {
     filterStatus: "Status",
     importCsv: "Import CSV",
     neverScanned: "Never scanned",
+    pause: "Pause monitoring",
+    resume: "Resume monitoring",
+    archive: "Archive",
+    archiving: "Archiving",
+    archiveConfirmTitle: "Archive this website?",
+    /** Names what SURVIVES. The fear the word "archive" triggers is data loss. */
+    archiveConfirmBody:
+      "Monitoring stops and the website leaves your list. Scan history, evidence and reports are kept, and you can restore it later.",
+    archivedNotice:
+      "This website is archived. Monitoring is stopped, and its scan history is kept.",
+    settingsTitle: "Monitoring settings",
+    originalUrlLabel: "Address as entered",
+    registrableDomainLabel: "Registrable domain",
+    monitoredPathsLabel: "Monitored paths",
+    nextScanLabel: "Next check",
+    notScheduled: "Not scheduled",
+    addedLabel: "Added",
+    scanHistoryTitle: "Scan history",
     searchPlaceholder: "Search by address or label",
     title: "Websites",
   },

@@ -22,3 +22,10 @@ export const MONITORING_LABEL: Record<MonitoringStatus, string> = {
   PAUSED: t("monitoring.paused"),
   ERROR: t("monitoring.error"),
 };
+
+/** Paired with MONITORING_LABEL — colour never carries the state alone (§11.6). */
+export const MONITORING_TONE = {
+  ACTIVE: "success",
+  PAUSED: "muted",
+  ERROR: "warning",
+} as const satisfies Record<MonitoringStatus, string>;

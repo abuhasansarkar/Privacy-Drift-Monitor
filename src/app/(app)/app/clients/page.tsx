@@ -45,10 +45,9 @@ export default async function ClientsPage({
     { key: "portal", label: t("clients.columnPortal"), hideBelow: "lg" },
   ];
 
-  // No `href` yet — the client detail page is still to be built, and a row that
-  // navigates to a 404 is worse than a row that does not navigate.
   const rows: Row[] = page.items.map((client) => ({
     id: client.id,
+    href: `/app/clients/${client.id}`,
     primary: client.name,
     secondary: client.websiteCount > 0 ? undefined : t("empty.noWebsites"),
     dimmed: client.archivedAt !== null,
@@ -85,11 +84,6 @@ export default async function ClientsPage({
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-5">
-      {/*
-        No action button: the create flow is not built yet, and offering one
-        that 404s is worse than offering none. `<Can permission="client:create">`
-        returns here with it.
-      */}
       <PageHeader
         title={t("clients.title")}
         subtitle={`${formatNumber(page.total)} ${t("clients.title").toLowerCase()}`}

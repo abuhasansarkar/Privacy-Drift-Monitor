@@ -34,10 +34,9 @@ export default async function DashboardPage() {
     { key: "health", label: t("websites.columnHealth"), align: "end" },
   ];
 
-  // No `href` yet: the website detail page is still to be built, and a row that
-  // navigates to a 404 is worse than a row that does not navigate.
   const rows: Row[] = overview.needsAttention.map((site) => ({
     id: site.id,
+    href: `/app/websites/${site.id}`,
     primary: <span className="font-mono text-mono">{site.url}</span>,
     secondary: site.clientName,
     cells: {
