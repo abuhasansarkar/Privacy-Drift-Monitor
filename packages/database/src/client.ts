@@ -26,10 +26,10 @@ function createClient(): PrismaClient {
   // Query timing — feeds the db_query_duration_seconds histogram (PLAN.md §10.8).
   // Budget: p95 < 100 ms, p99 < 300 ms (§10.12).
   if (process.env.NODE_ENV === "development") {
-    // @ts-expect-error — the `query` event is only typed when log config is static
+    // `query` is typed here because the dev branch of the log config above declares
+    // `{ emit: "event", level: "query" }` — Prisma derives the $on event union from it.
     client.$on("query", (e: { query: string; duration: number }) => {
       if (e.duration > 100) {
-        // eslint-disable-next-line no-console
         console.warn(`[prisma] slow query ${e.duration}ms: ${e.query.slice(0, 200)}`);
       }
     });

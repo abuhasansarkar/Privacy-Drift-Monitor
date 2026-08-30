@@ -1,0 +1,110 @@
+name: PR
+
+# PLAN.md Part XII §12.3 (Phase 0 task 0.9) — six gates, all blocking.
+# lint · typecheck · test · build · secret scan · migration check
+# plus the terminology gate from Part I §1.12.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pdm
+          POSTGRES_PASSWORD: pdm
+          POSTGRES_DB: pdm_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pdm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pdm:pdm@localhost:5432/pdm_test
+      REDIS_URL: redis://localhost:6379
+      # Clerk/Stripe/etc. are not exercised in CI; placeholders keep config
+      # validation from failing the build.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
+      CLERK_SECRET_KEY: sk_test_ci
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ci-fixed-key-not-a-real-secret-000000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # `npm ci` requires package-lock.json to match package.json exactly.
+      # Regenerate the lockfile locally (`npm install`) and commit it whenever a
+      # dependency or workspace changes, or this step fails.
+      - name: Install
+        run: npm ci
+
+      # Must precede typecheck: packages/database imports types that only exist
+      # after the Prisma client is generated.
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Lint
+        run: npm run lint
+
+      # `npm run typecheck` runs `next typegen` first. That is load-bearing on a
+      # clean checkout: layouts and pages use the global `LayoutProps<'/'>` /
+      # `PageProps<'/route'>` helpers (§0.4), which Next writes into
+      # `.next/types` and which therefore do not exist until typegen, dev or
+      # build has run. Type-checking before that failed with "Cannot find name
+      # 'LayoutProps'" on every fresh CI run.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Terminology gate (Part I §1.12)
+        run: npm run check:terminology
+
+      # Phase 0 acceptance: "migrations apply cleanly to a fresh database".
+      - name: Migration check
+        run: npm run db:deploy
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

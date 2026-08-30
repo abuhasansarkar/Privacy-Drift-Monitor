@@ -35,6 +35,12 @@ Turbopack-only builds, two-argument `revalidateTag`. Do not rely on memory for t
 | `dataviz` | Before writing any chart — health-trend line, tracker donut, drift timeline, admin cost charts. Part XI §11.3 already fixes the palette; keep the two consistent. |
 | `artifact-design` | Before publishing any artifact page. |
 
+## Package manager
+
+**npm with npm workspaces.** Never suggest or run `pnpm` or `yarn` commands here, and never
+write `"workspace:*"` in a package.json — npm does not understand that protocol and will try
+the registry. Local packages depend on each other with `"*"`.
+
 ## Verification expectations
 
 - After UI work, run the app and look at it (`/run` skill) rather than asserting it renders.

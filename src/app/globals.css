@@ -1,26 +1,306 @@
 @import "tailwindcss";
 
+/*
+ * CLASS-DRIVEN DARK MODE.
+ *
+ * Required, not optional. Tailwind v4's `dark:` variant defaults to
+ * `prefers-color-scheme`, so without this every `dark:` utility in the app
+ * followed the OS while the `.dark` token block below followed the user's
+ * explicit choice in the user menu (§3.3) — two mechanisms disagreeing, and the
+ * token remapping never actually reached the utilities.
+ *
+ * `:where()` keeps specificity at zero so it never wins over a real selector.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens — PLAN.md Part XI §11.3.
+ *
+ * Tailwind v4: tokens are CSS custom properties surfaced to utilities via
+ * `@theme inline`. There is NO tailwind.config.js and there should not be one.
+ *
+ * RULES
+ *  - `--primary` is the ONLY accent. Status colours appear only in badges,
+ *    dots, pills and charts.
+ *  - Severity is NEVER conveyed by colour alone — colour + icon + text
+ *    (WCAG 1.4.1, §11.6). The tokens below are half of that contract.
+ *  - Severity tokens are deliberately distinct from status tokens. Do not
+ *    collapse them: "danger" is a UI state, "critical" is a finding severity.
+ */
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
+  /*
+   * The app-shell canvas sits one step back from `--background` so cards read
+   * as raised. UI_DESIGN_PROMPTS.md §1/§2 calls this "app canvas #FAFAFA" and
+   * builds every `/app` and `/admin` screen on it; it needs a token or the
+   * prompt pack and the code disagree the moment the AppShell lands.
+   */
+  --canvas: #fafafa;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #2563eb;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-muted: #f0fdf4;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --warning-muted: #fffbeb;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --danger-muted: #fef2f2;
+  --info: #0891b2;
+  --info-foreground: #ffffff;
+  --info-muted: #ecfeff;
+
+  /* Finding severity — paired with ShieldAlert / AlertTriangle / AlertCircle / Info / Circle */
+  --severity-critical: #b91c1c;
+  --severity-critical-bg: #fef2f2;
+  --severity-high: #ea580c;
+  --severity-high-bg: #fff7ed;
+  --severity-medium: #ca8a04;
+  --severity-medium-bg: #fefce8;
+  --severity-low: #0284c7;
+  --severity-low-bg: #f0f9ff;
+  --severity-info: #64748b;
+  --severity-info-bg: #f8fafc;
+
+  /* Privacy Health Score bands (§11.3, feature 11) */
+  --score-excellent: #16a34a; /* 90–100 */
+  --score-good: #65a30d;      /* 75–89  */
+  --score-fair: #ca8a04;      /* 50–74  */
+  --score-poor: #ea580c;      /* 25–49  */
+  --score-critical: #b91c1c;  /* 0–24   */
+
+  --radius: 0.5rem;
+}
+
+/*
+ * Dark mode is CLASS-driven, not media-driven, because the user menu offers an
+ * explicit theme choice (§3.3). A `prefers-color-scheme` media query would
+ * override that choice.
+ */
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  /* On dark, canvas and background converge — cards carry the separation. */
+  --canvas: #09090b;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
+  --muted: #1f1f23;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #3b82f6;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  --success: #22c55e;
+  --success-foreground: #052e16;
+  --success-muted: #0d2818;
+  --warning: #f59e0b;
+  --warning-foreground: #451a03;
+  --warning-muted: #2c1c06;
+  --danger: #ef4444;
+  --danger-foreground: #450a0a;
+  --danger-muted: #2a1113;
+  --info: #06b6d4;
+  --info-foreground: #083344;
+  --info-muted: #0a2830;
+
+  --severity-critical: #f87171;
+  --severity-critical-bg: #2a1113;
+  --severity-high: #fb923c;
+  --severity-high-bg: #2a1a0d;
+  --severity-medium: #facc15;
+  --severity-medium-bg: #292009;
+  --severity-low: #38bdf8;
+  --severity-low-bg: #0c2231;
+  --severity-info: #94a3b8;
+  --severity-info-bg: #1a1f27;
+
+  --score-excellent: #22c55e;
+  --score-good: #84cc16;
+  --score-fair: #eab308;
+  --score-poor: #fb923c;
+  --score-critical: #ef4444;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-muted: var(--danger-muted);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-muted: var(--info-muted);
+
+  --color-severity-critical: var(--severity-critical);
+  --color-severity-critical-bg: var(--severity-critical-bg);
+  --color-severity-high: var(--severity-high);
+  --color-severity-high-bg: var(--severity-high-bg);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-medium-bg: var(--severity-medium-bg);
+  --color-severity-low: var(--severity-low);
+  --color-severity-low-bg: var(--severity-low-bg);
+  --color-severity-info: var(--severity-info);
+  --color-severity-info-bg: var(--severity-info-bg);
+
+  --color-score-excellent: var(--score-excellent);
+  --color-score-good: var(--score-good);
+  --color-score-fair: var(--score-fair);
+  --color-score-poor: var(--score-poor);
+  --color-score-critical: var(--score-critical);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /*
+   * TYPE SCALE — §11.2, and the same numbers UI_DESIGN_PROMPTS.md §1 encodes.
+   *
+   * These were missing: the `@layer base` comment below already told people to
+   * "opt up to `text-body-lg`" on marketing surfaces, but no such utility
+   * existed, so the class silently did nothing.
+   *
+   * Weight is part of the token because §11.2 defines it that way — `text-h1`
+   * is 30/38 semibold, not 30/38 at whatever weight you inherited. Override
+   * with `font-normal` on the rare occasion you need to.
+   */
+  --text-display: 3rem; /* 48/56 */
+  --text-display--line-height: 3.5rem;
+  --text-display--font-weight: 700;
+
+  --text-h1: 1.875rem; /* 30/38 */
+  --text-h1--line-height: 2.375rem;
+  --text-h1--font-weight: 600;
+
+  --text-h2: 1.5rem; /* 24/32 */
+  --text-h2--line-height: 2rem;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 1.25rem; /* 20/28 */
+  --text-h3--line-height: 1.75rem;
+  --text-h3--font-weight: 600;
+
+  --text-h4: 1rem; /* 16/24 */
+  --text-h4--line-height: 1.5rem;
+  --text-h4--font-weight: 600;
+
+  --text-body: 0.875rem; /* 14/22 — the default, see body below */
+  --text-body--line-height: 1.375rem;
+  --text-body--font-weight: 400;
+
+  --text-body-lg: 1rem; /* 16/26 — marketing body, client portal */
+  --text-body-lg--line-height: 1.625rem;
+  --text-body-lg--font-weight: 400;
+
+  --text-small: 0.8125rem; /* 13/20 */
+  --text-small--line-height: 1.25rem;
+  --text-small--font-weight: 400;
+
+  --text-caption: 0.75rem; /* 12/16 — labels, table headers, metadata */
+  --text-caption--line-height: 1rem;
+  --text-caption--font-weight: 500;
+
+  --text-mono: 0.8125rem; /* 13/20 — URLs, cookie names, selectors */
+  --text-mono--line-height: 1.25rem;
+  --text-mono--font-weight: 400;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Type scale — §11.2. Body is 14px/22 by default: this is a dense, technical
+ * product, not a marketing site. Marketing surfaces opt up to `text-body-lg`.
+ */
+@layer base {
+  * {
+    border-color: var(--border);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.5714; /* 22px */
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /*
+   * §11.6: a 2px focus ring with 2px offset on every focusable element, and it
+   * is NEVER removed. If you find yourself writing `outline: none`, stop.
+   */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* §11.6 — reduced motion disables transitions and animated counters. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

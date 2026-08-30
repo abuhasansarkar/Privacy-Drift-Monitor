@@ -1,7 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+# NOT `/node_modules` — that only anchors the repo root, so npm workspaces'
+# `packages/*/node_modules` were tracked and got committed.
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -30,9 +32,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — secrets stay out, the template stays in.
+# `.env.example` is the canonical variable list (Part X §10.10) and AGENTS.md
+# points new contributors at it; `.env*` alone was silently excluding it.
 .env*
-.env.local
+!.env.example
 
 
 # vercel

@@ -51,22 +51,58 @@ phase doc, pick a task, then open the feature doc it points to for the full spec
 
 ## Current status
 
-**Phase 0 is in progress.** The scaffold is still flat (`src/` at the repo root, not yet moved
-to `apps/web/`), but several Phase 0 tasks have landed. Nothing in `features/` is built.
+**Phase 0 is in progress.** The repo layout is settled: the Next.js app stays at the root
+(`src/`), only `packages/*` are workspace members, no Turborepo — see PLAN.md §10.9.
 
-Done so far:
+> This table is the single status source for Phase 0. `phases/phase-0-foundation.md`
+> holds the step detail; if the two ever disagree, fix the phase doc.
 
 | Task | State | Note |
 |---|---|---|
-| 0.1 monorepo conversion | 🟡 | `pnpm-workspace.yaml`, `turbo.json`, `.npmrc`, `packages/config` exist — but `src/` has **not** been moved to `apps/web/`, and the root `package.json` is still the Next app |
-| 0.6 Clerk integration | 🟡 | `proxy.ts`, `(auth)/login` + `(auth)/signup` catch-alls, `ClerkProvider`, `SiteHeader`, and a Clerk-only `server/auth/context.ts` are in place. **Missing:** webhook sync and the real `requireAgencyContext()` — both blocked on 0.3 |
+| 0.1 repo structure | ✅ | npm workspaces (`packages/*`), `.npmrc`. **No `apps/` move — decision reversed.** No `turbo.json`; a single package has nothing to orchestrate. `pnpm-workspace.yaml` is an inert tombstone still awaiting `rm` |
+| 0.2 `packages/*` scaffolding | 🟡 | `config`, `database`, `shared`, `schemas`, `scanner` exist. Remaining: `ai`, `billing`, `email`, `reports`, `storage`, `ui` |
+| 0.3 `packages/database` | 🟡 | Full `schema.prisma`, `client.ts`, `tenant.ts` (`forAgency`), `testing/factories.ts`, seed + ~250-vendor `trackers.json`, `__tests__/tenancy.test.ts`, `__tests__/enum-parity.test.ts`. A migration exists under `prisma/migrations/`. **Unverified:** the suites have never been run |
+| 0.4 `packages/shared` | 🟡 | `errors`, `logger`, `permissions`, `flags`, `url/normalize`, `copy/terminology`, `copy/en.ts` + `t()` + unit tests + `scripts/check-terminology.ts` written. Remaining: rate limiter, circuit breaker |
+| 0.5 `packages/schemas` | 🟡 | Enums (parity-tested against Prisma) + shared Zod primitives written |
+| 0.6 Clerk integration | 🟡 | `proxy.ts`, `(auth)` catch-alls, `ClerkProvider`, `server/auth/context.ts` with `requireAgencyContext`/`requirePermission`/`requireWebsiteAccess` in place. `POST /api/webhooks/clerk` written (`verifyWebhook` from `@clerk/nextjs/webhooks` + Zod payload schemas in `@pdm/schemas/clerk`; env var is `CLERK_WEBHOOK_SIGNING_SECRET`) — **never exercised against a real Clerk event** |
 | 0.7 docker-compose | ✅ | postgres, redis, minio (+ bucket init), mailpit |
-| `.env.example` | ✅ | Canonical list per Part X §10.10 |
-| 0.2–0.5, 0.8–0.10 | ⬜ | Not started |
+| 0.8 design system | 🟡 | Tokens, `@custom-variant dark`, focus ring, reduced-motion and the type scale are in `globals.css`; Inter + JetBrains Mono wired via `next/font/google`; `ThemeProvider` (`src/components/theme-provider.tsx`, no next-themes) sets the `.dark` class pre-hydration and exposes `useTheme()`. Remaining: shadcn install, base components, and the `next/font/local` swap §11.2 specifies |
+| 0.9 CI | 🟡 | `.github/workflows/pr.yml` written, never executed |
+| 0.10 observability | 🟡 | `src/instrumentation.ts` (`register` + `onRequestError`), `/api/health`, `/api/health/ready` written. Sentry deferred to Phase 7 — the DSN is empty until then |
+| 0.11 route groups | 🟡 | `SiteHeader` is out of the root layout, so marketing chrome no longer leaks into `/app`. **Remaining:** `git mv src/app/page.tsx src/app/(marketing)/page.tsx` plus a `(marketing)/layout.tsx`, and the `(app)`/`(admin)`/`(portal)` groups |
 
-**Immediate next:** finish 0.1 (move `src/` → `apps/web/`) *before* starting 0.3, because
-`packages/database` belongs in the workspace and restructuring after Prisma and the worker
-exist is far more disruptive.
+> ⚠️ **Almost nothing in this phase has been verified.** `npm run verify` — lint,
+> typecheck, terminology, test, build — has never completed against this tree. Every 🟡
+> means "code written", not "code working". Treat the whole phase as unverified until the
+> commands in §"Verifying Phase 0" below have been run and pass.
+
+**Immediate next:** run the verification commands and fix what they surface, then finish
+0.2 (remaining packages), 0.6 (Clerk webhook sync) and 0.11 (the file move).
+
+## Verifying Phase 0
+
+**Package manager: npm** (npm workspaces). Not pnpm, not yarn.
+
+```bash
+docker compose up -d                 # postgres, redis, minio, mailpit
+npm install                          # vitest, tsx, and the workspace links
+npm run db:generate                  # prisma generate — required before typecheck
+npm run db:migrate                   # applies prisma/migrations to your local database
+npm run verify                       # lint → typecheck → terminology → test → build
+```
+
+Run them in that order. Two ordering constraints are real, not stylistic:
+
+- `typecheck` fails before `db:generate`, because `packages/database` imports types
+  Prisma has not emitted yet — and `__tests__` read `Prisma.dmmf`, which only the
+  generated client carries.
+- `typecheck` runs `next typegen` for you (see the root `typecheck` script). Layouts and
+  pages use the global `LayoutProps<'/'>` / `PageProps<'/route'>` helpers, which live in
+  `.next/types` and do not exist on a clean checkout.
+
+`npm run verify` is the whole gate in one command; run the steps individually
+(`npm run lint`, `npm run typecheck`, `npm test`, `npm run build`) when you want
+to see which one fails first without the others masking it.
 
 | Phase | Goal | Status |
 |---|---|---|

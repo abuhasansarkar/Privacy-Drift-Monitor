@@ -21,17 +21,36 @@ client reports.
 
 ## Current state — read this before claiming anything exists
 
-This repo is **greenfield**. It contains a stock `create-next-app` scaffold and two planning
-documents. There is no product code yet.
+**Phase 0 is in progress. A fair amount of code is written; almost none of it is verified.**
 
 | | |
 |---|---|
-| Exists | `src/app/` (default scaffold page + layout), `src/app/globals.css`, `next.config.ts` (empty), `tsconfig.json`, `eslint.config.mjs`, `PLAN.md`, `UI_DESIGN_PROMPTS.md`, `dev-doc/` |
-| Does **not** exist yet | the monorepo (`apps/`, `packages/`), Prisma schema, the worker, the scanner, auth, billing, any route group, any UI component |
+| Written, **not yet run** | `packages/database` (schema, `client.ts`, `tenant.ts`, factories, seed + `trackers.json`, tenancy + enum-parity suites, a migration under `prisma/migrations/`), `packages/shared` (errors, logger, permissions, flags, url/normalize, copy + `t()`), `packages/schemas`, `packages/scanner` (SSRF guard + vector suite), `packages/config`, design tokens in `globals.css`, `src/proxy.ts`, `(auth)` routes, `src/server/auth/context.ts`, `src/instrumentation.ts`, health routes, the public homepage, CI workflow |
+| Exists and works | `.npmrc`, `docker-compose.yml`, `.env.example`, `tsconfig.json`, `eslint.config.mjs`, `PLAN.md`, `dev-doc/`, `UI_DESIGN_PROMPTS.md` |
+| Does **not** exist | the worker, the scan pipeline, the repository layer, route groups beyond `(auth)`, any `/app` page, the Clerk webhook handler, shadcn / the component library, billing, AI |
 
-Everything in `PLAN.md` Part XII §12.1 is a **target**, not a description. Never write or
-speak about planned architecture as if it were already built, and never import from a path
-that does not exist yet.
+"Written, not yet run" means `npm install`, `prisma generate`, `prisma migrate`, `npm test`
+and `npm run build` have never completed against it. **Do not describe any of it as working**,
+and do not report a task as done on the strength of the code existing — `dev-doc/README.md`
+carries the per-task status and the verification commands.
+
+`pnpm-workspace.yaml` is an inert tombstone awaiting deletion; the workspace is npm.
+
+## Repository layout — read this before writing a path
+
+There is **no `apps/` directory**. PLAN.md §10.9 supersedes §12.1 on this point:
+
+```
+drift-monitor/
+├── src/          Next.js app — default create-next-app layout, `@/*` → `./src/*`
+├── packages/     pnpm workspace members, shared with the Phase 2 worker
+├── worker/       separate Node process — added in Phase 2, does not exist yet
+└── package.json  one package; no Turborepo
+```
+
+`PLAN.md` §12.1 still prints the old `apps/web/…` tree with a superseded banner on top. Its
+**module map and public interfaces remain binding** — only strip the `apps/web/` prefix.
+So: `src/proxy.ts`, not `apps/web/src/proxy.ts`.
 
 ## PLAN.md is the source of truth
 
@@ -148,6 +167,21 @@ often in this codebase:
 
 The full verified table is `PLAN.md` Part 0 §0.4 and is binding.
 
+## Clerk v7 (Core 3) — what differs from training data
+
+`@clerk/nextjs@^7` is **Clerk Core 3**, which removed API that every tutorial still shows.
+
+- **`<SignedIn>` and `<SignedOut>` are GONE.** They are not deprecated — they throw at
+  render time and return a 500. The replacement is one component:
+  `<Show when="signed-in">` / `<Show when="signed-out">`, imported from `@clerk/nextjs`.
+  It takes a `fallback` prop. See `src/components/site-header.tsx`.
+- `<Show>` resolves auth state **on the server**, so any route that renders it opts out of
+  static prerendering. Marketing pages that must prerender (§3.2) need the auth controls in
+  a `"use client"` island using `useAuth()` instead.
+
+If a Clerk symbol is not in the installed package, check
+`node_modules/@clerk/nextjs/dist/types/index.d.ts` rather than assuming a rename.
+
 ## Engineering conventions
 
 **Code**
@@ -155,6 +189,9 @@ The full verified table is `PLAN.md` Part 0 §0.4 and is binding.
   suppression that names the reason.
 - No business logic inside React components. Components render; `packages/*` and
   `src/server/*` decide.
+- **Never import the raw `prisma` client in application code.** Use
+  `forAgency(agencyId)` from `@pdm/database/tenant`. `unsafeGlobalClient(reason)` exists for
+  schedulers, retention sweeps and admin surfaces, and every call site is justified in review.
 - Domain-oriented modules, small and focused. Centralized Zod validation, centralized
   authorization, centralized error handling.
 
@@ -199,14 +236,26 @@ Two known defects inherited from `create-next-app`, both specified in Part XI §
 
 ## Commands
 
-Package manager is **npm** (`package-lock.json`, lockfileVersion 3).
+Package manager is **npm**, using **npm workspaces** (`package-lock.json`, lockfileVersion 3).
+Never use pnpm or yarn here — `pnpm-workspace.yaml` is an inert tombstone pending deletion.
 
 ```bash
-npm run dev      # next dev (Turbopack)
-npm run build    # next build (Turbopack)
-npm run start    # next start
-npm run lint     # eslint, flat config — `next lint` no longer exists
+npm install
+npm run db:generate     # prisma generate — REQUIRED before typecheck
+npm run db:migrate      # prisma migrate dev
+npm run dev             # next dev (Turbopack)
+npm run build           # next build (Turbopack)
+npm run lint            # eslint flat config — `next lint` no longer exists
+npm run typecheck       # root + every workspace package
+npm test                # vitest; DB-backed suites need `docker compose up -d`
+npm run check:terminology
+npm run verify          # all gates in sequence
 ```
+
+Workspace-scoped: `npm run <script> -w @pdm/<pkg>`, `npm install <dep> -w @pdm/<pkg>`.
+
+After changing any dependency, run `npm install` and **commit `package-lock.json`** — CI
+uses `npm ci`, which fails if the lockfile has drifted.
 
 ## Definition of done
 

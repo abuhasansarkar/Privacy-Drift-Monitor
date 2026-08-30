@@ -1,8 +1,15 @@
 # Phase 2 — The Scanner
 
 > **Goal:** a real scan runs end to end and stores evidence.
-> **Dependencies:** Phase 1 · **Status:** ⬜ Not started
+> **Dependencies:** Phase 1 (task 1.1 only — **the rest of Phase 1 is not built**)
+> **Status:** 🟡 Started out of order
 > **⚠️ The highest-risk phase in the project.**
+>
+> **Started with the parts that need no browser and no database**, because they are
+> foundational and fully testable today:
+> `privacy/sanitize.ts` (§10.6), `types.ts` (state derivation + retry classification), and
+> the §10.3 port allowlist the SSRF guard was missing. Everything from 2.1 onward needs
+> dependencies that are not installed — see "What is needed next" below.
 > **Plan ref:** Part XII §12.3 (Phase 2), Part IV (all), Part VII (queues), Part X §10.3–§10.6
 
 This is the product. Everything else is a presentation layer over what this subsystem
@@ -28,6 +35,24 @@ records. `packages/scanner` must be independently testable **without a database*
 | 2.14 | **Fixture server + F01–F30** | L | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
 | 2.15 | Scan detail page + evidence viewer (virtualized) | L | [07-evidence-system](../features/07-evidence-system.md) | ⬜ |
 | 2.16 | Scan progress UI (live stages) | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
+
+## What is needed next
+
+Nothing past this point can be written honestly without these. All three are runtime
+dependencies of `packages/scanner` or `worker/`, and none is installed:
+
+```bash
+npm install playwright -w @pdm/scanner       # 2.2 pool, 2.3 recorders, 2.5 navigation
+npx playwright install --with-deps chromium  # the browser itself, ~400 MB
+npm install bullmq ioredis -w @pdm/scanner   # 2.1 worker queues
+```
+
+`worker/` does not exist yet either — §10.9 defers it to this phase, so 2.1 creates it as a
+sibling of `src/`, not a workspace package.
+
+Also required before 2.11 (evidence persistence) can be tested end to end: `docker compose up -d`
+for Postgres, Redis and MinIO, and a verified Phase 0/1 (`npm run verify` has still never
+passed against this tree).
 
 ## Order of attack
 

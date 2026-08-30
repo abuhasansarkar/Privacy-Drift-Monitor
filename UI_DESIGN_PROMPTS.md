@@ -3,6 +3,12 @@
 > Companion to `PLAN.md`. Every prompt below is derived from Part III (Information Architecture & Page Specifications) and Part XI (Design System & UX).
 > Purpose: generate the complete visual design of the product with an image-generation model, consistently, screen by screen.
 
+> **Token source of truth:** `src/app/globals.css`. Every hex value, radius and type size in
+> §1 is copied from there. When you change a token in the CSS, change it here in the same
+> commit — a design pack that disagrees with the code generates mockups nobody can build.
+> Screen content is bound by `PLAN.md` Part III; status words are bound by the Prisma enums
+> in `packages/database/prisma/schema.prisma`.
+
 ---
 
 ## 0. How to use this pack
@@ -99,10 +105,18 @@ Replace the VISUAL SYSTEM paragraph with:
 ```
 VISUAL SYSTEM: dark theme. App canvas #09090B, cards #18181B with 1px #27272A borders and
 8px radius, muted surfaces #1F1F23. Text: primary #FAFAFA, secondary #A1A1AA. ONE accent
-colour: blue #3B82F6. Status and severity colours are the same hues lifted for contrast on
-dark (green #22C55E, amber #F59E0B, red #EF4444, cyan #06B6D4). Deep, calm, low-glare —
-absolutely no neon glow and no colour bleed.
+colour: blue #3B82F6. Status colours lifted for contrast on dark: success green #22C55E,
+warning amber #F59E0B, danger red #EF4444, info cyan #06B6D4.
+SEVERITY SCALE on dark: critical #F87171 on #2A1113, high #FB923C on #2A1A0D,
+medium #FACC15 on #292009, low #38BDF8 on #0C2231, info #94A3B8 on #1A1F27.
+SCORE BANDS on dark: 90-100 #22C55E, 75-89 #84CC16, 50-74 #EAB308, 25-49 #FB923C,
+0-24 #EF4444.
+Deep, calm, low-glare — absolutely no neon glow and no colour bleed.
 ```
+
+> The dark severity and score values above are the `.dark` block in
+> `src/app/globals.css`. They were previously missing here, so dark-theme screens were being
+> generated with the light-theme severity hues, which fail contrast on #09090B.
 
 ---
 
@@ -146,7 +160,7 @@ Reusable phrases — drop these into any screen prompt instead of re-describing 
 | **Score ring** | `a 64px circular progress ring showing "82" in the centre in 24px semibold with the word "Health" beneath in 11px muted caps, the ring stroke 6px, coloured by score band, remaining track in #E4E4E7` |
 | **Severity badge** | `a small 22px pill badge with a coloured dot, a thin icon and a short label — "Critical" on #FEF2F2 with #B91C1C text, "High" on #FFF7ED, "Medium" on #FEFCE8, "Low" on #F0F9FF` |
 | **Stat tile** | `a white card, 12px uppercase muted label at top, a 30px semibold figure below, and a small green or red trend chevron with a percentage beside it` |
-| **Consent phase matrix** | `a four-row result matrix, one row per consent journey — "No consent", "Reject All", "Accept All", "Withdraw" — each row with the action taken, a result summary, and a green check, red cross or grey dash icon; a grey dash means "Could not be determined"` |
+| **Consent phase matrix** | `a four-row result matrix, one row per consent journey — "No consent", "Reject All", "Accept All", "Withdraw" — each row with the action taken, a result summary, and an outcome cell that is ALWAYS an icon PLUS a word: a filled red dot with "Detected", a hollow grey ring with "Not detected", a grey dash with "Could not be determined". Never a green tick or a red cross.` |
 | **Drift diff card** | `a card with a date and site name, a coloured change-type badge, a one-line human summary, and a two-column before/after mini-table where added rows have a green "+" and a #F0FDF4 tint and removed rows a red "−" and a #FEF2F2 tint` |
 | **Evidence row** | `a dense monospace table row: time offset "1842ms", method "GET", a truncated URL in JetBrains Mono, resource type, status 200, size, a "3rd party" chip and a red "Before consent" chip` |
 | **Tracker chip** | `a small rounded chip with a 16px square vendor favicon placeholder, the vendor name, and a category badge such as "Marketing", "Analytics" or "Essential"` |
@@ -389,7 +403,8 @@ Changes, Scans, Evidence, Reports, AI, Settings — with Overview active (blue u
 Content, a two-column grid of cards: "Score breakdown" with five weighted component rows
 each showing a mini horizontal bar and a point contribution; "Open issues by severity" with
 four counter rows; "Trackers by category" with a donut chart and a small legend;
-"Consent test results" as a four-row phase matrix with check, cross and dash icons;
+"Consent test results" as a four-row phase matrix (see the Consent phase matrix lexicon
+entry — outcome icon plus word, never a tick or a cross);
 "30-day score" as a wide sparkline; "Latest banner screenshot" as a bordered thumbnail of a
 generic cookie banner; and "What changed since last scan" as a small green/red diff list.
 ```
@@ -427,9 +442,11 @@ in 20px semibold, a version chip "v7.2", and a "Detection confidence 96%" pill.
 Below, four large phase result cards stacked vertically, each split into three columns:
 LEFT a phase name and number ("1. No consent", "2. Reject All", "3. Accept All",
 "4. Withdraw"); MIDDLE a short "What we did" description in muted text; RIGHT a result line
-with a bold count and an outcome icon — a red cross for "3 marketing trackers fired", a red
-cross for "1 marketing tracker still firing", a green check for "14 trackers fired
-(expected)", and a grey dash for "Could not be determined — preferences link not found".
+with a bold count, an outcome icon and an outcome WORD — a filled red dot + "Detected" for
+"3 marketing trackers fired", a filled red dot + "Detected" for "1 marketing tracker still
+firing", a hollow grey ring + "Expected" for "14 trackers fired after Accept All", and a
+grey dash + "Could not be determined" for "preferences link not found".
+No ticks, no crosses, no pass/fail badges anywhere on this screen (§11.1).
 Each card has a faint left border in its outcome colour and a small blue "View evidence →"
 link. To the right of the stack, a vertical strip of four bordered banner screenshot
 thumbnails, one per phase, each labelled.
@@ -464,14 +481,15 @@ tree, a small redacted headers list, and timing bars.
 
 ### 5.12 `/app/issues` — cross-portfolio issue queue
 ```
-SCREEN: the Issues queue. Page title "Issues" with a muted "38 open". Above the table, a row
+SCREEN: the Issues queue. Page title "Issues" with a muted "38 unresolved". Above the table, a row
 of saved-view pills — "All", "My critical issues", "New this week", "Unassigned", "Consent
 regressions" — with the second one active, plus a "Save view" ghost button. Beneath, a
 filter bar of six dropdown chips. A selection-aware toolbar is visible in a blue-tinted strip
 reading "4 selected" with ghost buttons "Acknowledge · Assign · Ignore · Resolve".
 The table: checkbox, "Severity" (badge with dot and icon), "Issue" (title in 14px medium
 with a monospace rule ID like "PDM-R014" in 12px muted beneath), "Website", "Client",
-"Status" (Open / Acknowledged / Resolved pill), "Assignee" (24px avatar), "First detected",
+"Status" (New / Acknowledged / Resolved pill — the first state is "New", matching the
+`IssueStatus` enum; there is no "Open"), "Assignee" (24px avatar), "First detected",
 "Last seen", "Age". Fourteen dense rows, four with checked checkboxes and a faint blue row
 tint.
 ```
@@ -481,7 +499,7 @@ tint.
 SCREEN: an issue detail page, single 900px content column with a sticky right rail.
 HEADER: a red "Critical" severity badge, a 30px semibold title "Meta Pixel observed before
 consent", a monospace rule ID chip, the website domain as a blue link, and on the right a
-"Status: Open" dropdown, an assignee avatar picker, and buttons "Acknowledge", "Resolve" and
+"Status: New" dropdown, an assignee avatar picker, and buttons "Acknowledge", "Resolve" and
 a "⋯" menu.
 Then a strictly ordered stack of bordered sections, each with a 12px uppercase muted section
 label:
@@ -660,10 +678,15 @@ active. Main area, two columns. LEFT, a form card: two logo upload tiles side by
 labelled "Logo (light)" and "Logo (dark)" each a dashed drop zone with a small placeholder
 mark; two colour fields each with a colour swatch button, a hex input in JetBrains Mono and
 a small green "AA contrast passes" chip; then inputs for company name, report footer text,
-custom disclaimer textarea, contact email, and portal subdomain with a muted
-".portal.driftmonitor.app" suffix. RIGHT, a sticky "Live preview" card showing two stacked
-mini mockups: a branded report cover and a branded portal header.
+custom disclaimer textarea, contact email, and a read-only portal link field showing
+"/portal/acme-dental" in JetBrains Mono with a small copy icon. RIGHT, a sticky "Live
+preview" card showing two stacked mini mockups: a branded report cover and a branded portal
+header.
 ```
+
+> This field used to read "portal subdomain … `.portal.driftmonitor.app`". PLAN.md §12.9 Q2
+> decided **no custom domains for v1** — the portal is path-based at `/portal`. Designing a
+> subdomain field would have shipped a control the product cannot honour.
 
 ### 5.27 `/app/settings/general` — generic settings template
 ```
@@ -889,6 +912,9 @@ Run each generated screen against this before accepting it:
 - [ ] Exactly **one** accent blue; status colours appear only in badges, dots and charts
 - [ ] Every severity shows **dot + icon + text** — never colour alone (Part XI §11.3, WCAG 1.4.1)
 - [ ] No pass/fail language anywhere — "Detected / Not detected / Could not be determined" (Part I §1.12)
+- [ ] No pass/fail **iconography** either: no green ticks or red crosses on a *result*. A tick
+      is only ever a progress marker ("this scan stage finished"), never a verdict (§11.1.4)
+- [ ] Status pills use the real enum words — issues start at **New**, not "Open"
 - [ ] No forbidden terminology in any visible string: *violation, illegal, GDPR breach, non-compliant, you must, confirmed*
 - [ ] AI output is visibly labelled and visually separated from deterministic content
 - [ ] Technical values are monospace; UI chrome is Inter

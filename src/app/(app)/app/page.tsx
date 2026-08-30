@@ -1,70 +1,150 @@
-import type { Metadata } from "next";
-import { getCurrentUser, requireUser } from "@/server/auth/context";
-
-export const metadata: Metadata = { title: "Dashboard" };
+import { t } from "@pdm/shared/copy";
+import { Can } from "@/components/can";
+import { ButtonLink } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { DataList, type Column, type Row } from "@/components/ui/data-list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { HealthScore } from "@/components/ui/health-score";
+import { PlusIcon } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/page-header";
+import { MutedBadge, SeverityBadge } from "@/components/ui/severity-badge";
+import { StatTile } from "@/components/ui/stat-tile";
+import { formatNumber } from "@/lib/format";
+import { requireAgencyContext } from "@/server/auth/context";
+import { getDashboardOverview } from "@/server/queries/dashboard";
 
 /**
- * Phase 0 placeholder. Proves the auth pipeline end to end:
- * proxy → layout gate → server-side identity resolution.
+ * DASHBOARD — §3.4, Phase 1 task 1.12.
  *
- * Replaced in Phase 3 by the real dashboard (PLAN.md §3.4): summary strip,
- * Attention Center, health trend, drift summary, activity feed.
+ * Context is re-resolved here rather than read from the layout: Next renders
+ * layouts and pages independently, so a page that trusts its layout's auth
+ * check is trusting something it cannot observe (§6.1).
+ *
+ * ⚠️ NO DRIFT CARD YET. The design has one; the drift tables arrive in Phase 3.
+ * Rendering "no changes detected" from a query that does not exist would be the
+ * UI asserting a scanner fact (P1), so the card is absent rather than empty.
  */
 export default async function DashboardPage() {
-  const { clerkUserId, clerkOrgId } = await requireUser();
-  const user = await getCurrentUser();
+  const ctx = await requireAgencyContext();
+  const overview = await getDashboardOverview(ctx);
+
+  const columns: Column[] = [
+    { key: "site", label: t("websites.columnWebsite") },
+    { key: "issues", label: t("dashboard.openIssues") },
+    { key: "health", label: t("websites.columnHealth"), align: "end" },
+  ];
+
+  // No `href` yet: the website detail page is still to be built, and a row that
+  // navigates to a 404 is worse than a row that does not navigate.
+  const rows: Row[] = overview.needsAttention.map((site) => ({
+    id: site.id,
+    primary: <span className="font-mono text-mono">{site.url}</span>,
+    secondary: site.clientName,
+    cells: {
+      issues: (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {site.criticalIssueCount > 0 ? (
+            <SeverityBadge severity="CRITICAL" count={site.criticalIssueCount} />
+          ) : null}
+          {site.openIssueCount > site.criticalIssueCount ? (
+            <MutedBadge>
+              {formatNumber(site.openIssueCount - site.criticalIssueCount)}
+            </MutedBadge>
+          ) : null}
+        </span>
+      ),
+      health: <HealthScore score={site.healthScore} />,
+    },
+  }));
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome{user?.firstName ? `, ${user.firstName}` : ""}
-        </h1>
-        <p className="mt-1 text-sm text-foreground/60">
-          Authentication is working. The real dashboard arrives in Phase 3.
-        </p>
+    <div className="mx-auto flex max-w-7xl flex-col gap-5">
+      <PageHeader
+        title={t("dashboard.title")}
+        subtitle={ctx.agencyName}
+        actions={
+          <Can role={ctx.role} permission="website:create">
+            <ButtonLink href="/app/websites/new" variant="primary">
+              <PlusIcon />
+              {t("dashboard.addWebsite")}
+            </ButtonLink>
+          </Can>
+        }
+      />
+
+      {/* 1 → 2 → 4 columns. Four tiles side by side is unreadable under ~700px. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label={t("dashboard.websitesMonitored")}
+          value={formatNumber(overview.websitesTotal)}
+          note={
+            <>
+              <MutedBadge>
+                {formatNumber(overview.websitesActive)} {t("monitoring.active")}
+              </MutedBadge>
+              {overview.websitesPaused > 0 ? (
+                <MutedBadge>
+                  {formatNumber(overview.websitesPaused)} {t("monitoring.paused")}
+                </MutedBadge>
+              ) : null}
+            </>
+          }
+        />
+        <StatTile
+          label={t("dashboard.openIssues")}
+          value={formatNumber(overview.openIssues)}
+          note={
+            overview.criticalIssues > 0 ? (
+              <SeverityBadge severity="CRITICAL" count={overview.criticalIssues} />
+            ) : null
+          }
+        />
+        <StatTile
+          label={t("dashboard.averageHealth")}
+          value={<HealthScore score={overview.averageHealthScore} showBand />}
+        />
+        <StatTile
+          label={t("clients.title")}
+          value={formatNumber(overview.clientsTotal)}
+        />
       </div>
 
-      <section className="rounded-lg border border-black/10 p-4 dark:border-white/10">
-        <h2 className="text-sm font-semibold">Session</h2>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-[10rem_1fr]">
-          <dt className="text-foreground/60">Email</dt>
-          <dd className="font-mono text-xs">
-            {user?.primaryEmailAddress?.emailAddress ?? "—"}
-          </dd>
-
-          <dt className="text-foreground/60">Clerk user id</dt>
-          <dd className="font-mono text-xs break-all">{clerkUserId}</dd>
-
-          <dt className="text-foreground/60">Clerk org id</dt>
-          <dd className="font-mono text-xs break-all">
-            {clerkOrgId ?? (
-              <span className="text-foreground/50">
-                none yet — created during onboarding, maps to Agency.clerkOrgId
-              </span>
-            )}
-          </dd>
-        </dl>
-      </section>
-
-      <section className="rounded-lg border border-dashed border-black/15 p-4 text-sm dark:border-white/15">
-        <h2 className="font-semibold">Next up</h2>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-foreground/70">
-          <li>
-            <code className="text-xs">packages/database</code> — Prisma schema,
-            first migration, tracker seed
-          </li>
-          <li>
-            Clerk webhook sync → <code className="text-xs">User</code>,{" "}
-            <code className="text-xs">Agency</code>,{" "}
-            <code className="text-xs">AgencyMember</code>
-          </li>
-          <li>
-            Swap <code className="text-xs">requireUser()</code> for{" "}
-            <code className="text-xs">requireAgencyContext()</code>
-          </li>
-        </ol>
-      </section>
+      <Card>
+        <CardHeader
+          title={t("dashboard.needsAttention")}
+          action={
+            <ButtonLink href="/app/websites" variant="ghost" size="sm">
+              {t("dashboard.viewAllWebsites")}
+            </ButtonLink>
+          }
+        />
+        {rows.length === 0 ? (
+          <EmptyState
+            title={t("dashboard.needsAttention")}
+            body={
+              overview.websitesTotal === 0
+                ? t("empty.noWebsites")
+                : t("dashboard.needsAttentionEmpty")
+            }
+            action={
+              overview.websitesTotal === 0 ? (
+                <Can role={ctx.role} permission="website:create">
+                  <ButtonLink href="/app/websites/new" variant="primary">
+                    <PlusIcon />
+                    {t("dashboard.addWebsite")}
+                  </ButtonLink>
+                </Can>
+              ) : null
+            }
+          />
+        ) : (
+          <DataList
+            caption={t("dashboard.needsAttention")}
+            columns={columns}
+            rows={rows}
+          />
+        )}
+      </Card>
     </div>
   );
 }

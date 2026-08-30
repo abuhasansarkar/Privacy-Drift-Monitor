@@ -26,7 +26,8 @@ Consistent ordering prevents rework:
 1. **Prisma schema + migration** — the shape of the data first (Part V)
 2. **Zod schemas** in `packages/schemas` — the contract
 3. **Repository** in `packages/database/src/repositories` — the only place raw Prisma is used
-4. **Service** in `apps/web/src/server/services` — orchestration, the only caller of repositories
+4. **Service** in `src/server/services` — orchestration, the only caller of repositories
+   (no `apps/web/` prefix — that directory does not exist, see PLAN.md §10.9)
 5. **API route or Server Action** — validation, authz, error boundary
 6. **UI** — components render; they never contain business logic
 7. **Tests** at each level as you go, not at the end
@@ -44,7 +45,8 @@ Consistent ordering prevents rework:
 From §12.3 Phase 0. Every one of these must pass before merge:
 
 - [ ] `lint` — eslint flat config (`next lint` no longer exists)
-- [ ] `typecheck` — TypeScript strict
+- [ ] `typecheck` — TypeScript strict. Runs `next typegen` first: `LayoutProps` /
+      `PageProps` live in `.next/types` and do not exist on a clean checkout
 - [ ] `test` — unit + integration
 - [ ] `build` — Turbopack production build
 - [ ] secret scan
@@ -54,6 +56,10 @@ From §12.3 Phase 0. Every one of these must pass before merge:
 **Coverage gate:** ≥ 85% on `packages/scanner` and `packages/billing`. These two are where a
 silent defect is most expensive — one produces false findings, the other produces wrong
 charges.
+
+⚠️ `vitest.config.ts` currently enforces the threshold on `packages/scanner` only. A coverage
+threshold whose glob matches nothing makes vitest fail the run, so `packages/billing` is
+added to `thresholds` **in the PR that creates the package** (Phase 6), not before.
 
 ## Testing ladder
 
@@ -98,18 +104,37 @@ Reviewers should reject a PR that:
 - Adds `tailwind.config.js` or a `webpack` key to `next.config.ts`
 - Conveys severity by colour alone
 - Puts business logic in a React component
+- Adds a tenant model to `schema.prisma` without adding it to `TENANT_MODELS`
+- Puts an internal identifier (a permission name, a resource id) in an
+  `expose: true` error message instead of the log-only `reason` option
+- Hardcodes a user-facing string in JSX instead of adding it to
+  `packages/shared/src/copy/en.ts` and reading it through `t()`
 
 ## Environment
 
+**Package manager: npm**, using npm workspaces. There is no pnpm and no Turborepo
+(PLAN.md §10.9). `pnpm-workspace.yaml` is an inert tombstone — delete it along with
+`pnpm-lock.yaml` if they are still present.
+
 ```bash
 docker compose up -d      # postgres, redis, minio, mailpit
-pnpm install
-pnpm dev                  # web + worker
-pnpm test / lint / typecheck / build
+npm install
+npm run db:generate       # required before typecheck — Prisma emits the types
+npm run dev               # web only; worker arrives in Phase 2
+npm run verify            # lint → typecheck → terminology → test → build
 ```
 
-> Until Phase 0 converts the scaffold to a pnpm + Turborepo monorepo, the commands are the
-> scaffold's npm scripts: `npm run dev | build | start | lint`.
+Workspace-scoped commands use `-w`:
+
+```bash
+npm run typecheck -w @pdm/database
+npm install zod -w @pdm/schemas
+npm run typecheck --workspaces --if-present   # every package
+```
+
+⚠️ `npm ci` (used by CI) requires `package-lock.json` to match `package.json`. After
+adding a dependency or a workspace, run `npm install` and **commit the updated lockfile**
+or the PR workflow fails at the install step.
 
 Environment variables: `.env.example` is the canonical list (Part X §10.10). Two that cause
 non-obvious production failures:

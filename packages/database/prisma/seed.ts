@@ -6,7 +6,7 @@
  *   2. Plan          — entitlements resolve from here (§9.2)
  *   3. FeatureFlag   — kill switches must exist before the features they gate (§11.13)
  *
- * Run: pnpm db:seed
+ * Run: npm run db:seed
  */
 
 import { readFileSync } from "node:fs";

@@ -5288,7 +5288,11 @@ public/free-scans/{token}/screenshot.webp        # 7-day lifecycle rule
 
 > **DECISION CHANGED (superseding the analysis below).** The project uses a **single
 > package at the repo root** — the default `create-next-app` layout with `src/` — plus
-> `packages/*` as pnpm workspace members for code shared with the Phase 2 worker:
+> `packages/*` as **npm workspace** members for code shared with the Phase 2 worker.
+>
+> **Package manager: npm.** Not pnpm, not yarn. The workspace list lives in the root
+> `package.json` `"workspaces"` field; dependencies between local packages use `"*"`
+> (npm has no `workspace:` protocol). Turborepo is not used.
 >
 > ```
 > drift-monitor/
@@ -5793,9 +5797,28 @@ Every flag has an owner and a removal date recorded in `/admin/feature-flags`. F
 
 ## 12.1 Repository Structure
 
+> ⚠️ **SUPERSEDED BY §10.9.** The `apps/` layer was dropped. The Next.js app lives
+> at the repo root in the default `create-next-app` layout, and only `packages/*`
+> are pnpm workspace members. Turborepo is not used.
+>
+> **Read every path below with `apps/web/` removed and `apps/worker/` → `worker/`:**
+>
+> | Written below | Actual path |
+> |---|---|
+> | `apps/web/src/app/…` | `src/app/…` |
+> | `apps/web/src/proxy.ts` | `src/proxy.ts` |
+> | `apps/web/src/server/…` | `src/server/…` |
+> | `apps/web/next.config.ts` | `next.config.ts` |
+> | `apps/worker/src/…` | `worker/src/…` (Phase 2) |
+> | `packages/*` | unchanged |
+>
+> The **module map, responsibilities and public interfaces** in this section are
+> unaffected — only the path prefix changed. The tree is retained below because
+> the route-group and package structure inside it is still binding.
+
 ```
 drift-monitor/
-├── apps/
+├── apps/                                     # ⚠️ SUPERSEDED — see the note above
 │   ├── web/                                  # Next.js 16 application
 │   │   ├── src/
 │   │   │   ├── app/
@@ -5939,7 +5962,7 @@ Effort: **S** (≤ 3 days), **M** (~1 week), **L** (~2 weeks), **XL** (~3–4 we
 
 | Task | Effort |
 |---|---|
-| Convert the scaffold to a pnpm + Turborepo monorepo; move `src/` → `apps/web/src/` | S |
+| ~~Convert the scaffold to a pnpm + Turborepo monorepo; move `src/` → `apps/web/src/`~~ **SUPERSEDED by §10.9** — npm workspaces, `src/` stays at the root, no Turborepo | S |
 | Create all ten `packages/*` with shared tsconfig/eslint presets, strict mode everywhere | S |
 | `packages/database`: Prisma init, full schema (Part V), first migration, seed script | M |
 | `packages/shared`: error taxonomy, Pino logger, rate limiter, circuit breaker, permissions, copy module | M |
@@ -5952,7 +5975,7 @@ Effort: **S** (≤ 3 days), **M** (~1 week), **L** (~2 weeks), **XL** (~3–4 we
 
 **Files:** `pnpm-workspace.yaml`, `turbo.json`, `packages/*/package.json`, `packages/database/prisma/schema.prisma`, `apps/web/src/proxy.ts`, `apps/web/src/app/globals.css`, `.github/workflows/pr.yml`.
 **DB:** initial migration, all models.
-**Acceptance:** `pnpm install && pnpm dev` boots web + worker · a user can sign up and reach an empty `/app` · `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build` all pass in CI · migrations apply cleanly to a fresh database · tenant-isolation test suite exists and passes (with zero models, trivially, but the harness is in place).
+**Acceptance:** `npm install && npm run dev` boots the web app (worker deferred to Phase 2 per §10.9) · a user can sign up and reach an empty `/app` · `npm run verify` (lint, typecheck, terminology, test, build) passes in CI · migrations apply cleanly to a fresh database · tenant-isolation test suite exists and passes (with zero models, trivially, but the harness is in place).
 
 ---
 

@@ -29,6 +29,9 @@ const isPublicRoute = createRouteMatcher([
   "/signup(.*)",
   "/api/webhooks(.*)",
   "/api/public(.*)",
+  // Liveness and readiness probes are called by the platform with no session.
+  // Gating these behind auth makes every deploy fail its health check.
+  "/api/health(.*)",
 ]);
 
 /**

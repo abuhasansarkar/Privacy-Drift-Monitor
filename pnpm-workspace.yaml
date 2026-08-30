@@ -1,18 +1,15 @@
-# The Next.js app lives at the repo root (default create-next-app structure).
-# `packages/*` holds code shared between the web app and the Phase 2 worker.
-packages:
-  - "packages/*"
-# Packages permitted to run install scripts.
-# Prisma MUST be allowed — its postinstall generates the client and fetches the
-# query engine binaries. Denying it produces "@prisma/client did not initialize yet".
-allowBuilds:
-  '@prisma/client': true
-  '@prisma/engines': true
-  prisma: true
-  esbuild: true          # required by tsx (seed script, tests)
-  unrs-resolver: true    # required by eslint-config-next's import resolver
-minimumReleaseAgeExclude:
-  - '@clerk/backend@3.16.13'
-  - '@clerk/nextjs@7.8.3'
-  - '@clerk/react@6.14.8'
-  - '@clerk/shared@4.30.2'
+# ⚠️ OBSOLETE — DELETE THIS FILE.
+#
+# This project uses **npm workspaces**, not pnpm. The workspace definition now
+# lives in the root package.json under the "workspaces" field.
+#
+#   rm pnpm-workspace.yaml pnpm-lock.yaml
+#
+# It is kept here only as a tombstone because the tooling that made the switch
+# could not delete files. npm ignores this file entirely; it is inert. The
+# settings it used to carry are no longer needed under npm:
+#
+#   allowBuilds          → npm runs postinstall scripts by default, so Prisma
+#                          generates its client without any allowlist.
+#   public-hoist-pattern → npm hoists to the root node_modules by default.
+#   minimumReleaseAge*   → pnpm-only policy, no npm equivalent.

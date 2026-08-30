@@ -1,7 +1,8 @@
 # Phase 1 — Core SaaS Shell
 
 > **Goal:** agencies can manage clients and websites. No scanning yet.
-> **Dependencies:** Phase 0 · **Status:** ⬜ Not started
+> **Dependencies:** Phase 0 (**written, not yet verified — nothing has been executed**)
+> **Status:** 🟡 In progress
 > **Plan ref:** Part XII §12.3 (Phase 1), Part III §3.3–§3.7, Part VI (auth, RBAC, API)
 
 The product becomes a real multi-tenant SaaS here. Everything in this phase is a prerequisite
@@ -11,13 +12,13 @@ for the scanner having somewhere to put its results.
 
 | # | Task | Effort | Feature doc | Status |
 |---|---|---|---|---|
-| 1.1 | Tenant extension `forAgency()` + repository layer + **tenant isolation suite over every model** | M | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | ⬜ |
-| 1.2 | RBAC: permission matrix, `requirePermission`, `<Can>` component | S | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | ⬜ |
+| 1.1 | Tenant extension `forAgency()` + repository layer + **tenant isolation suite over every model** | M | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | 🟡 `forAgency()`, isolation suite, enum-parity suite, and the `client` / `website` / `audit` repositories + their integration suite all written. **Unrun.** Remaining repositories (`scan`, `issue`, `drift`, `report`) arrive with the phases that need them |
+| 1.2 | RBAC: permission matrix, `requirePermission`, `<Can>` component | S | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | 🟡 Matrix + `requireAgencyContext`/`requirePermission`/`requireWebsiteAccess` + `<Can>` written (unrun) |
 | 1.3 | AppShell: sidebar, header, breadcrumbs, `⌘K` search, notification bell, user menu | M | [21-design-system](../features/21-design-system.md) | ⬜ |
 | 1.4 | Onboarding wizard (steps 1–6, 9) | M | [12-dashboard](../features/12-dashboard.md) | ⬜ |
 | 1.5 | Clients: CRUD, list, detail, assignment | M | [02-clients](../features/02-clients.md) | ⬜ |
 | 1.6 | Websites: CRUD, list (table + grid), filters, sort, bulk actions, groups, CSV import/export | L | [03-websites](../features/03-websites.md) | ⬜ |
-| 1.7 | URL validation service + **SSRF guard** with the full test-vector suite | M | [04-url-validation-ssrf](../features/04-url-validation-ssrf.md) | ⬜ |
+| 1.7 | URL validation service + **SSRF guard** with the full test-vector suite | M | [04-url-validation-ssrf](../features/04-url-validation-ssrf.md) | 🟡 `guard.ts` + `normalize.ts` + both vector suites written (unrun). **Not yet wired into any call site** |
 | 1.8 | Add Website wizard incl. the full validation error matrix | M | [03-websites](../features/03-websites.md) | ⬜ |
 | 1.9 | Team: invitations, members, role changes | M | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | ⬜ |
 | 1.10 | Settings: general, notifications, security (audit log viewer) | M | [01-tenancy-auth-rbac](../features/01-tenancy-auth-rbac.md) | ⬜ |

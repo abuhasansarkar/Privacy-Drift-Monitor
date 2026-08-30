@@ -2,36 +2,52 @@
   "name": "drift-monitor",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typegen": "next typegen",
+    "typecheck": "npm run typegen && tsc --noEmit && npm run typecheck --workspaces --if-present",
     "test": "vitest run",
-    "db:generate": "pnpm --filter @pdm/database generate",
-    "db:migrate": "pnpm --filter @pdm/database migrate",
-    "db:deploy": "pnpm --filter @pdm/database migrate:deploy",
-    "db:reset": "pnpm --filter @pdm/database migrate:reset",
-    "db:seed": "pnpm --filter @pdm/database seed",
-    "db:studio": "pnpm --filter @pdm/database studio"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check:terminology": "tsx scripts/check-terminology.ts",
+    "verify": "npm run lint && npm run typecheck && npm run check:terminology && npm run test && npm run build",
+    "db:generate": "npm run generate -w @pdm/database",
+    "db:migrate": "npm run migrate -w @pdm/database",
+    "db:deploy": "npm run migrate:deploy -w @pdm/database",
+    "db:reset": "npm run migrate:reset -w @pdm/database",
+    "db:seed": "npm run seed -w @pdm/database",
+    "db:studio": "npm run studio -w @pdm/database"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.3",
-    "@pdm/database": "workspace:*",
+    "@pdm/database": "*",
+    "@pdm/scanner": "*",
+    "@pdm/schemas": "*",
+    "@pdm/shared": "*",
     "next": "16.3.3",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^3",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^5",
+    "vitest": "^3"
   },
   "engines": {
     "node": ">=20.9.0"
