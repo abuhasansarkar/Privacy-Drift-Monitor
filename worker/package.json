@@ -13,7 +13,8 @@
     "@pdm/scanner": "*",
     "@pdm/shared": "*",
     "@pdm/database": "*",
-    "@pdm/storage": "*"
+    "@pdm/storage": "*",
+    "@pdm/analysis": "*"
   },
   "devDependencies": {
     "@pdm/config": "*",

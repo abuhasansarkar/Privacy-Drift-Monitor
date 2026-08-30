@@ -9,7 +9,9 @@ import { PlusIcon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { MutedBadge, SeverityBadge } from "@/components/ui/severity-badge";
 import { StatTile } from "@/components/ui/stat-tile";
+import { HealthTrend } from "@/components/dashboard/health-trend";
 import { formatNumber } from "@/lib/format";
+import { DRIFT_CHANGE_LABEL } from "@/lib/labels";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getDashboardOverview } from "@/server/queries/dashboard";
 
@@ -20,9 +22,9 @@ import { getDashboardOverview } from "@/server/queries/dashboard";
  * layouts and pages independently, so a page that trusts its layout's auth
  * check is trusting something it cannot observe (§6.1).
  *
- * ⚠️ NO DRIFT CARD YET. The design has one; the drift tables arrive in Phase 3.
- * Rendering "no changes detected" from a query that does not exist would be the
- * UI asserting a scanner fact (P1), so the card is absent rather than empty.
+ * ⚠️ EVERY NUMBER HERE IS A QUERY, and the ones that cannot exist yet are
+ * nullable rather than zero. An unscanned portfolio shows "—" for health, not
+ * 0 — a zero is a measurement, and we have not taken one (P1).
  */
 export default async function DashboardPage() {
   const ctx = await requireAgencyContext();
@@ -57,7 +59,7 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       <PageHeader
         title={t("dashboard.title")}
         subtitle={ctx.agencyName}
@@ -103,9 +105,73 @@ export default async function DashboardPage() {
           value={<HealthScore score={overview.averageHealthScore} showBand />}
         />
         <StatTile
-          label={t("clients.title")}
-          value={formatNumber(overview.clientsTotal)}
+          label={t("dashboard.healthy")}
+          value={formatNumber(overview.websitesHealthy)}
+          note={
+            <>
+              {overview.websitesWarning > 0 ? (
+                <MutedBadge>
+                  {formatNumber(overview.websitesWarning)} {t("dashboard.warnings")}
+                </MutedBadge>
+              ) : null}
+              {overview.websitesCritical > 0 ? (
+                <SeverityBadge
+                  severity="CRITICAL"
+                  count={overview.websitesCritical}
+                />
+              ) : null}
+            </>
+          }
         />
+        <StatTile
+          label={t("dashboard.scansToday")}
+          value={formatNumber(overview.scansToday)}
+        />
+        <StatTile
+          label={t("dashboard.newIssues")}
+          value={formatNumber(overview.newIssues24h)}
+        />
+        <StatTile
+          label={t("dashboard.driftEvents")}
+          value={formatNumber(overview.driftEvents7d)}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader title={t("dashboard.healthTrend")} />
+          <HealthTrend points={overview.healthTrend} />
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={t("dashboard.recentDrift")}
+            action={
+              <ButtonLink href="/app/drift" variant="ghost" size="sm">
+                {t("dashboard.viewDriftFeed")}
+              </ButtonLink>
+            }
+          />
+          {overview.driftSummary.length === 0 ? (
+            <p className="px-4 py-6 text-center text-small text-muted-foreground">
+              {t("empty.noDrift")}
+            </p>
+          ) : (
+            <ul className="flex flex-col">
+              {overview.driftSummary.map((row) => (
+                <li
+                  key={row.changeType}
+                  className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
+                >
+                  <span className="min-w-0 flex-1 truncate text-small">
+                    {DRIFT_CHANGE_LABEL[row.changeType as never]}
+                  </span>
+                  <MutedBadge>{formatNumber(row.count)}</MutedBadge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
 
       <Card>

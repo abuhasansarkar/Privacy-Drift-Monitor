@@ -83,7 +83,7 @@ export default async function ClientsPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       <PageHeader
         title={t("clients.title")}
         subtitle={`${formatNumber(page.total)} ${t("clients.title").toLowerCase()}`}

@@ -67,10 +67,13 @@ export function issueRepository(db: TenantClient, agencyId: string) {
 
       // Ignore rules are read ONCE, outside the loop: they change rarely and
       // re-reading per finding would be a query per row.
+      const now = params.detectedAt;
       const ignoreRules = await db.ignoreRule.findMany({
         where: {
           OR: [{ websiteId: params.websiteId }, { websiteId: null }],
-          revokedAt: null,
+          // An expired suppression stops suppressing. A "mute for 30 days"
+          // that never wakes up is just a deletion with extra steps.
+          AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }],
         },
         select: { ruleId: true, fingerprint: true },
       });
@@ -78,8 +81,12 @@ export function issueRepository(db: TenantClient, agencyId: string) {
       const ignoredFingerprints = new Set(
         ignoreRules.map((rule) => rule.fingerprint).filter(Boolean) as string[],
       );
+      // A rule-scoped suppression (no fingerprint) mutes every finding from
+      // that rule; a fingerprint-scoped one mutes exactly one finding.
       const ignoredRuleIds = new Set(
-        ignoreRules.filter((rule) => !rule.fingerprint).map((rule) => rule.ruleId),
+        ignoreRules
+          .filter((rule) => !rule.fingerprint && rule.ruleId)
+          .map((rule) => rule.ruleId as string),
       );
 
       await db.$transaction(async (tx) => {
@@ -267,6 +274,38 @@ export function issueRepository(db: TenantClient, agencyId: string) {
     },
 
     /**
+     * Active suppressions, for the settings page.
+     *
+     * ⚠️ THIS PAGE IS WHY IGNORING IS SAFE. A suppression with no surface that
+     * lists it is a permanent silent hole in the monitoring — six months on,
+     * nobody knows why a site stopped reporting a finding. Being able to see
+     * and revoke them is what makes "ignore" a decision rather than a leak.
+     */
+    async listIgnoreRules(now: Date) {
+      return db.ignoreRule.findMany({
+        where: { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+        // `createdById` has no relation on IgnoreRule — the page resolves the
+        // name separately rather than the schema growing a foreign key for one
+        // settings screen.
+        include: { website: { select: { id: true, url: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+
+    /**
+     * Revokes a suppression by deleting it.
+     *
+     * ⚠️ The ISSUE is not reopened here. The finding reappears on the next scan
+     * that observes the behaviour — which is the honest sequence: we do not
+     * know the tracker is still there until we look again. Resurrecting the old
+     * issue would assert a fact from a stale scan (P1).
+     */
+    async revokeIgnoreRule(id: string): Promise<boolean> {
+      const { count } = await db.ignoreRule.deleteMany({ where: { id } });
+      return count > 0;
+    },
+
+    /**
      * Ignoring requires a REASON (§6.5) — it is a decision someone else will
      * have to understand later, and an unexplained suppression is
      * indistinguishable from a missed finding.
@@ -292,6 +331,10 @@ export function issueRepository(db: TenantClient, agencyId: string) {
           data: {
             agencyId,
             websiteId: issue.websiteId,
+            // Fingerprint-scoped: ignoring THIS finding, not every finding the
+            // rule can produce. Muting a whole rule is a separate, deliberate
+            // action on the settings page.
+            scope: "FINGERPRINT",
             ruleId: issue.ruleId,
             fingerprint: issue.fingerprint,
             reason,

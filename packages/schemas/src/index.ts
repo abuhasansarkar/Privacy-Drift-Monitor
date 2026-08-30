@@ -2,6 +2,7 @@ export * as clerk from "./clerk";
 export * as enums from "./enums";
 export * as primitives from "./primitives";
 export * as client from "./client";
+export * as issue from "./issue";
 export * as website from "./website";
 
 export type {
@@ -19,6 +20,8 @@ export type {
   Severity,
   TrackerCategory,
 } from "./enums";
+
+export type { IgnoreIssueInput, IssueListQuery } from "./issue";
 
 export type {
   ClientListQuery,

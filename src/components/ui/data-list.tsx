@@ -41,6 +41,15 @@ export interface Row {
   cells: Record<string, ReactNode>;
   /** Visually recede an archived or paused row without hiding it. */
   dimmed?: boolean;
+  /**
+   * Tints the row to draw the eye.
+   *
+   * ⚠️ A tint HIGHLIGHTS, it does not judge. §11.6 forbids conveying meaning by
+   * colour alone, so a tinted row must also carry a badge or chip that says
+   * what is notable about it — the colour is the second signal, never the only
+   * one, and never a verdict.
+   */
+  tone?: "warning";
 }
 
 const HIDE_BELOW: Record<NonNullable<Column["hideBelow"]>, string> = {
@@ -53,12 +62,26 @@ export function DataList({
   columns,
   rows,
   footer,
+  selection,
 }: {
   /** Screen-reader name for the table. Never rendered visually. */
   caption: string;
   columns: Column[];
   rows: Row[];
   footer?: ReactNode;
+  /**
+   * Row selection, owned by the CALLER.
+   *
+   * ⚠️ The table does not hold selection state. It renders a checkbox and
+   * reports a toggle; who is selected, and what may be done with them, is a
+   * decision with permissions attached and belongs to the client component
+   * that also renders the bulk bar.
+   */
+  selection?: {
+    selected: ReadonlySet<string>;
+    onToggle: (id: string) => void;
+    label: string;
+  };
 }) {
   // No border or background here: the caller wraps this in a `<Card>`, and a
   // second bordered box inside one draws a double rule at every edge.
@@ -70,6 +93,11 @@ export function DataList({
           <caption className="sr-only">{caption}</caption>
           <thead>
             <tr>
+              {selection ? (
+                // Header cell is empty on purpose: the select-all control lives
+                // in the bulk bar above, where its count is visible.
+                <th scope="col" className="w-9 ps-4" />
+              ) : null}
               <th
                 scope="col"
                 className="w-full px-4 py-2.5 text-start text-caption font-semibold uppercase tracking-wide text-muted-foreground"
@@ -97,9 +125,22 @@ export function DataList({
                 key={row.id}
                 className={cn(
                   "border-t border-border",
+                  row.tone === "warning" && "bg-warning-muted",
+                  selection?.selected.has(row.id) && "bg-primary/5",
                   row.dimmed && "opacity-60",
                 )}
               >
+                {selection ? (
+                  <td className="ps-4">
+                    <input
+                      type="checkbox"
+                      checked={selection.selected.has(row.id)}
+                      onChange={() => selection.onToggle(row.id)}
+                      aria-label={`${selection.label}: ${row.id}`}
+                      className="size-4 accent-primary"
+                    />
+                  </td>
+                ) : null}
                 <td className="px-4 py-3">
                   <RowIdentity row={row} />
                 </td>
@@ -129,9 +170,23 @@ export function DataList({
             className={cn(
               "border-b border-border p-4 last:border-b-0",
               row.dimmed && "opacity-60",
+              selection?.selected.has(row.id) && "bg-primary/5",
+              // The tint has to survive to the phone: a highlight that only
+              // exists at desktop width is a highlight half the readers never
+              // see.
+              row.tone === "warning" && "bg-warning-muted",
             )}
           >
             <div className="flex items-start gap-3">
+              {selection ? (
+                <input
+                  type="checkbox"
+                  checked={selection.selected.has(row.id)}
+                  onChange={() => selection.onToggle(row.id)}
+                  aria-label={`${selection.label}: ${row.id}`}
+                  className="mt-1 size-4 shrink-0 accent-primary"
+                />
+              ) : null}
               <div className="min-w-0 flex-1">
                 <RowIdentity row={row} />
               </div>

@@ -8,7 +8,7 @@ import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 export default function DashboardLoading() {
   return (
     <div
-      className="mx-auto flex max-w-7xl flex-col gap-5"
+      className="flex w-full flex-col gap-5"
       role="status"
       aria-label={t("a11y.loading")}
     >

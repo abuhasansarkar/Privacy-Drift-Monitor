@@ -223,12 +223,30 @@ export async function makeScanWithEvidence(
 }
 
 /** Truncates every table. Call between integration tests. */
+/**
+ * Seeded GLOBAL reference data. Never truncated.
+ *
+ * ⚠️ These are not test state — they are the catalogue `npm run db:seed`
+ * installs, and wiping them silently breaks the local app: with an empty
+ * `tracker_vendors` the classifier identifies nothing, every detection becomes
+ * "unknown third party", and no rule fires. That failure is invisible, because
+ * a scan with no findings looks exactly like a clean site.
+ *
+ * No test needs them empty — the tenancy suite upserts its own fixture vendor
+ * and the rest only read tenant tables.
+ */
+const SEEDED_REFERENCE_TABLES = ["tracker_vendors", "plans", "feature_flags"];
+
 export async function resetDatabase() {
   const tables = await prisma.$queryRaw<Array<{ tablename: string }>>`
     SELECT tablename FROM pg_tables
     WHERE schemaname = 'public' AND tablename NOT LIKE '_prisma%'
   `;
-  const list = tables.map((t) => `"public"."${t.tablename}"`).join(", ");
+  const list = tables
+    .map((t) => t.tablename)
+    .filter((name) => !SEEDED_REFERENCE_TABLES.includes(name))
+    .map((name) => `"public"."${name}"`)
+    .join(", ");
   if (list) {
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${list} CASCADE;`);
   }

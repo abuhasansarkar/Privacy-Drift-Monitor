@@ -12,6 +12,7 @@ import { runScan } from "@pdm/scanner/scan";
 import { objectStore } from "@pdm/storage";
 import { isRetryable, type ScanResult } from "@pdm/scanner/types";
 import { childLogger, logger } from "@pdm/shared/logger";
+import { analyseScan } from "./analysis";
 import { startScheduler } from "./scheduler";
 
 /**
@@ -101,6 +102,21 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
 
   const screenshotKeys = await uploadScreenshots(job.data, result);
   await persist(repos, result, screenshotKeys);
+
+  /*
+   * ⚠️ ANALYSIS RUNS AFTER THE EVIDENCE IS COMMITTED, AND ITS FAILURE DOES NOT
+   * FAIL THE SCAN (§3.8). The recording is the expensive, unrepeatable part; a
+   * rule that throws must not throw it away. A scan whose analysis failed shows
+   * its evidence with no issues yet, and analysis can be re-run over the stored
+   * rows — which is the whole reason the two are separate steps.
+   */
+  if (result.status !== "FAILED") {
+    try {
+      await analyseScan(job.data.agencyId, result.scanId);
+    } catch (error) {
+      log.error({ err: error }, "analysis failed; evidence is kept");
+    }
+  }
 
   // The job's return value is a SUMMARY, not the evidence. BullMQ stores the
   // return value in Redis, and a scan's full recording is megabytes — the

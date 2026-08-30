@@ -35,6 +35,20 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             aria-label={t("a11y.mainNavigation")}
             className="flex items-center gap-3"
           >
+            {/* Hidden below sm: on a phone the auth CTA is what matters, and
+                four nav links beside it wrap into a second row. */}
+            <Link
+              href="/features"
+              className="text-sm text-muted-foreground transition hover:text-foreground max-sm:hidden"
+            >
+              {t("nav.features")}
+            </Link>
+            <Link
+              href="/how-it-works"
+              className="text-sm text-muted-foreground transition hover:text-foreground max-sm:hidden"
+            >
+              {t("nav.howItWorks")}
+            </Link>
             <MarketingAuthLinks />
           </nav>
         </div>

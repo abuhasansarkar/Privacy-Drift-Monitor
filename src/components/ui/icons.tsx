@@ -254,3 +254,12 @@ export function RadarIcon(props: IconProps) {
     </svg>
   );
 }
+
+/** Drift — a signal line, not a warning triangle: change, not alarm. */
+export function ActivityIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M1.5 8h3l2-5 3 10 2-5h3" />
+    </Icon>
+  );
+}

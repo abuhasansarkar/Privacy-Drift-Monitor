@@ -258,7 +258,7 @@ describe("rule engine — fingerprints and precedence", () => {
   it("keeps other rules' findings when one rule throws", () => {
     const exploding: Rule = {
       id: "R99_BROKEN",
-      category: "CONSENT_MECHANISM",
+      category: "CONSENT_MISSING",
       precedence: 999,
       evaluate() {
         throw new Error("bad predicate");

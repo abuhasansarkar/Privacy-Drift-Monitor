@@ -18,3 +18,11 @@ export {
   type ScoreConfidence,
   type ScoreResult,
 } from "./score";
+export {
+  diffScans,
+  normalize,
+  pickBaseline,
+  type DriftChangeType,
+  type DriftEvent,
+  type ScanFingerprint,
+} from "./drift";

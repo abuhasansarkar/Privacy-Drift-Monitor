@@ -1,5 +1,7 @@
 import { t } from "@pdm/shared/copy";
+import { can } from "@pdm/shared/permissions";
 import { Can } from "@/components/can";
+import { BulkSelection } from "@/components/websites/bulk-selection";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataList, type Column, type Row } from "@/components/ui/data-list";
@@ -107,7 +109,7 @@ export default async function WebsitesPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       <PageHeader
         title={t("websites.title")}
         subtitle={`${formatNumber(page.total)} ${t("websites.title").toLowerCase()}`}
@@ -160,19 +162,34 @@ export default async function WebsitesPage({
             }
           />
         ) : (
-          <DataList
-            caption={t("websites.title")}
-            columns={columns}
-            rows={rows}
-            footer={
-              <Pagination
-                page={query.page}
-                perPage={query.perPage}
-                total={page.total}
-                params={raw}
+          /*
+           * Selection lives in the client wrapper and is handed to the table as
+           * a render prop — the table stays a pure renderer, and the decision
+           * about what may be done with a selection (which carries permissions)
+           * stays with the component that also draws the bulk bar.
+           */
+          <BulkSelection
+            ids={rows.map((row) => row.id)}
+            canUpdate={can(ctx.role, "website:update")}
+            canArchive={can(ctx.role, "website:delete")}
+          >
+            {(selection) => (
+              <DataList
+                caption={t("websites.title")}
+                columns={columns}
+                rows={rows}
+                selection={selection}
+                footer={
+                  <Pagination
+                    page={query.page}
+                    perPage={query.perPage}
+                    total={page.total}
+                    params={raw}
+                  />
+                }
               />
-            }
-          />
+            )}
+          </BulkSelection>
         )}
       </Card>
     </div>

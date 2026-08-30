@@ -1,7 +1,9 @@
 import { forAgency, type TenantClient } from "../tenant";
 import { auditRepository, type AuditRepository } from "./audit.repository";
 import { clientRepository, type ClientRepository } from "./client.repository";
+import { issueRepository, type IssueRepository } from "./issue.repository";
 import { scanRepository, type ScanRepository } from "./scan.repository";
+import { teamRepository, type TeamRepository } from "./team.repository";
 import { websiteRepository, type WebsiteRepository } from "./website.repository";
 
 /**
@@ -25,6 +27,8 @@ export interface Repositories {
   websites: WebsiteRepository;
   clients: ClientRepository;
   scans: ScanRepository;
+  issues: IssueRepository;
+  team: TeamRepository;
   audit: AuditRepository;
 }
 
@@ -36,20 +40,32 @@ export function repositoriesFor(agencyId: string): Repositories {
     websites: websiteRepository(db, agencyId),
     clients: clientRepository(db, agencyId),
     scans: scanRepository(db, agencyId),
+    issues: issueRepository(db, agencyId),
+    team: teamRepository(db, agencyId),
     audit: auditRepository(db),
   };
 }
 
-export { auditRepository, clientRepository, scanRepository, websiteRepository };
+export {
+  auditRepository,
+  clientRepository,
+  issueRepository,
+  scanRepository,
+  teamRepository,
+  websiteRepository,
+};
 export type {
   AuditRepository,
   ClientRepository,
+  IssueRepository,
   ScanRepository,
+  TeamRepository,
   WebsiteRepository,
 };
 export type { AuditAction, AuditEntry } from "./audit.repository";
 export type { ClientListRow } from "./client.repository";
 export type { ScanCompletion, ScanEvidence } from "./scan.repository";
+export type { FindingInput, UpsertResult } from "./issue.repository";
 export type { WebsiteListRow } from "./website.repository";
 export {
   cursorSlice,

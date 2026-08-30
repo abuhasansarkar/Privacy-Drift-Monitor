@@ -66,6 +66,125 @@ export default function Home() {
           ))}
         </ol>
       </section>
+
+      {/*
+        §4.2 — the differentiator section. It is the second thing on the page
+        because "we scan your site" is a commodity claim; "we tell you what
+        CHANGED" is the one this product is built around.
+      */}
+      <section className="border-y border-border bg-card">
+        <div className="mx-auto w-full max-w-3xl px-4 py-20">
+          <p className="text-caption font-semibold uppercase tracking-wide text-primary">
+            {t("marketing.driftEyebrow")}
+          </p>
+          <h2 className="mt-2 text-h1 tracking-tight text-balance">
+            {t("marketing.driftTitle")}
+          </h2>
+          <p className="mt-4 max-w-2xl text-body-lg text-muted-foreground">
+            {t("marketing.driftBody")}
+          </p>
+
+          {/* A concrete diff, not an abstract illustration. */}
+          <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
+            <div className="bg-background p-4">
+              <p className="text-caption uppercase tracking-wide text-muted-foreground">
+                {t("marketing.driftLastWeek")}
+              </p>
+              <ul className="mt-3 flex flex-col gap-2 font-mono text-mono text-muted-foreground">
+                <li>google-analytics.com</li>
+                <li>consent.cookiebot.com</li>
+              </ul>
+            </div>
+            <div className="bg-background p-4">
+              <p className="text-caption uppercase tracking-wide text-muted-foreground">
+                {t("marketing.driftToday")}
+              </p>
+              <ul className="mt-3 flex flex-col gap-2 font-mono text-mono">
+                <li className="text-muted-foreground">google-analytics.com</li>
+                <li className="text-muted-foreground">consent.cookiebot.com</li>
+                <li className="rounded bg-warning-muted px-1.5 py-0.5 text-warning">
+                  + connect.facebook.net
+                </li>
+                <li className="rounded bg-severity-critical-bg px-1.5 py-0.5 text-severity-critical">
+                  + fires after Reject All
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* §4.3 (2) — the three problems, in the reader's own words. */}
+      <section className="mx-auto w-full max-w-5xl px-4 py-20">
+        <h2 className="text-h2 tracking-tight">{t("marketing.problemTitle")}</h2>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            [t("marketing.problem1Title"), t("marketing.problem1Body")],
+            [t("marketing.problem2Title"), t("marketing.problem2Body")],
+            [t("marketing.problem3Title"), t("marketing.problem3Body")],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-lg border border-border bg-card p-5">
+              <h3 className="text-h4">{title}</h3>
+              <p className="mt-2 text-small text-muted-foreground">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* §4.3 (4) — benefits. */}
+      <section className="border-y border-border bg-card">
+        <div className="mx-auto w-full max-w-5xl px-4 py-20">
+          <h2 className="text-h2 tracking-tight">{t("marketing.benefitsTitle")}</h2>
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            {[
+              [t("marketing.benefit1Title"), t("marketing.benefit1Body")],
+              [t("marketing.benefit2Title"), t("marketing.benefit2Body")],
+              [t("marketing.benefit3Title"), t("marketing.benefit3Body")],
+            ].map(([title, body]) => (
+              <div key={title}>
+                <h3 className="text-h4">{title}</h3>
+                <p className="mt-2 text-small text-muted-foreground">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/*
+        §4.5's honesty panel, on the homepage rather than only on
+        /how-it-works. §1.11's boundary statement belongs where a buyer forms
+        their expectation, not in a footer they scroll past.
+      */}
+      <section className="mx-auto w-full max-w-3xl px-4 py-20">
+        <div className="rounded-lg border border-border p-6">
+          <h2 className="text-h3">{t("marketing.honestyTitle")}</h2>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2">
+            <p className="text-small text-muted-foreground">
+              {t("marketing.honestyCan")}
+            </p>
+            <p className="text-small text-muted-foreground">
+              {t("marketing.honestyCannot")}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-primary/5">
+        <div className="mx-auto w-full max-w-3xl px-4 py-20 text-center">
+          <h2 className="text-h1 tracking-tight text-balance">
+            {t("marketing.ctaTitle")}
+          </h2>
+          <p className="mt-3 text-body-lg text-muted-foreground">
+            {t("marketing.ctaBody")}
+          </p>
+          <Link
+            href="/signup"
+            className="mt-8 inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          >
+            {t("marketing.primaryCta")}
+          </Link>
+        </div>
+      </section>
     </>
   );
 }

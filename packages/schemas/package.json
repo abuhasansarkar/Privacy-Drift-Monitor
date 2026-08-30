@@ -10,7 +10,8 @@
     "./enums": "./src/enums.ts",
     "./primitives": "./src/primitives.ts",
     "./client": "./src/client.ts",
-    "./website": "./src/website.ts"
+    "./website": "./src/website.ts",
+    "./issue": "./src/issue.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

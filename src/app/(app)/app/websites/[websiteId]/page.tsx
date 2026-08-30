@@ -1,30 +1,15 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { t } from "@pdm/shared/copy";
-import { can } from "@pdm/shared/permissions";
-import { Can } from "@/components/can";
 import { Card, CardHeader } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { HealthScore } from "@/components/ui/health-score";
 import { MutedBadge, SeverityBadge, StatusBadge } from "@/components/ui/severity-badge";
-import { PageHeader } from "@/components/ui/page-header";
-import { ScanStatusBadge } from "@/components/scans/scan-phases";
-import { StartScanButton } from "@/components/scans/start-scan-button";
-import { DataList, type Column, type Row } from "@/components/ui/data-list";
-import { WebsiteActions } from "@/components/websites/website-actions";
-import {
-  formatDateTime,
-  formatDuration,
-  formatNumber,
-  formatRelative,
-} from "@/lib/format";
+import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { FREQUENCY_LABEL, MONITORING_LABEL, MONITORING_TONE } from "@/lib/labels";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getWebsiteDetail } from "@/server/queries/detail";
-import { getWebsiteScans } from "@/server/queries/scans";
 
 /**
- * WEBSITE DETAIL — §3.6, Phase 1 task 1.6.
+ * WEBSITE DETAIL — OVERVIEW TAB — §3.6, UI_DESIGN_PROMPTS §5.6.
  *
  * ⚠️ `requireWebsiteAccess()` rather than `requireAgencyContext()`. A member can
  * be restricted to specific websites (§6.2), and a site outside that scope must
@@ -44,55 +29,10 @@ export default async function WebsiteDetailPage({
   const website = await getWebsiteDetail(ctx, websiteId);
   if (!website) notFound();
 
-  const scans = await getWebsiteScans(ctx, websiteId);
   const now = new Date();
 
-  const scanColumns: Column[] = [
-    { key: "started", label: t("scans.columnStarted") },
-    { key: "outcome", label: t("scans.columnStatus") },
-    { key: "requests", label: t("scans.columnRequests"), align: "end" },
-    { key: "duration", label: t("scans.columnDuration"), align: "end", hideBelow: "lg" },
-  ];
-
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <PageHeader
-        title={
-          <span className="font-mono text-h3 break-all">{website.url}</span>
-        }
-        subtitle={
-          website.client ? (
-            <Link
-              href={`/app/clients/${website.client.id}`}
-              className="underline-offset-2 hover:underline"
-            >
-              {website.client.name}
-            </Link>
-          ) : (
-            t("addWebsite.noClient")
-          )
-        }
-        actions={
-          <div className="flex flex-wrap items-start gap-2">
-            <Can role={ctx.role} permission="scan:trigger">
-              <StartScanButton websiteId={website.id} />
-            </Can>
-            <WebsiteActions
-              websiteId={website.id}
-              monitoringStatus={website.monitoringStatus}
-              canUpdate={can(ctx.role, "website:update")}
-              canArchive={can(ctx.role, "website:delete")}
-            />
-          </div>
-        }
-      />
-
-      {website.archivedAt ? (
-        <p className="flex items-start gap-2 rounded-lg border border-border bg-muted px-4 py-3 text-small text-muted-foreground">
-          {t("websites.archivedNotice")}
-        </p>
-      ) : null}
-
+    <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
           <p className="text-caption text-muted-foreground">
@@ -201,47 +141,6 @@ export default async function WebsiteDetailPage({
         </dl>
       </Card>
 
-      <Card>
-        <CardHeader title={t("websites.scanHistoryTitle")} />
-        {scans.length === 0 ? (
-          <EmptyState
-            title={t("websites.scanHistoryTitle")}
-            body={t("empty.noScansYet")}
-          />
-        ) : (
-          <DataList
-            caption={t("websites.scanHistoryTitle")}
-            columns={scanColumns}
-            rows={scans.map((scan): Row => ({
-              id: scan.id,
-              href: `/app/websites/${website.id}/scans/${scan.id}`,
-              primary: scan.startedAt ? (
-                <time dateTime={scan.startedAt.toISOString()}>
-                  {formatDateTime(scan.startedAt, ctx.timezone)}
-                </time>
-              ) : (
-                <span className="text-muted-foreground">{t("scans.queued")}</span>
-              ),
-              secondary: scan.trigger,
-              cells: {
-                outcome: <ScanStatusBadge status={scan.status} />,
-                requests: (
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatNumber(scan.requestCount)}
-                  </span>
-                ),
-                duration: (
-                  <span className="tabular-nums text-muted-foreground">
-                    {scan.durationMs
-                      ? formatDuration(Math.round(scan.durationMs / 1000))
-                      : "—"}
-                  </span>
-                ),
-              },
-            }))}
-          />
-        )}
-      </Card>
     </div>
   );
 }

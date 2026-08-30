@@ -15,7 +15,7 @@ import type { Permission } from "@pdm/shared/permissions";
 export interface NavItem {
   href: string;
   label: string;
-  icon: "grid" | "users" | "globe" | "alert" | "doc" | "team" | "settings";
+  icon: "grid" | "users" | "globe" | "alert" | "drift" | "doc" | "team" | "settings";
   permission: Permission;
   /** Marks the entry active for `/app/websites/new` as well as the list. */
   matchPrefix?: boolean;
@@ -47,6 +47,22 @@ export const NAV_ITEMS: NavItem[] = [
     label: t("navApp.issues"),
     icon: "alert",
     permission: "issue:read",
+    matchPrefix: true,
+  },
+  {
+    // Directly after Issues: the two are read together — an issue says what is
+    // wrong, drift says when it started.
+    href: "/app/drift",
+    label: t("navApp.drift"),
+    icon: "drift",
+    permission: "issue:read",
+    matchPrefix: true,
+  },
+  {
+    href: "/app/trackers",
+    label: t("navApp.trackers"),
+    icon: "globe",
+    permission: "website:read",
     matchPrefix: true,
   },
   {

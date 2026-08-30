@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { t } from "@pdm/shared/copy";
 import type { AgencyRole } from "@pdm/shared/permissions";
 import { BellIcon, MenuIcon, SearchIcon, XIcon } from "@/components/ui/icons";
+import { CommandPalette } from "./command-palette";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -40,6 +41,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   /*
    * Closing on navigation is the Sidebar's `onNavigate` below, NOT an effect on
@@ -58,6 +60,24 @@ export function AppShell({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [drawerOpen]);
+
+  /*
+   * ⌘K / Ctrl+K opens the palette from anywhere.
+   *
+   * ⚠️ `preventDefault` matters: ⌘K is the browser's own search-bar shortcut in
+   * some builds, and without it the address bar steals focus while our dialog
+   * opens behind it.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="flex min-h-svh bg-canvas">
@@ -117,6 +137,7 @@ export function AppShell({
           {/* Full field from sm up; an icon button below it. */}
           <button
             type="button"
+            onClick={() => setPaletteOpen(true)}
             className="ms-auto flex h-9 items-center gap-2 rounded-md border border-border px-3 text-small text-muted-foreground transition-colors hover:text-foreground max-md:hidden lg:w-64"
           >
             <SearchIcon />
@@ -127,6 +148,7 @@ export function AppShell({
           </button>
           <button
             type="button"
+            onClick={() => setPaletteOpen(true)}
             aria-label={t("shell.searchShort")}
             className="ms-auto grid size-9 place-items-center rounded-md border border-border text-muted-foreground md:hidden"
           >
@@ -153,6 +175,8 @@ export function AppShell({
 
         <main className="min-w-0 flex-1 px-3 py-5 sm:px-5 sm:py-6">{children}</main>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

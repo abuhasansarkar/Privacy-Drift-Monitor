@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./classify": "./src/classify.ts",
     "./rules": "./src/rules.ts",
-    "./score": "./src/score.ts"
+    "./score": "./src/score.ts",
+    "./drift": "./src/drift.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

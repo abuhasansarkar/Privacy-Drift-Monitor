@@ -76,7 +76,7 @@ export default async function ClientDetailPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       <PageHeader
         title={client.name}
         subtitle={

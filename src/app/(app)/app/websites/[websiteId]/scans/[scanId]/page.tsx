@@ -78,7 +78,7 @@ export default async function ScanDetailPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-2.5">

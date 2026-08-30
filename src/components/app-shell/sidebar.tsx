@@ -7,6 +7,7 @@ import { can, type AgencyRole } from "@pdm/shared/permissions";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/format";
 import {
+  ActivityIcon,
   AlertCircleIcon,
   DocIcon,
   GlobeIcon,
@@ -31,6 +32,7 @@ const ICONS: Record<NavItem["icon"], typeof GridIcon> = {
   users: UsersIcon,
   globe: GlobeIcon,
   alert: AlertCircleIcon,
+  drift: ActivityIcon,
   doc: DocIcon,
   team: UsersIcon,
   settings: SlidersIcon,
