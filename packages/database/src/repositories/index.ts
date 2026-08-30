@@ -46,7 +46,7 @@ export {
   cursorSlice,
   isPrismaError,
   PRISMA_NOT_FOUND,
-  PRISMA_UNIQUE_VIOLATION,
+  PRISMA_UNIQUE_CONFLICT,
   skipTake,
   slugify,
   toOffsetPage,

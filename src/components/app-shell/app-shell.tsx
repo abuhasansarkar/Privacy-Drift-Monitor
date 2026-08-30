@@ -2,7 +2,6 @@
 
 import { UserButton } from "@clerk/nextjs";
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
 import { t } from "@pdm/shared/copy";
 import type { AgencyRole } from "@pdm/shared/permissions";
 import { BellIcon, MenuIcon, SearchIcon, XIcon } from "@/components/ui/icons";
@@ -41,11 +40,14 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const pathname = usePathname();
 
-  // Close the drawer on navigation. Without this it stays open over the page
-  // the user just chose, which reads as a broken link on a phone.
-  useEffect(() => setDrawerOpen(false), [pathname]);
+  /*
+   * Closing on navigation is the Sidebar's `onNavigate` below, NOT an effect on
+   * `usePathname()`. The drawer closes because the user tapped a link — that is
+   * an event, and driving it from a pathname effect meant a synchronous
+   * setState in an effect body, which cascades an extra render for every
+   * navigation in the app (react-hooks/set-state-in-effect).
+   */
 
   // Escape closes it — the drawer is modal while open, so it needs a keyboard exit.
   useEffect(() => {

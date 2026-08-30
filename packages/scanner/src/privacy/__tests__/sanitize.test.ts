@@ -166,7 +166,19 @@ describe("sanitizeStorageValue", () => {
 
 describe("sanitizeConsoleMessage", () => {
   it("truncates to 500 characters", () => {
-    expect(sanitizeConsoleMessage("x".repeat(900))).toHaveLength(500);
+    // The fixture must not be TOKEN_SHAPED. `"x".repeat(900)` is an unbroken
+    // 900-character run of `[A-Za-z0-9_-]`, so redaction collapsed it to
+    // "[REDACTED]" and this assertion never reached the truncation it claims
+    // to cover. Spaces break the run, so this message survives to be sliced.
+    const long = "could not load resource ".repeat(40);
+    expect(long.length).toBeGreaterThan(500);
+    expect(sanitizeConsoleMessage(long)).toHaveLength(500);
+  });
+
+  it("redacts a long opaque token rather than truncating it", () => {
+    // The other half of the case above, pinned deliberately: a long unbroken
+    // token IS a secret shape, and redaction is the correct outcome.
+    expect(sanitizeConsoleMessage("x".repeat(900))).toBe("[REDACTED]");
   });
 
   it("redacts before truncating", () => {

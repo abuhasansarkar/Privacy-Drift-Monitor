@@ -9,6 +9,22 @@ export {
 } from "./url/normalize";
 export { logger, childLogger, type LogContext, type Logger } from "./logger";
 export {
+  checkRateLimit,
+  memoryRateLimitStore,
+  rateLimitHeaders,
+  rateLimitKey,
+  type RateLimitResult,
+  type RateLimitRule,
+  type RateLimitStore,
+} from "./rate-limit";
+export {
+  createCircuitBreaker,
+  CircuitOpenError,
+  type CircuitBreaker,
+  type CircuitBreakerOptions,
+  type CircuitState,
+} from "./circuit-breaker";
+export {
   APPROVED_TERMS,
   FORBIDDEN_TERMS,
   PORTAL_SEVERITY_WORDS,

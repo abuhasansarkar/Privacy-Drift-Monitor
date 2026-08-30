@@ -95,6 +95,8 @@ export const en = {
     partialScan:
       "Some consent tests couldn't be completed on this scan. Results below cover only the tests that ran.",
     referenceLabel: "Reference",
+    validation: "Check the highlighted fields and try again.",
+    notFound: "We couldn't find that.",
     unreachable:
       "We couldn't reach this website. It may be offline, or it may be blocking automated visits.",
     urlNotAllowed: "We can't monitor this address.",
@@ -150,6 +152,11 @@ export const en = {
 
   clients: {
     addClient: "Add client",
+    saving: "Adding client",
+    nameLabel: "Client name",
+    namePlaceholder: "Acme Dental",
+    contactEmailLabel: "Contact email (optional)",
+    contactEmailPlaceholder: "hello@acme-dental.co.uk",
     averageHealth: "Avg health",
     columnClient: "Client",
     columnOpenIssues: "Open issues",
@@ -201,6 +208,16 @@ export const en = {
     checkRobots: "robots.txt",
     checking: "Checking this address",
     reachable: "Reachable",
+    frequencyLabel: "How often to check",
+    clientLabel: "Client",
+    noClient: "No client",
+    labelLabel: "Label (optional)",
+    labelPlaceholder: "Main site, EU storefront…",
+    /** MANUAL means nextScanAt stays null — §7.5. Say so rather than implying monitoring. */
+    manualNote:
+      "Manual means this website is only checked when you start a scan yourself.",
+    submit: "Add website",
+    saving: "Adding website",
     wwwNoticeTitle: "www is kept.",
     wwwNoticeBody:
       "A www address and its apex can serve different tags, so they are monitored as separate websites.",

@@ -1,4 +1,3 @@
-import type { MonitoringStatus, ScanFrequency } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { Can } from "@/components/can";
 import { ButtonLink } from "@/components/ui/button";
@@ -20,6 +19,7 @@ import {
   StatusBadge,
 } from "@/components/ui/severity-badge";
 import { formatNumber, formatRelative } from "@/lib/format";
+import { FREQUENCY_LABEL, MONITORING_LABEL } from "@/lib/labels";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getWebsiteList } from "@/server/queries/lists";
 
@@ -35,24 +35,11 @@ import { getWebsiteList } from "@/server/queries/lists";
  * rule: the list never implies a monitoring result the scanner did not produce.
  */
 
-const MONITORING_LABEL: Record<MonitoringStatus, string> = {
-  ACTIVE: t("monitoring.active"),
-  PAUSED: t("monitoring.paused"),
-  ERROR: t("monitoring.error"),
-};
-
 const MONITORING_TONE = {
   ACTIVE: "success",
   PAUSED: "muted",
   ERROR: "warning",
 } as const;
-
-const FREQUENCY_LABEL: Record<ScanFrequency, string> = {
-  DAILY: t("frequency.daily"),
-  WEEKLY: t("frequency.weekly"),
-  MONTHLY: t("frequency.monthly"),
-  MANUAL: t("frequency.manual"),
-};
 
 export default async function WebsitesPage({
   searchParams,

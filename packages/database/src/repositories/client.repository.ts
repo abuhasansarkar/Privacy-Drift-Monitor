@@ -3,7 +3,7 @@ import type { TenantClient } from "../tenant";
 import { auditRepository } from "./audit.repository";
 import {
   isPrismaError,
-  PRISMA_UNIQUE_VIOLATION,
+  PRISMA_UNIQUE_CONFLICT,
   skipTake,
   slugify,
   toOffsetPage,
@@ -131,7 +131,7 @@ export function clientRepository(db: TenantClient, agencyId: string) {
     } catch (e) {
       // Lost the race on (agencyId, slug). Re-probe once; a second collision is
       // vanishingly unlikely and is allowed to surface as a 409.
-      if (isPrismaError(e, PRISMA_UNIQUE_VIOLATION) && attempt === 0) {
+      if (isPrismaError(e, PRISMA_UNIQUE_CONFLICT) && attempt === 0) {
         return create({ ...input, slug: undefined }, actor, 1);
       }
       throw e;

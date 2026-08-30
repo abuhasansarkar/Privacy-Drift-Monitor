@@ -20,7 +20,15 @@ export interface Entitlements {
   websiteLimit: number | null;
 }
 
-export async function getEntitlements(_agencyId: string): Promise<Entitlements> {
+export async function getEntitlements(
+  /*
+   * Unused until Phase 6, and deliberately kept: this is where the agency's
+   * plan gets read, and every call site already passes it. Dropping the
+   * parameter now would mean revisiting each one when billing lands.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  agencyId: string,
+): Promise<Entitlements> {
   return { websiteLimit: null };
 }
 

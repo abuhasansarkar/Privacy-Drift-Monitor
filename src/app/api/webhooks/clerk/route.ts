@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { Prisma, unsafeGlobalClient } from "@pdm/database";
 import { childLogger } from "@pdm/shared/logger";
@@ -89,7 +90,9 @@ async function upsertAgency(data: ClerkOrganizationData) {
   });
 }
 
-export async function POST(req: Request) {
+// `NextRequest`, not the web `Request`: Clerk's `verifyWebhook()` accepts a
+// `RequestLike`, which needs `cookies`/`nextUrl` that only NextRequest carries.
+export async function POST(req: NextRequest) {
   let evt;
   try {
     // Reads CLERK_WEBHOOK_SIGNING_SECRET. A bad signature throws → 400, no retry.

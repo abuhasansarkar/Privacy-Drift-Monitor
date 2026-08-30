@@ -1,4 +1,6 @@
 import { t } from "@pdm/shared/copy";
+import { Can } from "@/components/can";
+import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataList, type Column, type Row } from "@/components/ui/data-list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,6 +10,7 @@ import {
   SelectField,
 } from "@/components/ui/filter-form";
 import { HealthScore } from "@/components/ui/health-score";
+import { PlusIcon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -90,6 +93,14 @@ export default async function ClientsPage({
       <PageHeader
         title={t("clients.title")}
         subtitle={`${formatNumber(page.total)} ${t("clients.title").toLowerCase()}`}
+        actions={
+          <Can role={ctx.role} permission="client:create">
+            <ButtonLink href="/app/clients/new" variant="primary">
+              <PlusIcon />
+              {t("clients.addClient")}
+            </ButtonLink>
+          </Can>
+        }
       />
 
       <FilterForm

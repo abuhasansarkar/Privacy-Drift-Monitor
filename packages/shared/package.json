@@ -8,6 +8,8 @@
     ".": "./src/index.ts",
     "./errors": "./src/errors.ts",
     "./logger": "./src/logger.ts",
+    "./rate-limit": "./src/rate-limit.ts",
+    "./circuit-breaker": "./src/circuit-breaker.ts",
     "./permissions": "./src/permissions.ts",
     "./flags": "./src/flags.ts",
     "./url/normalize": "./src/url/normalize.ts",

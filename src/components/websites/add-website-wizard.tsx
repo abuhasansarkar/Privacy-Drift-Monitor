@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import type { UrlValidationResult } from "@pdm/schemas";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import type { ScanFrequency, UrlValidationResult } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { cn } from "@/lib/cn";
+import { FREQUENCY_LABEL } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import {
   AlertCircleIcon,
   CheckIcon,
   GlobeIcon,
 } from "@/components/ui/icons";
+import { createWebsite } from "@/server/actions/websites";
 
 /**
  * ADD WEBSITE WIZARD — §3.6, Phase 1 tasks 1.7 + 1.8.
@@ -50,12 +53,51 @@ type State =
   | { phase: "checking" }
   | { phase: "done"; result: UrlValidationResult };
 
-export function AddWebsiteWizard() {
+const FREQUENCIES: ScanFrequency[] = ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"];
+
+export function AddWebsiteWizard({ clients }: { clients: Array<{ id: string; name: string }> }) {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [state, setState] = useState<State>({ phase: "idle" });
+  const [frequency, setFrequency] = useState<ScanFrequency>("WEEKLY");
+  const [clientId, setClientId] = useState("");
+  const [label, setLabel] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // `useTransition`, not a boolean: it keeps the pending flag tied to the
+  // action's own lifecycle, so the button cannot re-enable before the
+  // revalidation the action triggers has actually landed.
+  const [saving, startSaving] = useTransition();
 
   const result = state.phase === "done" ? state.result : null;
-  const step = result?.ok ? 1 : 0;
+  const step = result?.ok ? 2 : 0;
+
+  function save() {
+    setSaveError(null);
+    startSaving(async () => {
+      /*
+       * The URL sent here is the one the USER typed, not `result.normalizedUrl`.
+       * The action re-runs normalization and the SSRF guard from scratch, so
+       * passing the server's own earlier answer back to it would prove nothing
+       * — and the raw address is what gets stored as `originalUrl` anyway.
+       */
+      const outcome = await createWebsite({
+        url,
+        scanFrequency: frequency,
+        scanPriority: "NORMAL",
+        monitoredPaths: ["/"],
+        alertProfile: "DEFAULT",
+        runInitialScan: true,
+        ...(clientId ? { clientId } : {}),
+        ...(label.trim() ? { label: label.trim() } : {}),
+      });
+
+      if (!outcome.ok) {
+        setSaveError(outcome.message);
+        return;
+      }
+      router.push("/app/websites");
+    });
+  }
 
   async function validate() {
     setState({ phase: "checking" });
@@ -152,6 +194,90 @@ export function AddWebsiteWizard() {
         </div>
 
         {result?.ok ? <ValidationChecks result={result} /> : null}
+
+        {result?.ok ? (
+          <div className="mt-6 border-t border-border pt-5">
+            <h2 className="text-h4">{t("addWebsite.stepSchedule")}</h2>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-caption font-semibold">
+                  {t("addWebsite.frequencyLabel")}
+                </span>
+                <select
+                  value={frequency}
+                  onChange={(event) =>
+                    setFrequency(event.target.value as ScanFrequency)
+                  }
+                  className="h-10 rounded-md border border-border bg-background px-3 text-small"
+                >
+                  {FREQUENCIES.map((value) => (
+                    <option key={value} value={value}>
+                      {FREQUENCY_LABEL[value]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className="text-caption font-semibold">
+                  {t("addWebsite.clientLabel")}
+                </span>
+                <select
+                  value={clientId}
+                  onChange={(event) => setClientId(event.target.value)}
+                  className="h-10 rounded-md border border-border bg-background px-3 text-small"
+                >
+                  <option value="">{t("addWebsite.noClient")}</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
+                <span className="text-caption font-semibold">
+                  {t("addWebsite.labelLabel")}
+                </span>
+                <input
+                  value={label}
+                  onChange={(event) => setLabel(event.target.value)}
+                  maxLength={120}
+                  placeholder={t("addWebsite.labelPlaceholder")}
+                  className="h-10 rounded-md border border-border bg-background px-3 text-small outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+            </div>
+
+            {frequency === "MANUAL" ? (
+              <p className="mt-3 flex items-start gap-2 rounded-md bg-severity-info-bg px-3 py-2 text-small text-severity-info">
+                <AlertCircleIcon className="mt-0.5" />
+                {t("addWebsite.manualNote")}
+              </p>
+            ) : null}
+
+            {saveError ? (
+              <p
+                role="alert"
+                className="mt-3 flex items-start gap-2 text-small text-danger"
+              >
+                <AlertCircleIcon className="mt-0.5" />
+                {saveError}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setState({ phase: "idle" })}>
+                {t("addWebsite.back")}
+              </Button>
+              <Button variant="primary" onClick={save} disabled={saving}>
+                {saving ? t("addWebsite.saving") : t("addWebsite.submit")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

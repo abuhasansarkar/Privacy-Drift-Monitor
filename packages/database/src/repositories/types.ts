@@ -86,8 +86,15 @@ export function cursorSlice<T extends { id: string }>(
 
 /** Prisma's "record not found" code, raised by update/delete on a no-match. */
 export const PRISMA_NOT_FOUND = "P2025";
-/** Prisma's unique-constraint violation. */
-export const PRISMA_UNIQUE_VIOLATION = "P2002";
+/**
+ * Prisma's unique-constraint conflict.
+ *
+ * Named CONFLICT, not the word Prisma's own docs use: `check:terminology` bans
+ * that word tree-wide (Part I §1.12) and does not try to tell an identifier
+ * from a user-facing string. The name also happens to match what we raise —
+ * `ConflictError` / 409 — so it reads better at the call sites anyway.
+ */
+export const PRISMA_UNIQUE_CONFLICT = "P2002";
 
 export function isPrismaError(e: unknown, code: string): boolean {
   return (
