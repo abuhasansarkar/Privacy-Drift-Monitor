@@ -18,13 +18,14 @@
     "test:coverage": "vitest run --coverage",
     "check:terminology": "tsx scripts/check-terminology.ts",
     "verify": "npm run lint && npm run typecheck && npm run check:terminology && npm run test:coverage && npm run build",
-    "db:generate": "npm run generate -w @pdm/database",
-    "db:migrate": "npm run migrate -w @pdm/database",
-    "db:deploy": "npm run migrate:deploy -w @pdm/database",
-    "db:reset": "npm run migrate:reset -w @pdm/database",
+    "db:generate": "prisma generate --schema packages/database/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema packages/database/prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema packages/database/prisma/schema.prisma",
+    "db:reset": "prisma migrate reset --force --schema packages/database/prisma/schema.prisma",
     "db:seed": "npm run seed -w @pdm/database",
     "db:seed:demo": "tsx packages/database/prisma/seed-demo.ts",
-    "db:studio": "npm run studio -w @pdm/database",
+    "stripe:provision": "tsx packages/database/prisma/stripe-provision.ts",
+    "db:studio": "prisma studio --schema packages/database/prisma/schema.prisma",
     "worker": "npm run dev -w @pdm/worker"
   },
   "dependencies": {
@@ -49,6 +50,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sonner": "^2.0.8",
+    "stripe": "^22",
     "tailwind-merge": "^3.6.0",
     "zod": "^4"
   },

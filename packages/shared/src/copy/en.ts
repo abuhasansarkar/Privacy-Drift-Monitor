@@ -495,6 +495,13 @@ export const en = {
     graceTitle: "You are over your new plan limit",
     graceBody:
       "Nothing has been removed. Archive the sites you no longer monitor, or move back up a plan, and monitoring continues as it is.",
+    unavailable:
+      "Billing is temporarily unavailable. Your subscription and everything it includes are unaffected.",
+    noSubscription: "There is no subscription to manage yet.",
+    confirming: "Confirming your subscription…",
+    confirmingBody:
+      "Payment went through. We are waiting for confirmation from our payment provider — this usually takes a few seconds.",
+    checkoutCancelled: "Checkout was cancelled. Nothing has been charged.",
     usageTitle: "Usage this period",
     unlimited: "Unlimited",
     ofLimit: "of",
@@ -532,6 +539,13 @@ export const en = {
     creditCapPlaceholder: "No limit",
     creditCapHelp:
       "Leave empty for no limit. Set 0 to stop all AI spend. We notify at 80% and block new calls at 100%.",
+    unavailable:
+      "Billing is temporarily unavailable. Your subscription and everything it includes are unaffected.",
+    noSubscription: "There is no subscription to manage yet.",
+    confirming: "Confirming your subscription…",
+    confirmingBody:
+      "Payment went through. We are waiting for confirmation from our payment provider — this usually takes a few seconds.",
+    checkoutCancelled: "Checkout was cancelled. Nothing has been charged.",
     usageTitle: "Usage this period",
     creditsUsed: "Credits used",
     ofCap: "of",

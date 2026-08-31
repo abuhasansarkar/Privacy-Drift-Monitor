@@ -1259,8 +1259,24 @@ model Plan {
   sortOrder   Int     @default(0)
 
   stripeProductId      String?
+  /// The USD prices. §9.1 stores these two on the row and the rest in `currencyPrices`.
   stripePriceMonthlyId String?
   stripePriceAnnualId  String?
+
+  /// Localized Stripe Price ids, keyed by lower-case currency.
+  ///
+  /// §9.1: "Two per product (monthly, annual) x three currencies (USD, GBP,
+  /// EUR) = 24 prices. `Plan.stripePriceMonthlyId`/`AnnualId` store the USD
+  /// ones; the localized IDs live in a `currencyPrices` JSON map."
+  ///
+  /// Shape: `{ "gbp": { "monthly": "price_...", "annual": "price_..." }, ... }`
+  ///
+  /// ⚠️ A JSON MAP RATHER THAN SIX MORE COLUMNS, because the set of currencies
+  /// is a commercial decision that will change (§9.3 lists three today) and a
+  /// migration per currency is a migration nobody will want to write on the day
+  /// sales asks for CAD. The trade is that it is unvalidated at the database
+  /// boundary — `stripe.ts` reads it defensively for exactly that reason.
+  currencyPrices       Json?
   /// Integer minor units. Never Float.
   priceMonthlyCents    Int
   priceAnnualCents     Int

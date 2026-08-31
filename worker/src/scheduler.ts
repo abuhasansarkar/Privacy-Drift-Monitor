@@ -13,6 +13,7 @@ import {
   notifyQuotaExceeded,
 } from "./jobs/scan-quota";
 import { reconcileCounters } from "./jobs/reconcile-counters";
+import { reconcileStripe } from "./jobs/reconcile-stripe";
 import type IORedis from "ioredis";
 
 /**
@@ -234,6 +235,17 @@ export function startScheduler(connection: IORedis, intervalMs = 60_000) {
       if (Date.now() - lastReconcileAt >= RECONCILE_INTERVAL_MS) {
         lastReconcileAt = Date.now();
         await reconcileCounters();
+        /*
+         * ⚠️ §9.1's daily Stripe reconciliation. It catches a MISSED WEBHOOK —
+         * the one billing failure that announces nothing: an agency that
+         * upgraded stays on the old plan and hits limits it has paid to clear,
+         * and one that cancelled keeps full service indefinitely. Both look
+         * normal from inside the product.
+         *
+         * It no-ops (and says so) when Stripe is unconfigured, so it is safe to
+         * run in every environment.
+         */
+        await reconcileStripe();
       }
     } catch (error) {
       logger.error({ err: error }, "scheduler tick failed");

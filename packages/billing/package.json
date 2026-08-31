@@ -8,13 +8,16 @@
     ".": "./src/index.ts",
     "./entitlements": "./src/entitlements.ts",
     "./usage": "./src/usage.ts",
-    "./grace": "./src/grace.ts"
+    "./grace": "./src/grace.ts",
+    "./stripe": "./src/stripe.ts",
+    "./webhook": "./src/webhook.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pdm/schemas": "*"
+    "@pdm/schemas": "*",
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
     "@pdm/config": "*",
