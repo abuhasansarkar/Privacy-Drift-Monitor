@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@pdm/billing": "*",
     "@pdm/database": "*",
     "@pdm/schemas": "*",
     "@pdm/shared": "*",

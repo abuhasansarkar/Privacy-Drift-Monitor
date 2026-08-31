@@ -9,6 +9,11 @@ import { report as reportSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ConflictError, NotFoundError, ValidationError } from "@pdm/shared/errors";
 import { requirePermission } from "@/server/auth/context";
+import { releaseMetric } from "@/server/entitlements";
+import {
+  requireAllowedValue,
+  requireAndConsume,
+} from "@/server/services/entitlement-guard";
 import { reportQueue } from "@/server/services/queues";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
@@ -110,18 +115,41 @@ export async function generateReport(
     const existing = await repos.reports.findByIdempotencyKey(idempotencyKey);
     if (existing) return actionOk({ reportId: existing.id });
 
-    const report = await repos.reports.create({
-      type: input.type,
-      name: input.name,
-      clientId: input.clientId,
-      websiteId: input.websiteId,
-      createdById: ctx.userId,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      // `scanId` rides in options — see the note in `report.job.ts`.
-      options: { ...input.options, scanId: input.scanId } as never,
-      idempotencyKey,
-    });
+    /*
+     * ⚠️ ENFORCEMENT POINT (§9.2): "Generate report →
+     * `checkLimit(REPORTS)` + `reportTypes.includes(type)` → 402 / type
+     * unavailable". Two separate checks, because they fail for different
+     * reasons and a reader needs to know which: "you have used all 50 reports"
+     * invites an upgrade for MORE, "Privacy Drift reports are not on Starter"
+     * invites an upgrade for a DIFFERENT THING.
+     *
+     * ⚠️ AFTER THE IDEMPOTENCY LOOKUP. A double-clicked button returns the
+     * first report without touching the allowance — charging twice for one
+     * report because the user's connection was slow is exactly the billing
+     * dispute this phase exists to avoid.
+     */
+    await requireAllowedValue(ctx.agencyId, "reportTypes", input.type);
+    await requireAndConsume(ctx.agencyId, "REPORTS", 1);
+
+    let report;
+    try {
+      report = await repos.reports.create({
+        type: input.type,
+        name: input.name,
+        clientId: input.clientId,
+        websiteId: input.websiteId,
+        createdById: ctx.userId,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        // `scanId` rides in options — see the note in `report.job.ts`.
+        options: { ...input.options, scanId: input.scanId } as never,
+        idempotencyKey,
+      });
+    } catch (error) {
+      // ⚠️ §12.3: "a failed report must not consume the allowance."
+      await releaseMetric(ctx.agencyId, "REPORTS", 1).catch(() => {});
+      throw error;
+    }
 
     await repos.audit.record({
       action: "report.generated",

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@pdm/analysis": "*",
+    "@pdm/billing": "*",
     "@pdm/database": "*",
     "@pdm/email": "*",
     "@pdm/notifications": "*",

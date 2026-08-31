@@ -468,6 +468,38 @@ export const en = {
       "AI is used only to describe findings the scanner recorded. It never decides whether a request happened, whether a tracker fired, or whether a scan succeeded — those come from the browser recording alone. Every AI output links to the evidence it used, and one that references anything else is discarded before you see it.",
   },
 
+  /**
+   * §9.2, §9.3 — plans, limits and the 402 surface.
+   *
+   * ⚠️ A PLAN CEILING IS A SALES SURFACE, NOT AN ERROR. §9.2 asks for "402 +
+   * upgrade prompt naming the limit", so this copy says what was reached and
+   * what to do — never "something went wrong". The number itself is appended by
+   * `entitlement-guard.ts`, because it is data, not copy.
+   */
+  billing: {
+    title: "Billing",
+    limitReached: "You have reached your plan limit:",
+    featureNotOnPlan: "That feature is not included in your current plan.",
+    optionNotOnPlan: "That option is not available on your current plan.",
+    upgradePrompt: "Upgrade your plan to continue.",
+    viewPlans: "View plans",
+    /** §9.2's read-only state — rule 3: stop spending, never hide data. */
+    readOnlyTitle: "New scans are paused",
+    readOnlyBody:
+      "Your subscription needs attention, so new scans and AI generation are paused. Everything you have already recorded stays available.",
+    trialEndsIn: "days left in your trial",
+    trialEnded: "Your trial has ended.",
+    pastDue: "A payment did not go through.",
+    updatePayment: "Update payment method",
+    /** §9.2 grace on downgrade — never delete, pause the oldest. */
+    graceTitle: "You are over your new plan limit",
+    graceBody:
+      "Nothing has been removed. Archive the sites you no longer monitor, or move back up a plan, and monitoring continues as it is.",
+    usageTitle: "Usage this period",
+    unlimited: "Unlimited",
+    ofLimit: "of",
+  },
+
   /** §3.11, §8.9 — Settings → AI. */
   aiSettings: {
     title: "AI",
