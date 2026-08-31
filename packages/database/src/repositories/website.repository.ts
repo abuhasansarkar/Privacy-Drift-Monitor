@@ -1,7 +1,20 @@
-import type { MonitoringStatus, Prisma, Website } from "@prisma/client";
+import type {
+  MonitoringStatus,
+  Prisma,
+  ScanFrequency,
+  ScanPriority,
+  ScreenshotPolicy,
+  Website,
+} from "@prisma/client";
 import type { TenantClient } from "../tenant";
 import { auditRepository } from "./audit.repository";
-import { skipTake, toOffsetPage, type OffsetPage } from "./types";
+import {
+  isPrismaError,
+  PRISMA_UNIQUE_CONFLICT,
+  skipTake,
+  toOffsetPage,
+  type OffsetPage,
+} from "./types";
 
 /**
  * WEBSITE REPOSITORY — PLAN.md Part III §3.6, §5.4, §5.6, feature doc 03.
@@ -388,6 +401,75 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
         data: { clientId },
       });
       return count;
+    },
+
+    async assignGroup(ids: string[], groupId: string | null): Promise<number> {
+      const { count } = await db.website.updateMany({
+        where: { id: { in: ids } },
+        data: { groupId },
+      });
+      return count;
+    },
+
+    /**
+     * Finds a group by name, or creates it.
+     *
+     * ⚠️ THIS IS THE ONLY PLACE GROUPS ARE CREATED, and it is deliberate. §3.5
+     * lists "Move to group" as a bulk action and Group as a filter, but the
+     * page inventory has no group-management screen — because a group with no
+     * websites in it is not a thing anyone wants to create. Typing a new name
+     * while moving sites into it is the whole lifecycle.
+     *
+     * The unique index is `(agencyId, name)`, so a concurrent create loses the
+     * race and is resolved by re-reading rather than by failing the batch.
+     */
+    async findOrCreateGroup(name: string): Promise<{ id: string; name: string }> {
+      const existing = await db.websiteGroup.findFirst({ where: { name } });
+      if (existing) return { id: existing.id, name: existing.name };
+
+      try {
+        const created = await db.websiteGroup.create({ data: { agencyId, name } });
+        return { id: created.id, name: created.name };
+      } catch (error) {
+        if (!isPrismaError(error, PRISMA_UNIQUE_CONFLICT)) throw error;
+        const raced = await db.websiteGroup.findFirstOrThrow({ where: { name } });
+        return { id: raced.id, name: raced.name };
+      }
+    },
+
+    /**
+     * AGENCY SCAN SETTINGS — §3.11, Phase 4 task 4.9.
+     *
+     * ⚠️ Read with `findFirst`, not `findUnique`: an agency that has never
+     * opened the settings page has no row, and the caller falls back to the
+     * schema defaults rather than seeing a null.
+     */
+    async scanSettings() {
+      return db.agencyScanSettings.findFirst();
+    },
+
+    async saveScanSettings(input: {
+      defaultFrequency: ScanFrequency;
+      defaultPageLimit: number;
+      defaultPriority: ScanPriority;
+      screenshotPolicy: ScreenshotPolicy;
+      respectRobots: boolean;
+      userAgentSuffix: string | null;
+      ignoredDomains: string[];
+      evidenceRetentionDays: number | null;
+    }) {
+      return db.agencyScanSettings.upsert({
+        where: { agencyId },
+        create: { ...input, agencyId },
+        update: input,
+      });
+    },
+
+    async listGroups() {
+      return db.websiteGroup.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      });
     },
   };
 

@@ -19,11 +19,14 @@ import { cn } from "@/lib/cn";
 
 const TABS = [
   { segment: "", label: t("websiteTabs.overview") },
+  { segment: "issues", label: t("issues.title") },
   { segment: "trackers", label: t("websiteTabs.trackers") },
   { segment: "cookies", label: t("websiteTabs.cookies") },
   { segment: "consent", label: t("websiteTabs.consent") },
   { segment: "changes", label: t("websiteTabs.changes") },
   { segment: "scans", label: t("websiteTabs.scans") },
+  { segment: "evidence", label: t("evidence.title") },
+  { segment: "reports", label: t("reports.title") },
 ];
 
 export function WebsiteTabs({ websiteId }: { websiteId: string }) {

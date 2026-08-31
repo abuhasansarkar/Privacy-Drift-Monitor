@@ -22,6 +22,7 @@ function finding(severity: Severity, id: string): Finding {
     consentPhase: "NO_CONSENT",
     evidenceRefs: { requestUrls: [], cookieNames: [], storageKeys: [] },
     rationale: "test",
+    recommendedAction: "test",
   };
 }
 

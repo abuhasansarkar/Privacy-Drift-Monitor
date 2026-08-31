@@ -37,6 +37,14 @@ export const en = {
     accountMenu: "Account menu",
   },
 
+  /** §3.2 — the four legal documents and their shared template. */
+  legal: {
+    contents: "Contents",
+    lastUpdated: "Last updated",
+    otherDocuments: "Other documents",
+    footerTitle: "Legal",
+  },
+
   /** §3.2 — the public homepage. The full page is Phase 1 task 1.13. */
   marketing: {
     heroTitle:
@@ -259,6 +267,30 @@ export const en = {
     bandFair: "Fair",
     bandPoor: "Poor",
     bandCritical: "Needs review",
+    attentionCenter: "Attention Center",
+    attentionItems: "items",
+    attentionEmpty: "Nothing needs your attention.",
+    attentionEmptyDetail: "{count} websites monitored.",
+    attentionAlso: "and {count} more on this website",
+    recentActivity: "Recent activity",
+    recentActivityEmpty: "Nothing has happened yet.",
+    actionView: "View",
+    actionAcknowledge: "Acknowledge",
+    actionRescan: "Re-scan",
+    kindConsentRegression: "Consent changed",
+    kindCriticalIssue: "Critical finding",
+    kindScanFailing: "Scans failing",
+    kindNewTracker: "New tracker",
+    kindStale: "Not scanned recently",
+    activityScanCompleted: "Scan completed",
+    activityScanPartial: "Scan partially completed",
+    activityScanFailed: "Scan failed",
+    activityIssueResolved: "Finding updated",
+    activityIssueIgnored: "Finding ignored",
+    activityWebsiteAdded: "Website added",
+    activityReportGenerated: "Report generated",
+    activityMemberJoined: "Member invited",
+    activityOther: "Change recorded",
   },
 
   /** §3.9 — scan detail and progress. */
@@ -438,6 +470,24 @@ export const en = {
     columnPreConsent: "Before consent on",
     columnRisk: "Risk",
     sites: "sites",
+    vendorProfile: "Service profile",
+    domains: "Domains",
+    scripts: "Script patterns",
+    cookiePatterns: "Cookie patterns",
+    documentation: "Documentation",
+    privacyPolicy: "Privacy policy",
+    processingLocation: "Processing location",
+    company: "Operated by",
+    essentialNote:
+      "Marked as a service that may legitimately load before consent, so a pre-consent detection is not treated as critical.",
+    whereItAppears: "Where it appears",
+    columnFirstSeen: "First seen",
+    columnPhases: "Consent states",
+    timelineTitle: "When it appeared",
+    notFound: "We don't have a profile for that service",
+    notFoundBody:
+      "It may be an unrecognised third party. Those are listed by domain on the inventory page.",
+    noDetections: "Not currently detected on any monitored website.",
   },
 
   /** §3.5 — the surface that makes suppression reversible. */
@@ -488,6 +538,119 @@ export const en = {
   },
 
   /** §5.6 — who did what. Cursor-paginated; see the page note. */
+  /** §3.11 — Settings → Security. */
+  security: {
+    title: "Security",
+    subtitle: "Sessions, two-factor authentication, and the audit trail.",
+    sessionsTitle: "Sessions and two-factor authentication",
+    sessionsBody:
+      "Active sessions, password changes and two-factor authentication are handled by our authentication provider. Open your account menu in the header to manage them.",
+    twoFactorTitle: "Require two-factor for everyone",
+    twoFactorBody:
+      "Enforcing two-factor for the whole agency is an organisation setting with our authentication provider, not a switch here. Turning it on there applies to every member immediately.",
+    auditTitle: "Audit trail",
+    auditBody:
+      "Every change anyone makes is recorded, with who made it and what moved. Export it whenever you need a copy.",
+    openAuditLog: "Open the audit log",
+    apiKeysTitle: "API keys",
+    apiKeysBody:
+      "Programmatic access to your monitoring data. Not available yet.",
+    ipAllowlistTitle: "IP allowlist",
+    ipAllowlistBody:
+      "Restrict sign-in to named networks. Not available yet.",
+    comingIn: "Planned",
+    notAvailable: "Not available yet",
+  },
+
+  /** §3.8 "Tab: Evidence", UI_DESIGN_PROMPTS §5.11 — the developer's tab. */
+  evidence: {
+    title: "Evidence",
+    subtitle: "Everything the browser recorded on this scan.",
+    scanLabel: "Scan",
+    kindRequests: "Requests",
+    kindCookies: "Cookies",
+    kindStorage: "Storage",
+    kindConsole: "Console",
+    kindScreenshots: "Screenshots",
+    filterDomain: "Domain or URL",
+    filterPhase: "Consent state",
+    filterType: "Resource type",
+    thirdPartyOnly: "Third-party only",
+    trackerOnly: "Tracker-matched only",
+    anyPhase: "Any state",
+    anyType: "Any type",
+    columnTime: "Time",
+    columnMethod: "Method",
+    columnUrl: "URL",
+    columnType: "Type",
+    columnStatus: "Status",
+    columnSize: "Size",
+    columnParty: "Party",
+    columnPhase: "State",
+    columnTracker: "Tracker",
+    columnKey: "Key",
+    columnOrigin: "Origin",
+    columnLevel: "Level",
+    columnMessage: "Message",
+    columnValue: "Value",
+    beforeConsent: "Before consent",
+    firstParty: "First-party",
+    thirdParty: "Third-party",
+    valueRedacted: "Redacted",
+    valueLength: "length",
+    export: "Export",
+    exportJson: "Export JSON",
+    exportCsv: "Export CSV",
+    exportNote:
+      "Exports the rows matching the filters above. Exports are recorded in the audit log.",
+    noScans: "No scans yet",
+    noScansBody:
+      "Evidence appears here once this website has been scanned at least once.",
+    emptyTitle: "Nothing recorded",
+    emptyBody: "No rows match these filters on this scan.",
+    /** §10.6 — the reason values are absent, said out loud. */
+    minimisationNote:
+      "Query values, cookie values and header values are stripped before storage. What you see is everything we kept.",
+    screenshotAlt: "Screenshot",
+  },
+
+  /** §3.11 — Settings → Scan Settings, Phase 4 task 4.9. */
+  scanSettings: {
+    title: "Scanning",
+    subtitle: "Defaults applied to new websites, and settings that apply to every scan.",
+    defaultsTitle: "Defaults for new websites",
+    defaultsBody: "Changing these does not alter websites you have already added.",
+    frequency: "Default frequency",
+    pageLimit: "Pages per scan",
+    pageLimitHelp: "How many pages of each website we load. Higher plans allow more.",
+    priority: "Default priority",
+    behaviourTitle: "How scans behave",
+    screenshotPolicy: "Screenshots",
+    screenshotAlways: "Every scan",
+    screenshotOnChange: "Only when something changed",
+    screenshotNever: "Never",
+    screenshotHelp:
+      "Screenshots corroborate a finding. They are the largest thing we store, so most agencies keep them on change only.",
+    respectRobots: "Respect robots.txt",
+    respectRobotsHelp:
+      "When a website's robots.txt disallows our scanner, skip it rather than scanning anyway. Leave this on unless you control the site and have decided otherwise.",
+    userAgentSuffix: "User-agent suffix",
+    userAgentSuffixHelp:
+      "Appended to our scanner's user agent, so your client's logs and firewall rules can identify us.",
+    retentionTitle: "Evidence retention",
+    retentionLabel: "Keep evidence for",
+    retentionDays: "days",
+    retentionPlanDefault: "Use my plan's limit",
+    retentionHelp:
+      "A shorter period than your plan allows. Evidence attached to an open finding is always kept until that finding closes.",
+    ignoredTitle: "Ignored domains",
+    ignoredHelp:
+      "Domains excluded from third-party classification — your own CDN, for example. One per line. Requests to them are still recorded.",
+    save: "Save settings",
+    saving: "Saving",
+    saved: "Settings saved.",
+  },
+
   audit: {
     title: "Audit log",
     columnAction: "Action",
@@ -497,6 +660,13 @@ export const en = {
     system: "System",
     older: "Older entries",
     endOfLog: "End of the log",
+    filterAction: "Action",
+    filterEntity: "Entity",
+    filterActor: "Who",
+    exportCsv: "Export CSV",
+    exportNote: "Exports the rows matching the filters above, newest first.",
+    anyAction: "Any action",
+    anyEntity: "Any entity",
   },
 
   bulk: {
@@ -506,6 +676,13 @@ export const en = {
     /** Surfaced, never swallowed — see the note in bulk-selection.tsx. */
     skipped: "skipped (out of your scope)",
     archiveConfirm: "Archive these websites?",
+    scanNow: "Scan now",
+    queued: "queued",
+    moveToGroup: "Move to group",
+    assignToClient: "Assign to client",
+    groupPlaceholder: "Group name",
+    apply: "Apply",
+    newGroupHint: "Type a name to create a new group.",
   },
 
   /** §5.5 — CSV import. Preview before write, always. */
@@ -605,6 +782,15 @@ export const en = {
     scanHistoryTitle: "Scan history",
     searchPlaceholder: "Search by address or label",
     title: "Websites",
+    viewTable: "Table",
+    viewGrid: "Grid",
+    viewToggle: "View as",
+    filterGroup: "Group",
+    anyClient: "Any client",
+    anyGroup: "Any group",
+    noGroup: "No group",
+    exportCsv: "Export CSV",
+    scannedRelative: "Scanned",
   },
 
   /** §3.6 — the Add Website wizard. */

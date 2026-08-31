@@ -53,7 +53,15 @@ export type ConsentMethod =
   | "api_call"
   | "accessible_name"
   | "text_match"
-  | "dom_heuristic";
+  | "dom_heuristic"
+  /**
+   * Reject reached only by opening a preferences panel first (§4.6).
+   *
+   * ⚠️ RECORDED SEPARATELY BECAUSE IT IS A FINDING, not just a mechanism.
+   * PDM-R011 fires on exactly this: rejecting was possible, but not at the
+   * same level as accepting. Folding it into `dom_heuristic` would lose that.
+   */
+  | "preferences_fallback";
 
 export type ConsentErrorCode =
   | "CONSENT_NO_BANNER_FOUND"

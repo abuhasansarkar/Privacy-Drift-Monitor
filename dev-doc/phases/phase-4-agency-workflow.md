@@ -1,7 +1,7 @@
 # Phase 4 — Agency Workflow
 
 > **Goal:** findings become alerts, reports, and client-facing value.
-> **Dependencies:** Phase 3 · **Status:** 🟡 Built; partially verified
+> **Dependencies:** Phase 3 · **Status:** 🟡 Built; two gaps need a live dependency
 > **Plan ref:** Part XII §12.3 (Phase 4), Part VI §6.9–§6.10, Part III §3.11, §3.13
 
 This is the phase that makes the product **sellable**. Detection without alerting is a
@@ -19,12 +19,36 @@ dashboard nobody opens; alerting without reports is a tool the agency can't bill
 | 4.6 | Client portal: magic-link auth, sessions, 5 pages, client-safe serializers | L | [15-client-portal](../features/15-client-portal.md) | 🟡 |
 | 4.7 | Verification re-scan workflow | M | [09-rule-engine-issues](../features/09-rule-engine-issues.md) | ✅ |
 | 4.8 | Reports UI: library, wizard, detail, share links | M | [14-reports-white-label](../features/14-reports-white-label.md) | ✅ |
-| 4.9 | Settings: branding, scanning, alerts pages | M | [21-design-system](../features/21-design-system.md) | 🟡 |
+| 4.9 | Settings: branding, scanning, alerts pages | M | [21-design-system](../features/21-design-system.md) | ✅ |
 
 ### What each 🟡 is missing
 
-- **4.3** — the transport is a fetch client against the Resend HTTP API and has
-  **never run against Resend**: with no `RESEND_API_KEY` every send is recorded
+- **4.3** — a real `RESEND_API_KEY` is now configured and validated against the
+  provider (key accepted, `GET /domains` returns 200). **No email has been sent
+  yet**: the account has no verified sending domain, so delivery is restricted.
+  Adding the key immediately exposed two defects no test could have caught while
+  every send short-circuited to `simulated` — both fixed, both now covered:
+
+  1. **`EMAIL_FROM` was parsed as a bare address.** `.env.example` ships it as
+     `"Privacy Drift Monitor <alerts@example.com>"` — RFC 5322 — and the
+     transport wrapped it a second time, producing
+     `Privacy Drift Monitor <Privacy Drift Monitor <alerts@example.com>>`.
+     `parseFromAddress` handles both forms; five regression tests pin it.
+  2. **A permanent rejection was retried eight times.** An unverified sending
+     domain answers 403 on every attempt, and the job treated it like a Resend
+     outage — two hours of retries hiding a one-line configuration fix.
+     `EmailRejectedError` now splits deterministic rejections (400/401/403/404/422)
+     from transient ones, the same split the scanner already makes for scan
+     errors. 429 stays retryable, because a rate limit is exactly what a retry
+     is for.
+
+  Still outstanding: an actual delivered message, the delivery webhook against a
+  real event (`RESEND_WEBHOOK_SECRET` is unset, so the handler currently fails
+  closed with 401 — which is correct), and manual rendering checks in Gmail,
+  Outlook and Apple Mail.
+
+- ~~**4.3 (original note)**~~ — the transport is a fetch client against the
+  Resend HTTP API and had **never run against Resend**: with no `RESEND_API_KEY` every send is recorded
   as `simulated`, which is deliberate and visible in Alerts → History. The
   webhook handler verifies Svix signatures but has not seen a real event.
   Manual render checks in Gmail / Outlook / Apple Mail are still outstanding.
@@ -32,10 +56,10 @@ dashboard nobody opens; alerting without reports is a tool the agency can't bill
   covered by 14 integration tests, and the pages render. What is untested is the
   MAILBOX HOP: the invitation email has never actually arrived anywhere, because
   Resend is unconfigured. Everything either side of that hop is asserted.
-- **4.9** — Branding and Notifications settings pages are built. **Scan Settings
-  is not** (§3.11 specifies default frequency, page limit, priority, screenshot
-  policy, retention, user-agent suffix, respect-robots and global ignore
-  patterns); `AgencyScanSettings` exists in the schema with no editor.
+- ~~**4.9**~~ — done. Branding, Notifications and **Scan Settings** all exist.
+  `respectRobots` defaults to on and its help text says plainly what turning it
+  off means, because the consequence lands on somebody else's server; toggling
+  it is audit-logged specifically.
 
 ### Deviations from the plan, all deliberate
 

@@ -2,14 +2,8 @@
 
 > **Goal:** a real scan runs end to end and stores evidence.
 > **Dependencies:** Phase 1 (task 1.1 only — **the rest of Phase 1 is not built**)
-> **Status:** 🟡 Started out of order
+> **Status:** ✅ Complete
 > **⚠️ The highest-risk phase in the project.**
->
-> **Started with the parts that need no browser and no database**, because they are
-> foundational and fully testable today:
-> `privacy/sanitize.ts` (§10.6), `types.ts` (state derivation + retry classification), and
-> the §10.3 port allowlist the SSRF guard was missing. Everything from 2.1 onward needs
-> dependencies that are not installed — see "What is needed next" below.
 > **Plan ref:** Part XII §12.3 (Phase 2), Part IV (all), Part VII (queues), Part X §10.3–§10.6
 
 This is the product. Everything else is a presentation layer over what this subsystem
@@ -19,22 +13,22 @@ records. `packages/scanner` must be independently testable **without a database*
 
 | # | Task | Effort | Feature doc | Status |
 |---|---|---|---|---|
-| 2.1 | Worker bootstrap: BullMQ queues, connection handling, graceful shutdown, health + metrics | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.2 | Browser pool: lifecycle, recycling, semaphore, crash recovery | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.3 | Recorders: network, cookie, storage, console, screenshot | L | [07-evidence-system](../features/07-evidence-system.md) | ⬜ |
-| 2.4 | Resource interception policy (record-then-abort) | S | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.5 | Navigation, settle, observation window, scroll | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.6 | Consent adapter framework + registry + resolution cascade | L | [06-consent-engine](../features/06-consent-engine.md) | ⬜ |
-| 2.7 | Five CMP adapters (Cookiebot, CookieYes, Complianz, OneTrust, Usercentrics incl. shadow DOM) | L | [06-consent-engine](../features/06-consent-engine.md) | ⬜ |
-| 2.8 | `GenericBannerAdapter` — the four-strategy heuristic cascade | L | [06-consent-engine](../features/06-consent-engine.md) | ⬜ |
-| 2.9 | Four-phase orchestration with isolated contexts + withdrawal flow | L | [06-consent-engine](../features/06-consent-engine.md) | ⬜ |
-| 2.10 | Scan state machine + `ScanPhase` persistence | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.11 | Evidence persistence with batching and sanitization/redaction | M | [07-evidence-system](../features/07-evidence-system.md) | ⬜ |
-| 2.12 | S3 integration: screenshot upload, key builders, signed URLs | M | [07-evidence-system](../features/07-evidence-system.md) | ⬜ |
-| 2.13 | Scan job + database-driven scheduler + stuck-scan recovery | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.14 | **Fixture server + F01–F30** | L | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
-| 2.15 | Scan detail page + evidence viewer (virtualized) | L | [07-evidence-system](../features/07-evidence-system.md) | ⬜ |
-| 2.16 | Scan progress UI (live stages) | M | [05-scan-engine](../features/05-scan-engine.md) | ⬜ |
+| 2.1 | Worker bootstrap: BullMQ queues, connection handling, graceful shutdown, health + metrics | M | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.2 | Browser pool: lifecycle, recycling, semaphore, crash recovery | M | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.3 | Recorders: network, cookie, storage, console, screenshot | L | [07-evidence-system](../features/07-evidence-system.md) | ✅ |
+| 2.4 | Resource interception policy (record-then-abort) | S | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.5 | Navigation, settle, observation window, scroll | M | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.6 | Consent adapter framework + registry + resolution cascade | L | [06-consent-engine](../features/06-consent-engine.md) | ✅ |
+| 2.7 | Five CMP adapters (Cookiebot, CookieYes, Complianz, OneTrust, Usercentrics incl. shadow DOM) | L | [06-consent-engine](../features/06-consent-engine.md) | ✅ |
+| 2.8 | `GenericBannerAdapter` — the four-strategy heuristic cascade | L | [06-consent-engine](../features/06-consent-engine.md) | ✅ |
+| 2.9 | Four-phase orchestration with isolated contexts + withdrawal flow | L | [06-consent-engine](../features/06-consent-engine.md) | ✅ |
+| 2.10 | Scan state machine + `ScanPhase` persistence | M | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.11 | Evidence persistence with batching and sanitization/redaction | M | [07-evidence-system](../features/07-evidence-system.md) | ✅ |
+| 2.12 | S3 integration: screenshot upload, key builders, signed URLs | M | [07-evidence-system](../features/07-evidence-system.md) | ✅ |
+| 2.13 | Scan job + database-driven scheduler + stuck-scan recovery | M | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.14 | **Fixture server + F01–F30** | L | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
+| 2.15 | Scan detail page + evidence viewer (virtualized) | L | [07-evidence-system](../features/07-evidence-system.md) | ✅ |
+| 2.16 | Scan progress UI (live stages) | M | [05-scan-engine](../features/05-scan-engine.md) | ✅ |
 
 ## What is needed next
 
@@ -118,3 +112,53 @@ From §12.3 and M3 (§12.4).
 | SSRF exploited (Low/**Critical**) | Guard on every navigation *and every redirect hop*, IP pinning, plus an infrastructure egress firewall |
 | Sites block our scanner (**High**/Medium) | Identifiable UA, published egress IPs, `/bot` page, robots respect, "allowlist us" error copy |
 | Browser cost exceeds model (Medium/Medium) | Record-then-abort, screenshot policy, page limits, priority queues |
+
+
+## The fixture matrix is a contract — read this before touching it
+
+§4.15 fixes a thirty-row matrix and the CI contract names it directly: "F01–F30
+run on every PR that touches `packages/scanner`. **F28 is a hard gate** — any
+change producing spurious drift fails the build."
+
+An earlier pass numbered a LOCAL set F01–F12 describing entirely different
+behaviours. That is worse than having no fixtures: a green "F07 passes" said
+nothing about shadow-DOM consent, and a green "F28" said nothing about drift.
+The ids now match the plan row for row, and
+`src/testing/__tests__/fixture-matrix.test.ts` fails the build if one goes
+missing. Fixtures that are ours rather than the plan's carry `X` ids.
+
+Three deviations, all deliberate and all commented at the source:
+
+| Row | Plan | Built | Why |
+|---|---|---|---|
+| F20 | tag injected after 5 s | 1.2 s | Both are inside the 10 s observation window and prove the same property; 5 s per run is minutes of CI for no extra signal |
+| F23 | 20 s first byte | 20 s, overridable per test | The fixture matches the plan; a test asserting timeout HANDLING overrides it rather than waiting |
+| F02 etc. | "both vendors classified" | recorded, not classified | The classifier matches on registrable domain and these pages are served from 127.0.0.1, which has none. Vendor matching is unit-tested against synthetic requests in `packages/analysis` — merging the two would need a DNS-rewriting proxy for no extra confidence |
+
+## Two real defects the fixtures found
+
+- **The generic adapter did not recognise "Deny"** — which is what Usercentrics
+  actually renders. F07 caught it. Bare `deny` and `refuse` are now in the
+  reject phrase list, after the "… all" forms so the more specific phrase still
+  wins.
+- **There was no preferences fallback at all.** §4.6 describes rejecting via a
+  preferences panel and PDM-R011 fires on exactly that, but the cascade stopped
+  at three strategies. It is now strategy 4, reject-only, recorded as its own
+  `preferences_fallback` method so the rule has something to fire on. "Save"
+  alone is deliberately NOT treated as a rejection — in a panel where nothing
+  was toggled it may persist opt-in defaults, which would invert the finding.
+
+## The Evidence tab (task 2.15)
+
+Faceted browser over one scan: requests, cookies, storage, console,
+screenshots, with domain search, consent-state, resource-type and two toggle
+filters, plus JSON/CSV export behind `evidence:export` and audit-logged.
+
+⚠️ **Server-side paging, not client virtualisation.** §5.11 draws a virtualised
+table, which is the right answer for a dataset already in the browser. Ours is
+not: one scan of a busy site is thousands of rows, and shipping them all to
+virtualise locally is the cost virtualisation exists to avoid.
+
+⚠️ **It says what was NOT kept.** Query values, cookie values and header values
+are stripped before storage (§10.6). A developer hunting a missing parameter
+needs to know it was never stored, rather than concluding the scanner missed it.

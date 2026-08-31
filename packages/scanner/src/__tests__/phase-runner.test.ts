@@ -21,7 +21,7 @@ import type { NavigationBudget } from "../navigate";
 const FAST: NavigationBudget = {
   navTimeoutMs: 10_000,
   settleMaxMs: 3_000,
-  // Must stay above F06's 1.2s deferred tag, or the test would pass by not
+  // Must stay above F20's 1.2s deferred tag, or the test would pass by not
   // looking rather than by the observation window working.
   observeMs: 2_000,
 };
@@ -57,7 +57,7 @@ describe("runPhase — recording", () => {
   });
 
   it("records a third-party script that fires before consent", async () => {
-    const server = await fixture("F03");
+    const server = await fixture("F11");
     const thirdPartyPort = new URL(server.thirdPartyOrigin).port;
 
     const result = await runPhase(pool, {
@@ -69,7 +69,9 @@ describe("runPhase — recording", () => {
 
     // The finding this product exists to make: a request that happened before
     // anyone was asked.
-    const tracker = result.requests.find((r) => r.url.includes("/tracker.js"));
+    // F11 loads an analytics tag before any consent interaction — the plan's
+    // "pre-consent GA4" row.
+    const tracker = result.requests.find((r) => r.url.includes("/gtag/js"));
     expect(tracker, "tracker request was not recorded").toBeDefined();
     expect(tracker?.consentPhase).toBe("NO_CONSENT");
     expect(tracker?.status).toBe(200);
@@ -79,7 +81,7 @@ describe("runPhase — recording", () => {
   });
 
   it("records a cookie written before consent", async () => {
-    const server = await fixture("F04");
+    const server = await fixture("F11");
     const result = await runPhase(pool, {
       phase: "NO_CONSENT",
       url: server.origin,
@@ -96,7 +98,7 @@ describe("runPhase — recording", () => {
   });
 
   it("records storage writes, hashed, never raw", async () => {
-    const server = await fixture("F05");
+    const server = await fixture("X04");
     const result = await runPhase(pool, {
       phase: "NO_CONSENT",
       url: server.origin,
@@ -120,7 +122,7 @@ describe("runPhase — recording", () => {
   });
 
   it("catches a tag that fires 1.2s late — the observation window earns its keep", async () => {
-    const server = await fixture("F06");
+    const server = await fixture("F20");
     const result = await runPhase(pool, {
       phase: "NO_CONSENT",
       url: server.origin,
@@ -135,7 +137,7 @@ describe("runPhase — recording", () => {
   });
 
   it("catches a tag bound to scroll", async () => {
-    const server = await fixture("F07");
+    const server = await fixture("X05");
     const result = await runPhase(pool, {
       phase: "NO_CONSENT",
       url: server.origin,
@@ -151,7 +153,7 @@ describe("runPhase — recording", () => {
   });
 
   it("reports FAILED on an HTTP error rather than an empty clean phase", async () => {
-    const server = await fixture("F11");
+    const server = await fixture("F24");
     const result = await runPhase(pool, {
       phase: "NO_CONSENT",
       url: server.origin,
@@ -166,7 +168,7 @@ describe("runPhase — recording", () => {
   });
 
   it("still EXECUTES a page that never goes network-idle", async () => {
-    const server = await fixture("F12");
+    const server = await fixture("X03");
     const result = await runPhase(pool, {
       phase: "NO_CONSENT",
       url: server.origin,

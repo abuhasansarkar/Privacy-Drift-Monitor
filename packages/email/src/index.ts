@@ -16,7 +16,9 @@ export type {
 } from "./templates";
 export {
   createResendTransport,
+  EmailRejectedError,
   emailCircuitState,
+  parseFromAddress,
   resendConfigFromEnv,
 } from "./client";
 export type {

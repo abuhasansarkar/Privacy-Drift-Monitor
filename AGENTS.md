@@ -21,33 +21,54 @@ client reports.
 
 ## Current state — read this before claiming anything exists
 
-**Phases 0–4 are built. `npm run verify` passes: lint, typecheck, terminology
-(288 files), 400 tests, `next build`.** Both processes have been started and
-exercised against the docker-compose stack.
+**Phases 0–4 are complete. `npm run verify` passes: lint, typecheck,
+terminology (318 files), 452 tests, `next build`.** Both processes have been
+started and exercised against the docker-compose stack.
 
 | | |
 |---|---|
-| Built and exercised | `packages/{config,database,shared,schemas,scanner,analysis,storage,notifications,email,reports}`, `worker/` (scan + analysis + notification + email + report + digest, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` route groups, the scan pipeline, drift, scoring, the rule engine, alerts, the five report types, the client portal |
+| Built and exercised | `packages/{config,database,shared,schemas,scanner,analysis,storage,notifications,email,reports}`, `worker/` (scan + analysis + notification + email + report + digest, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` route groups, the scan pipeline, the F01–F30 fixture matrix, all 25 rules, drift, scoring, alerts, the five report types, the client portal, the four legal documents |
 | Built, **never run against the real dependency** | Resend (no `RESEND_API_KEY`: every send records as `simulated`, visibly, in Alerts → History), the Resend delivery webhook, the Clerk webhook, CI |
-| Does **not** exist | `packages/{ai,billing,ui}`, billing and Stripe, the free public scanner, `/admin`, `/app/ai`, `/app/billing`, `/app/help`, Scan Settings (`AgencyScanSettings` has no editor), shadcn |
+| Does **not** exist | `packages/{ai,billing,ui}`, billing and Stripe, the free public scanner, `/admin`, `/app/ai`, `/app/billing`, `/app/help`, `/pricing`, `/blog`, `/resources`, `/about`, `/contact`, shadcn |
+
+### Three things here are CONTRACTS, not labels
+
+Each was found mis-numbered once, and each failure was **silent** — the code
+worked, the tests were green, and the green meant nothing.
+
+| Contract | Where | What a mismatch costs |
+|---|---|---|
+| Fixture ids `F01`–`F30` | §4.15, `packages/scanner/src/testing/fixtures.ts` | "F28 passes" stops meaning "no spurious drift" |
+| Rule ids `PDM-R001`–`PDM-R025` | §4.11, `packages/analysis/src/rules/` | Renaming one orphans every `Issue` row that stores it |
+| Queue and job ids | §7.2, `packages/scanner/src/queue/queues.ts` | BullMQ rejects a `:` in a job id, at runtime, in production |
+
+All three now have a test that fails the build if one goes missing. Anything
+that is ours rather than the plan's carries an `X` prefix (`X01`, `PDM-X01`) so
+nobody mistakes it for a plan row.
 
 **Reporting rule, unchanged:** do not describe something as working on the
 strength of the code existing. `dev-doc/phases/phase-4-agency-workflow.md` is
 the model — it marks each acceptance criterion ✅ only where a test or an
 observed run backs it, and 🟡 otherwise.
 
-**Three defects that only appeared when the processes were actually started**,
-all fixed, all worth knowing before you write similar code:
+### Defects that only appeared when the processes were actually started
+
+All fixed, all worth knowing before you write similar code:
 
 1. **BullMQ rejects a job id containing `:`** — the same trap already documented
-   for queue *names*. `toJobId()` in `packages/scanner/src/queue/queues.ts`
-   rewrites at the enqueue boundary; database keys keep their colons.
+   for queue *names*. `toJobId()` rewrites at the enqueue boundary; database
+   keys keep their colons.
 2. **`export *` in a `.ts` barrel is invisible to Node's ESM loader under tsx.**
    The worker died at boot on a symbol that demonstrably existed. Barrels
    consumed by `worker/` must re-export explicitly.
 3. **esbuild transformed the report `.tsx` templates with the classic JSX
    runtime** and threw `React is not defined` at render time, on files `tsc` was
    happy with. Those three files carry an explicit `import * as React`.
+4. **The generic consent adapter did not recognise "Deny"** — which is what
+   Usercentrics actually renders. Fixture F07 caught it.
+5. **`server-only` throws in vitest**, because outside a bundler it resolves to
+   the client entry whose job is to throw. `test/server-only-stub.ts` is aliased
+   in `vitest.config.ts` so `src/server/**` can be tested directly.
 
 `pnpm-workspace.yaml` is an inert tombstone awaiting deletion; the workspace is npm.
 

@@ -1,7 +1,13 @@
 import { Prisma, unsafeGlobalClient } from "@pdm/database";
 import { repositoriesFor, type FindingInput } from "@pdm/database/repositories";
 import { classify, type VendorPattern } from "@pdm/analysis/classify";
-import { evaluateRules, type Finding } from "@pdm/analysis/rules";
+import {
+  evaluateDriftRules,
+  evaluateRules,
+  type DriftFact,
+  type Finding,
+  type ScanFacts,
+} from "@pdm/analysis/rules";
 import { computeScore } from "@pdm/analysis/score";
 import {
   diffScans,
@@ -73,8 +79,8 @@ function toIssue(finding: Finding, confidence: number): FindingInput {
     title: finding.title,
     message: finding.rationale,
     technicalReason: finding.rationale,
-    recommendedAction:
-      "Review this with whoever manages the site's tag configuration.",
+    // §4.11's "Recommended action" column, authored by the rule that fired.
+    recommendedAction: finding.recommendedAction,
   };
 }
 
@@ -128,6 +134,8 @@ export interface AnalysisResult {
   resolved: number;
   /** Issues a person marked RESOLVED that this scan confirmed are gone (§6.5). */
   verified: number;
+  /** Findings raised by the drift pass (§4.11 R013–R019). */
+  driftFindings: number;
   score: number;
   scoreConfidence: "FULL" | "PARTIAL";
   driftEvents: number;
@@ -184,14 +192,31 @@ export async function analyseScan(
     screenshots: [],
   }));
 
-  const findings = evaluateRules({
+  /*
+   * ⚠️ SCAN-LEVEL FACTS COME FROM THE SCAN RECORD, not from a rule's own
+   * lookup. R022, R023 and R025 all need them, and a rule that queried would
+   * be a rule that can produce a fact — which P6 forbids.
+   */
+  const scanFacts: ScanFacts = {
+    status: scan.status,
+    errorCode: scan.errorCode,
+    url: scan.website.url,
+    consecutiveFailures: scan.website.consecutiveFailures,
+    cmpId: scan.detectedCmpId,
+    cmpName: scan.detectedCmpName,
+  };
+
+  const ruleContext = {
     phases,
     detections,
     vendorsById: new Map(vendors.map((vendor) => [vendor.id, vendor])),
     requests: requests as never,
     cookies: cookies as never,
     storage: storage as never,
-  });
+    scan: scanFacts,
+  };
+
+  const findings = evaluateRules(ruleContext);
 
   const confidenceByFingerprint = new Map(
     detections.map((detection) => [detection.vendorId ?? "", detection.confidence]),
@@ -321,6 +346,48 @@ export async function analyseScan(
 
   const driftEvents = await recordDrift(repos, agencyId, scan.website.id, scanId, current);
 
+  /*
+   * ⚠️ THE SECOND RULE PASS (§4.11 R013–R019). Drift rules run only after the
+   * drift engine has produced its events, so the findings list and the drift
+   * feed describe the same change. Running them in the first pass would mean
+   * the rule engine diffing scans itself, and the two diffs would eventually
+   * disagree.
+   */
+  let driftFindings = 0;
+  if (driftEvents > 0) {
+    const events = await repos.db.privacyDriftEvent.findMany({
+      where: { currentScanId: scanId },
+      select: {
+        changeType: true,
+        severity: true,
+        summary: true,
+        addedItems: true,
+      },
+    });
+
+    const facts: DriftFact[] = events.map((event) => ({
+      changeType: event.changeType,
+      severity: event.severity as DriftFact["severity"],
+      summary: event.summary,
+      // The subject is what the change is ABOUT — a vendor name, a cookie name,
+      // a domain. The drift engine records it as the first added item.
+      subject: firstItem(event.addedItems) ?? event.changeType,
+      // Pre-consent changes are the ones §4.11 escalates (R013, R016).
+      preConsent: JSON.stringify(event.addedItems).includes("NO_CONSENT"),
+    }));
+
+    const found = evaluateDriftRules({ ...ruleContext, drift: facts });
+    if (found.length > 0) {
+      const upserted = await repos.issues.upsertFromScan({
+        websiteId: scan.website.id,
+        scanId,
+        detectedAt: scan.finishedAt ?? new Date(),
+        findings: found.map((finding) => toIssue(finding, 1)),
+      });
+      driftFindings = upserted.created + upserted.reopened;
+    }
+  }
+
   const result: AnalysisResult = {
     driftEvents,
     detections: detections.length,
@@ -330,6 +397,7 @@ export async function analyseScan(
     suppressed: upsert.suppressed,
     resolved,
     verified,
+    driftFindings,
     score: score.score,
     scoreConfidence: score.confidence,
   };
@@ -402,4 +470,23 @@ async function recordDrift(
   });
 
   return events.length;
+}
+
+
+/**
+ * The first entry of a drift event's `addedItems` JSON array, as a string.
+ *
+ * The drift engine stores added items as an array of identifiers; the FIRST is
+ * what the event is about. Written defensively because the column is JSON and a
+ * malformed row must not take the whole analysis down with it.
+ */
+function firstItem(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const first = value[0];
+  if (typeof first === "string") return first;
+  if (first && typeof first === "object" && "name" in first) {
+    const name = (first as { name?: unknown }).name;
+    return typeof name === "string" ? name : null;
+  }
+  return null;
 }

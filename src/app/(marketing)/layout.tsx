@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { t } from "@pdm/shared/copy";
 import { DISCLAIMER_SHORT } from "@pdm/shared/copy/terminology";
+import { LEGAL_DOCUMENTS } from "@content/legal";
 import { MarketingAuthLinks } from "@/components/marketing-auth-links";
 
 /**
@@ -59,11 +60,31 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       </main>
 
       <footer className="mt-auto border-t border-border">
-        <div className="mx-auto w-full max-w-3xl px-4 py-8">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
           {/* §1.11 — the boundary statement appears on every public surface. */}
           <p className="text-xs leading-5 text-muted-foreground">
             {DISCLAIMER_SHORT}
           </p>
+
+          {/*
+            §3.2 requires all four legal documents to be reachable. Linked from
+            the footer of every public page rather than buried, because the
+            disclaimer above is a summary and this is where the full text lives.
+          */}
+          <nav aria-label={t("legal.footerTitle")}>
+            <ul className="flex flex-wrap gap-x-4 gap-y-1">
+              {LEGAL_DOCUMENTS.map((doc) => (
+                <li key={doc.slug}>
+                  <Link
+                    href={`/legal/${doc.slug}`}
+                    className="text-xs text-muted-foreground transition hover:text-foreground"
+                  >
+                    {doc.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </footer>
     </>

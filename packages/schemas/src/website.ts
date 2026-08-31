@@ -4,8 +4,9 @@ import {
   monitoringStatus,
   scanFrequency,
   scanPriority,
+  screenshotPolicy,
 } from "./enums";
-import { httpUrl, uuid } from "./primitives";
+import { httpUrl, registrableDomain, uuid } from "./primitives";
 
 /**
  * WEBSITE CONTRACTS — PLAN.md Part III §3.6, §6.4, feature doc 03-websites.
@@ -131,3 +132,46 @@ export const bulkWebsiteActionSchema = z.object({
 });
 
 export type BulkWebsiteAction = z.infer<typeof bulkWebsiteActionSchema>;
+
+
+/**
+ * AGENCY SCAN SETTINGS — §3.11 ("Scan Settings"), Phase 4 task 4.9.
+ *
+ * ⚠️ `respectRobots` DEFAULTS TO TRUE, and §3.11 marks that default in bold.
+ * Turning it off means scanning a site that asked us not to; it is a decision
+ * an agency makes deliberately for sites they control, never a default we ship.
+ *
+ * ⚠️ `evidenceRetentionDays` IS NULLABLE, meaning "use the plan's limit". A
+ * number here can only ever SHORTEN retention — the plan ceiling is enforced by
+ * the retention sweep, not by this form, so a value above the plan is clamped
+ * there rather than silently accepted.
+ */
+export const agencyScanSettingsSchema = z.object({
+  defaultFrequency: scanFrequency,
+  defaultPageLimit: z.coerce.number().int().min(1).max(20),
+  defaultPriority: scanPriority,
+  screenshotPolicy,
+  respectRobots: z.boolean(),
+  userAgentSuffix: z
+    .string()
+    .trim()
+    .max(80)
+    // A suffix is appended to our UA string; a newline would let someone inject
+    // a second header.
+    .regex(/^[\w .()/+:-]*$/, "Use letters, numbers and simple punctuation")
+    .nullable()
+    .default(null),
+  ignoredDomains: z
+    .array(registrableDomain)
+    .max(50)
+    .default([]),
+  evidenceRetentionDays: z.coerce
+    .number()
+    .int()
+    .min(7)
+    .max(365)
+    .nullable()
+    .default(null),
+});
+
+export type AgencyScanSettingsInput = z.infer<typeof agencyScanSettingsSchema>;

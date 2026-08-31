@@ -51,11 +51,23 @@ phase doc, pick a task, then open the feature doc it points to for the full spec
 
 ## Current status
 
-**Phases 0–4 are built.** `npm run verify` — lint, typecheck, terminology, 400
-tests, build — passes against the whole tree, and both processes have been
-started and exercised. The per-phase docs carry what is verified versus merely
-written; Phase 4's doc is the most precise about the difference and is the
-model to follow.
+**Phases 0–4 are complete.** `npm run verify` — lint, typecheck, terminology
+(318 files), **452 tests**, `next build` — passes against the whole tree, and
+both processes have been started and exercised against the docker-compose stack.
+
+The per-phase docs carry what is verified versus merely written. Phase 4's doc
+is the most precise about the difference and is the model to follow.
+
+> **Three things in this codebase are CONTRACTS, not labels.** Each was found
+> mis-numbered once, and each failure was silent:
+>
+> | Contract | Where | What a mismatch costs |
+> |---|---|---|
+> | Fixture ids `F01`–`F30` | §4.15, `packages/scanner/src/testing/fixtures.ts` | "F28 passes" stops meaning "no spurious drift" |
+> | Rule ids `PDM-R001`–`PDM-R025` | §4.11, `packages/analysis/src/rules/` | Renaming one orphans every `Issue` row that stores it |
+> | Queue and job ids | §7.2, `packages/scanner/src/queue/queues.ts` | BullMQ rejects a `:` at runtime, in production |
+>
+> All three now have a test that fails the build if one goes missing.
 
 > ⚠️ The Phase 0 table below is the ORIGINAL foundation checklist and is now
 > largely historical. Where it says "unverified", the suites have since run.
@@ -116,10 +128,10 @@ to see which one fails first without the others masking it.
 | Phase | Goal | Status |
 |---|---|---|
 | [Phase 0](phases/phase-0-foundation.md) | Monorepo, schema, auth, design system, CI | 🟡 In progress |
-| [Phase 1](phases/phase-1-core-saas-shell.md) | Clients + websites, no scanning yet | 🟡 Built |
-| [Phase 2](phases/phase-2-scanner.md) | A real scan runs end to end | 🟡 Built |
-| [Phase 3](phases/phase-3-intelligence.md) | Evidence becomes findings, drift, score | 🟡 Built |
-| [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | 🟡 Built; partially verified — see the phase doc |
+| [Phase 1](phases/phase-1-core-saas-shell.md) | Clients + websites, no scanning yet | ✅ Complete |
+| [Phase 2](phases/phase-2-scanner.md) | A real scan runs end to end | ✅ Complete |
+| [Phase 3](phases/phase-3-intelligence.md) | Evidence becomes findings, drift, score | ✅ Complete |
+| [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | 🟡 Built; two gaps need a live dependency — see the phase doc |
 | [Phase 5](phases/phase-5-ai.md) | Grounded explanation and recommendation | ⬜ Not started |
 | [Phase 6](phases/phase-6-commercial-admin.md) | Billing, free scanner, admin panel | ⬜ Not started |
 | [Phase 7](phases/phase-7-hardening-launch.md) | Security, load, a11y, DR, launch | ⬜ Not started |

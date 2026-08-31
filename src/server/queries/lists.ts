@@ -71,11 +71,24 @@ export async function getWebsiteList(ctx: AgencyContext, raw: RawParams) {
     : websiteSchemas.websiteListQuerySchema.parse({});
 
   const repos = repositoriesFor(ctx.agencyId);
-  return {
-    query,
+
+  const [page, clients, groups] = await Promise.all([
     // §6.2 — a member restricted to specific sites sees only those. Passed
     // through rather than applied here: the repository composes it into the
     // same `where` as the filters, so it cannot be forgotten by a caller.
-    page: await repos.websites.list({ ...query, websiteScope: ctx.websiteScope }),
-  };
+    repos.websites.list({ ...query, websiteScope: ctx.websiteScope }),
+    repos.db.client.findMany({
+      where: { archivedAt: null },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    repos.db.websiteGroup.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  // The filter dropdowns need names, not ids — §3.5 lists Client and Group as
+  // filters, and a dropdown of uuids is not a filter anyone can use.
+  return { query, page, clients, groups };
 }

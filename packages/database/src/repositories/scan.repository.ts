@@ -1,4 +1,4 @@
-import type { Prisma, Scan, ScanStatus, ScanTrigger } from "@prisma/client";
+import type { ConsentPhase, Prisma, Scan, ScanStatus, ScanTrigger } from "@prisma/client";
 import type { TenantClient } from "../tenant";
 
 /**
@@ -263,7 +263,17 @@ export function scanRepository(db: TenantClient, agencyId: string) {
         where: { id: scanId },
         include: {
           phases: { orderBy: { phase: "asc" } },
-          website: { select: { id: true, url: true, registrableDomain: true } },
+          // `consecutiveFailures` is here for PDM-R023, which must read the
+          // count rather than derive it — a rule that queried history would be
+          // a rule that can produce a fact (P6).
+          website: {
+            select: {
+              id: true,
+              url: true,
+              registrableDomain: true,
+              consecutiveFailures: true,
+            },
+          },
         },
       });
     },
@@ -274,6 +284,111 @@ export function scanRepository(db: TenantClient, agencyId: string) {
      * A busy site records thousands of requests, so this is never loaded whole
      * — the viewer virtualises and this returns one window (§3.9).
      */
+    /**
+     * FACETED EVIDENCE BROWSER — §3.8 ("Tab: Evidence"), Phase 2 task 2.15.
+     *
+     * ⚠️ FILTERED AND PAGED IN THE DATABASE, not in the page. One scan of a
+     * busy site records thousands of requests; shipping them all to the browser
+     * to filter client-side is the difference between a fast tab and one that
+     * locks a laptop. Every filter below has an index behind it (§5.3).
+     */
+    async evidenceRequests(
+      scanId: string,
+      params: {
+        skip: number;
+        take: number;
+        search?: string;
+        consentPhase?: ConsentPhase;
+        resourceType?: string;
+        thirdPartyOnly?: boolean;
+        trackerOnly?: boolean;
+      },
+    ) {
+      const where = {
+        scanId,
+        ...(params.consentPhase ? { consentPhase: params.consentPhase } : {}),
+        ...(params.resourceType ? { resourceType: params.resourceType } : {}),
+        ...(params.thirdPartyOnly ? { isThirdParty: true } : {}),
+        ...(params.trackerOnly ? { trackerVendorId: { not: null } } : {}),
+        ...(params.search
+          ? {
+              OR: [
+                { host: { contains: params.search, mode: "insensitive" as const } },
+                { url: { contains: params.search, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
+      };
+
+      const [items, total] = await Promise.all([
+        db.networkRequest.findMany({
+          where,
+          orderBy: [{ timestampMs: "asc" }, { id: "asc" }],
+          skip: params.skip,
+          take: params.take,
+        }),
+        db.networkRequest.count({ where }),
+      ]);
+
+      return { items, total };
+    },
+
+    /** Distinct resource types present on this scan, for the filter dropdown. */
+    async evidenceResourceTypes(scanId: string): Promise<string[]> {
+      const rows = await db.networkRequest.groupBy({
+        by: ["resourceType"],
+        where: { scanId },
+        orderBy: { resourceType: "asc" },
+      });
+      return rows.map((row) => row.resourceType);
+    },
+
+    async evidenceCookies(scanId: string, params: { skip: number; take: number }) {
+      const [items, total] = await Promise.all([
+        db.cookieRecord.findMany({
+          where: { scanId },
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          skip: params.skip,
+          take: params.take,
+        }),
+        db.cookieRecord.count({ where: { scanId } }),
+      ]);
+      return { items, total };
+    },
+
+    async evidenceStorage(scanId: string, params: { skip: number; take: number }) {
+      const [items, total] = await Promise.all([
+        db.storageEntry.findMany({
+          where: { scanId },
+          orderBy: [{ key: "asc" }, { id: "asc" }],
+          skip: params.skip,
+          take: params.take,
+        }),
+        db.storageEntry.count({ where: { scanId } }),
+      ]);
+      return { items, total };
+    },
+
+    async evidenceConsole(scanId: string, params: { skip: number; take: number }) {
+      const [items, total] = await Promise.all([
+        db.consoleLog.findMany({
+          where: { scanId },
+          orderBy: { createdAt: "asc" },
+          skip: params.skip,
+          take: params.take,
+        }),
+        db.consoleLog.count({ where: { scanId } }),
+      ]);
+      return { items, total };
+    },
+
+    async evidenceScreenshots(scanId: string) {
+      return db.screenshot.findMany({
+        where: { scanId },
+        orderBy: [{ consentPhase: "asc" }, { kind: "asc" }],
+      });
+    },
+
     async requests(scanId: string, params: { skip: number; take: number }) {
       const where: Prisma.NetworkRequestWhereInput = { scanId };
       const [total, items] = await Promise.all([

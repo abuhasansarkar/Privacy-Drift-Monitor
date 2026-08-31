@@ -87,7 +87,7 @@ describe("runScan", () => {
   });
 
   it("reports PARTIAL when the banner has NO reject control", async () => {
-    const server = await fixture("F10");
+    const server = await fixture("X02");
     const result = await runScan(
       input(server.origin, { phases: ["NO_CONSENT", "REJECT_ALL"] }),
       { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
@@ -103,7 +103,7 @@ describe("runScan", () => {
   });
 
   it("finds a reject control inside an open shadow root", async () => {
-    const server = await fixture("F09");
+    const server = await fixture("F07");
     const result = await runScan(
       input(server.origin, { phases: ["REJECT_ALL"] }),
       { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
@@ -114,6 +114,95 @@ describe("runScan", () => {
     // Playwright pierces open shadow roots, so this needs no special selector —
     // the test exists to prove that, because Usercentrics depends on it.
     expect(reject?.actionMethod).not.toBeNull();
+  });
+
+  /*
+   * ⚠️ THE THREE CONSENT-OUTCOME FIXTURES (§4.15 F13–F15). These are the
+   * product's actual claim — not "we found a banner", but "we can tell whether
+   * the banner did anything". A scanner that passes every other test and fails
+   * these detects nothing worth paying for.
+   */
+  it("F13 — records the tag that fires ANYWAY after Reject All", async () => {
+    const server = await fixture("F13");
+    const result = await runScan(
+      input(server.origin, { phases: ["REJECT_ALL"] }),
+      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+    );
+
+    const reject = result.phases[0];
+    expect(reject?.status).toBe("EXECUTED");
+    // The rejection was performed AND the tracker still loaded. Both halves
+    // matter: without the first, this is indistinguishable from a scan that
+    // never found the button.
+    expect(reject?.bannerDismissed).toBe(true);
+    expect(
+      reject?.requests.some((request) => request.url.includes("/tracker.js")),
+      "the tracker should have been recorded firing after rejection",
+    ).toBe(true);
+  });
+
+  it("F14 — Accept All loads tags that Reject All does not", async () => {
+    const server = await fixture("F14");
+    const result = await runScan(
+      input(server.origin, { phases: ["REJECT_ALL", "ACCEPT_ALL"] }),
+      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+    );
+
+    const byPhase = new Map(result.phases.map((phase) => [phase.phase, phase]));
+    const rejected = byPhase.get("REJECT_ALL");
+    const accepted = byPhase.get("ACCEPT_ALL");
+
+    expect(rejected?.status).toBe("EXECUTED");
+    expect(accepted?.status).toBe("EXECUTED");
+
+    const thirdParty = (phase: typeof rejected) =>
+      (phase?.requests ?? []).filter((request) => /\/[abc]\.js/.test(request.url)).length;
+
+    // ⚠️ The ASYMMETRY is the assertion, not the absolute counts. A scan where
+    // both phases record the same thing is a scan whose consent actions did
+    // nothing — which is exactly what F13 models and F14 must not.
+    expect(thirdParty(accepted)).toBeGreaterThan(thirdParty(rejected));
+    expect(thirdParty(rejected)).toBe(0);
+  });
+
+  /**
+   * ⚠️ F28 — THE HARD GATE (§4.15). "Identical site scanned twice → zero drift
+   * events — the single most important regression test."
+   *
+   * Asserted on the RECORDING rather than on drift events, because that is
+   * where a regression would actually originate: fingerprints are derived from
+   * these sets, so two identical scans producing identical sets is the property
+   * the whole drift engine rests on. A recorder that leaked a timestamp, a
+   * request id or an ordering difference fails here, one layer before the
+   * normaliser gets a chance to hide it.
+   */
+  it("F28 — two scans of an identical page record identical sets", async () => {
+    const server = await fixture("F28");
+
+    const runOnce = async () => {
+      const result = await runScan(
+        input(server.origin, { phases: ["NO_CONSENT"] }),
+        { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      );
+      const phase = result.phases[0];
+      return {
+        // Sorted: recording ORDER is not part of a fingerprint, and asserting
+        // on it would make this test fail for a reason drift does not care about.
+        requests: (phase?.requests ?? [])
+          .map((request) => `${request.method} ${request.url}`)
+          .sort(),
+        cookies: (phase?.cookies ?? [])
+          .map((cookie) => `${cookie.domain}|${cookie.name}`)
+          .sort(),
+      };
+    };
+
+    const first = await runOnce();
+    const second = await runOnce();
+
+    expect(first.requests.length).toBeGreaterThan(0);
+    expect(second.requests).toEqual(first.requests);
+    expect(second.cookies).toEqual(first.cookies);
   });
 
   it("records NO consent action for the NO_CONSENT phase", async () => {
@@ -131,7 +220,7 @@ describe("runScan", () => {
   });
 
   it("stops after the first phase when navigation never succeeds", async () => {
-    const server = await fixture("F11");
+    const server = await fixture("F24");
     const result = await runScan(input(server.origin), {
       pool,
       adapters: [GENERIC_ADAPTER],

@@ -18,7 +18,8 @@ import type { CmpDetectionResult, ConsentMethod } from "../types";
  *      heuristic available: it is the same thing a screen-reader user acts on.
  *   2. text_match      — visible text against a multi-language phrase list.
  *   3. dom_heuristic   — a control inside something banner-shaped, by id/class.
- *   4. give up         — UNDETERMINED, with a code.
+ *   4. preferences     — open the preferences panel and look again (reject only).
+ *   5. give up         — UNDETERMINED, with a code.
  *
  * ⚠️ STRATEGY 4 IS A FEATURE. The temptation is to click the most
  * banner-looking thing and move on; that produces a scan which reports "no
@@ -37,6 +38,13 @@ const REJECT_PHRASES = [
   "deny all",
   "reject",
   "decline",
+  /*
+   * ⚠️ Bare "deny" is what Usercentrics actually renders (fixture F07), and it
+   * is unambiguous in a consent banner in a way "OK" and "Got it" are not.
+   * It sits AFTER the "… all" forms so the more specific phrase still wins.
+   */
+  "deny",
+  "refuse",
   "necessary only",
   "only necessary",
   "essential only",
@@ -203,6 +211,83 @@ async function byDomHeuristic(
   return null;
 }
 
+/**
+ * Strategy 4 — open the preferences panel, then look for reject inside it.
+ *
+ * ⚠️ REJECT ONLY. Opening preferences to find ACCEPT would be absurd — accept
+ * is always at the top level — and opening it for WITHDRAW is what the withdraw
+ * phrases already do. This exists for the common pattern where the banner
+ * offers "Accept all" and "Manage preferences" and nothing else.
+ *
+ * ⚠️ THE RESULT IS RECORDED AS `preferences_fallback`, not as whichever
+ * strategy found the control inside the panel. PDM-R011 fires on that method:
+ * rejecting was possible, but it took an extra step that accepting did not.
+ */
+async function byPreferencesPanel(
+  page: Page,
+  phrases: string[],
+): Promise<Candidate | null> {
+  const opener =
+    (await byAccessibleName(page, PREFERENCE_PHRASES)) ??
+    (await byText(page, PREFERENCE_PHRASES)) ??
+    (await byDomHeuristic(page, PREFERENCE_PHRASES));
+  if (!opener) return null;
+
+  try {
+    await opener.locator.click({ timeout: 5_000 });
+  } catch {
+    // The panel would not open. That is not a reject failure with a different
+    // cause — it is still "we could not find a way to reject".
+    return null;
+  }
+
+  // Give the panel a moment to render before looking inside it.
+  await page.waitForTimeout(500);
+
+  const inside =
+    (await byAccessibleName(page, [...phrases, ...SAVE_WITHOUT_ACCEPTING_PHRASES])) ??
+    (await byText(page, [...phrases, ...SAVE_WITHOUT_ACCEPTING_PHRASES]));
+  if (!inside) return null;
+
+  return {
+    ...inside,
+    method: "preferences_fallback",
+    selector: `preferences >> ${inside.selector}`,
+    // Below the direct strategies: two clicks and an assumption about which
+    // panel opened is materially weaker evidence than one labelled button.
+    confidence: Math.min(inside.confidence, 0.6),
+  };
+}
+
+/** Controls that OPEN a preferences panel. Not themselves a rejection. */
+const PREFERENCE_PHRASES = [
+  "manage preferences",
+  "cookie preferences",
+  "manage cookies",
+  "customize",
+  "customise",
+  "settings",
+  "einstellungen",
+  "personnaliser",
+  "configurar",
+];
+
+/**
+ * Controls INSIDE a preferences panel that mean "reject".
+ *
+ * ⚠️ "Save" alone is absent, deliberately. In a panel where the visitor has
+ * toggled nothing, "Save" may persist the defaults — which on many platforms
+ * are opt-in. Clicking it and calling the result a rejection would invert the
+ * finding, which is the same trap "OK" and "Got it" are excluded for.
+ */
+const SAVE_WITHOUT_ACCEPTING_PHRASES = [
+  "save without accepting",
+  "continue without accepting",
+  "save my preferences",
+  "confirm my choices",
+  "reject non-essential",
+];
+
 export const GENERIC_ADAPTER: ConsentAdapter = {
   id: "generic",
   name: "Generic banner",
@@ -228,11 +313,13 @@ export const GENERIC_ADAPTER: ConsentAdapter = {
     const candidate =
       (await byAccessibleName(page, phrases)) ??
       (await byText(page, phrases)) ??
-      (await byDomHeuristic(page, phrases));
+      (await byDomHeuristic(page, phrases)) ??
+      // Strategy 4, reject only — see `byPreferencesPanel`.
+      (intent === "reject" ? await byPreferencesPanel(page, phrases) : null);
 
     if (!candidate) {
-      // Strategy 4. A banner with no control we can identify for this intent —
-      // fixture F10's accept-only banner is exactly this case, and the answer
+      // Strategy 5. A banner with no control we can identify for this intent —
+      // fixture X02's accept-only banner is exactly this case, and the answer
       // is UNDETERMINED, not "rejected with no effect".
       return actionFailure(
         "CONSENT_BUTTON_NOT_FOUND",

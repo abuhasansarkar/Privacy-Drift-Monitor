@@ -108,6 +108,13 @@ export default async function TrackerInventoryPage() {
     )
     .map((rollup) => ({
       id: rollup.key,
+      /*
+       * ⚠️ ONLY KNOWN VENDORS LINK. An unrecognised third party has no
+       * catalogue row and therefore no profile — a link to a "we don't have a
+       * profile" page from every unknown row would be a dead end offered
+       * dozens of times.
+       */
+      href: rollup.known ? `/app/trackers/${rollup.key}` : undefined,
       primary: rollup.name,
       secondary: rollup.known ? rollup.category : t("trackers.unknownVendors"),
       cells: {

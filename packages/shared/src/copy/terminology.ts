@@ -104,6 +104,38 @@ export const DISCLAIMER_SHORT =
   "advice and does not determine legal compliance.";
 
 /**
+ * THE FULL BOUNDARY STATEMENT — PLAN.md §3.2, verbatim.
+ *
+ * ⚠️ REPRODUCED WORD FOR WORD FROM THE PLAN, not paraphrased. §3.2: "Do not
+ * paraphrase it per surface — import it." This is the text that appears at
+ * `/legal/disclaimer`, at onboarding, and in the limitations section of every
+ * PDF report. `DISCLAIMER_SHORT` above is the one-paragraph reduction for
+ * places a four-paragraph statement would swamp the content it qualifies —
+ * an email footer, a report cover, the marketing footer.
+ *
+ * "Positioned as legal compliance and sued over a missed issue" is a named risk
+ * in §12.7. This paragraph set is the mitigation, so editing it is a legal
+ * decision and not a copy decision.
+ */
+/* terminology-allow — §3.2 verbatim; "compliance" appears only in the sentence
+   that says what we do NOT do, which is the exact context the marker exists for. */
+export const DISCLAIMER_FULL: readonly string[] = [
+  "Privacy Drift Monitor is a technical monitoring service. It observes and records the " +
+    "behavior of websites in an automated browser and applies deterministic rules to that " +
+    "recorded behavior in order to surface potential issues for human review.",
+  "It does not provide legal advice, does not constitute a legal assessment, and does not " +
+    "certify compliance with the GDPR, the UK GDPR, the ePrivacy Directive, or any other law " +
+    "or regulation.",
+  "Automated scanning has technical limitations. It may not detect every tracking " +
+    "technology, may not be able to interact with every consent management platform, and " +
+    "may report behavior that is expected in context. Findings are described as potential " +
+    "issues and are intended as a starting point for review by you and, where appropriate, " +
+    "by a qualified legal advisor.",
+  "You are responsible for determining the legal obligations that apply to any website you " +
+    "monitor and for deciding what action to take.",
+] as const;
+
+/**
  * Returns every forbidden term found in `text`, or an empty array.
  * Used by the CI check and by the AI output validator (§8.7).
  */

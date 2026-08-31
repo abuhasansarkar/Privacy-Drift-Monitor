@@ -328,7 +328,9 @@ export async function requestFingerprint(): Promise<{
 /** Audit helper for portal activity §6.10 requires to be logged. */
 export async function auditPortal(
   session: PortalSessionContext,
-  action: string,
+  /* Narrowed to the three portal actions in `AuditAction` — a typo here would
+     otherwise land in the trail and never match a filter. */
+  action: "portal.issues_viewed" | "portal.report_downloaded",
   entity: { entityType: string; entityId: string },
 ): Promise<void> {
   await db.auditLog

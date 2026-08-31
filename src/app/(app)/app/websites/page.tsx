@@ -2,6 +2,7 @@ import { t } from "@pdm/shared/copy";
 import { can } from "@pdm/shared/permissions";
 import { Can } from "@/components/can";
 import { BulkSelection } from "@/components/websites/bulk-selection";
+import { ViewToggle, WebsiteGrid } from "@/components/websites/website-grid";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataList, type Column, type Row } from "@/components/ui/data-list";
@@ -39,6 +40,14 @@ import { getWebsiteList } from "@/server/queries/lists";
  * ⚠️ A PAUSED site says so rather than quietly going stale, and a site with no
  * scan says "never scanned" rather than showing a zero score. Both are the same
  * rule: the list never implies a monitoring result the scanner did not produce.
+ *
+ * ⚠️ THE VIEW MODE IS IN THE URL, like every other list control (§3.5). Holding
+ * it in component state would make a shared link land on someone else's default
+ * — and would lose it on every navigation back to this page.
+ *
+ * ⚠️ BULK SELECTION IS TABLE-ONLY. The grid is a recognition surface, and a
+ * checkbox on each card turns it back into a table with worse density. §3.5
+ * lists selection under the table's row actions, not the grid's.
  */
 
 export default async function WebsitesPage({
@@ -46,7 +55,32 @@ export default async function WebsitesPage({
 }: PageProps<"/app/websites">) {
   const ctx = await requireAgencyContext();
   const raw = await searchParams;
-  const { query, page } = await getWebsiteList(ctx, raw);
+  const { query, page, clients, groups } = await getWebsiteList(ctx, raw);
+
+  const view =
+    (Array.isArray(raw.view) ? raw.view[0] : raw.view) === "grid" ? "grid" : "table";
+
+  const filtered =
+    query.search !== undefined ||
+    query.status !== undefined ||
+    query.clientId !== undefined ||
+    query.groupId !== undefined;
+
+  // The export carries the ACTIVE FILTERS (§3.5 "Export selected"): an export
+  // that ignored them would hand back the whole portfolio when the user asked
+  // for one client.
+  const exportParams = new URLSearchParams();
+  for (const [key, value] of Object.entries({
+    search: query.search,
+    status: query.status,
+    client: query.clientId,
+    group: query.groupId,
+  })) {
+    if (value) exportParams.set(key, String(value));
+  }
+  const exportHref = `/api/websites/export${
+    exportParams.size > 0 ? `?${exportParams}` : ""
+  }`;
 
   // Captured once so every row formats against the same instant — calling
   // Date.now() per row would drift and would not be reproducible in a test.
@@ -114,34 +148,74 @@ export default async function WebsitesPage({
         title={t("websites.title")}
         subtitle={`${formatNumber(page.total)} ${t("websites.title").toLowerCase()}`}
         actions={
-          <Can role={ctx.role} permission="website:create">
-            <ButtonLink href="/app/websites/new" variant="primary">
-              <PlusIcon />
-              {t("websites.addWebsite")}
-            </ButtonLink>
-          </Can>
+          <>
+            {/* A plain <a>: the CSV is a download, and the client router would
+                try to treat the response as a navigation. */}
+            <a
+              href={exportHref}
+              download
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-small font-medium hover:bg-muted max-sm:h-11"
+            >
+              {t("websites.exportCsv")}
+            </a>
+            <Can role={ctx.role} permission="website:create">
+              <ButtonLink href="/app/websites/import" variant="secondary">
+                {t("import.title")}
+              </ButtonLink>
+            </Can>
+            <Can role={ctx.role} permission="website:create">
+              <ButtonLink href="/app/websites/new" variant="primary">
+                <PlusIcon />
+                {t("websites.addWebsite")}
+              </ButtonLink>
+            </Can>
+          </>
         }
       />
 
-      <FilterForm
-        clearHref={query.search || query.status ? "/app/websites" : undefined}
-      >
-        <SearchField
-          defaultValue={query.search}
-          placeholder={t("websites.searchPlaceholder")}
-        />
-        <SelectField
-          name="status"
-          label={t("websites.filterStatus")}
-          defaultValue={query.status}
-          options={[
-            { value: "", label: t("filters.all") },
-            { value: "ACTIVE", label: t("monitoring.active") },
-            { value: "PAUSED", label: t("monitoring.paused") },
-            { value: "ERROR", label: t("monitoring.error") },
-          ]}
-        />
-      </FilterForm>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <FilterForm clearHref={filtered ? "/app/websites" : undefined}>
+            {/* The view survives a filter submit — otherwise choosing a client
+                silently throws you back to the table. */}
+            {view === "grid" ? <input type="hidden" name="view" value="grid" /> : null}
+            <SearchField
+              defaultValue={query.search}
+              placeholder={t("websites.searchPlaceholder")}
+            />
+            <SelectField
+              name="client"
+              label={t("websites.filterClient")}
+              defaultValue={query.clientId}
+              options={[
+                { value: "", label: t("websites.anyClient") },
+                ...clients.map((client) => ({ value: client.id, label: client.name })),
+              ]}
+            />
+            <SelectField
+              name="group"
+              label={t("websites.filterGroup")}
+              defaultValue={query.groupId}
+              options={[
+                { value: "", label: t("websites.anyGroup") },
+                ...groups.map((group) => ({ value: group.id, label: group.name })),
+              ]}
+            />
+            <SelectField
+              name="status"
+              label={t("websites.filterStatus")}
+              defaultValue={query.status}
+              options={[
+                { value: "", label: t("filters.all") },
+                { value: "ACTIVE", label: t("monitoring.active") },
+                { value: "PAUSED", label: t("monitoring.paused") },
+                { value: "ERROR", label: t("monitoring.error") },
+              ]}
+            />
+          </FilterForm>
+        </div>
+        <ViewToggle view={view} params={raw} />
+      </div>
 
       <Card>
         {rows.length === 0 ? (
@@ -161,6 +235,30 @@ export default async function WebsitesPage({
               </Can>
             }
           />
+        ) : view === "grid" ? (
+          <WebsiteGrid
+            now={now}
+            sites={page.items.map((site) => ({
+              id: site.id,
+              url: site.url,
+              label: site.label,
+              clientName: site.client?.name ?? null,
+              healthScore: site.healthScore,
+              monitoringStatus: site.monitoringStatus,
+              openIssueCount: site.openIssueCount,
+              criticalIssueCount: site.criticalIssueCount,
+              lastScanAt: site.lastScanAt,
+              archived: site.archivedAt !== null,
+            }))}
+            footer={
+              <Pagination
+                page={query.page}
+                perPage={query.perPage}
+                total={page.total}
+                params={raw}
+              />
+            }
+          />
         ) : (
           /*
            * Selection lives in the client wrapper and is handed to the table as
@@ -172,6 +270,9 @@ export default async function WebsitesPage({
             ids={rows.map((row) => row.id)}
             canUpdate={can(ctx.role, "website:update")}
             canArchive={can(ctx.role, "website:delete")}
+            canScan={can(ctx.role, "scan:trigger")}
+            clients={clients}
+            groups={groups}
           >
             {(selection) => (
               <DataList

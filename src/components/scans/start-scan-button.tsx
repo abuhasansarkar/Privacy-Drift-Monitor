@@ -50,3 +50,37 @@ export function StartScanButton({ websiteId }: { websiteId: string }) {
     </div>
   );
 }
+
+/**
+ * A compact "Re-scan" for a dense row — the Attention Center's third action.
+ *
+ * ⚠️ IT DOES NOT NAVIGATE. From a dashboard row, being thrown to a scan page is
+ * a lost place in a list you were triaging. It reports queued-or-not inline and
+ * refreshes the feed instead.
+ */
+export function RescanButton({ websiteId }: { websiteId: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [state, setState] = useState<"idle" | "queued" | "error">("idle");
+
+  return (
+    <button
+      type="button"
+      disabled={pending || state === "queued"}
+      onClick={() =>
+        start(async () => {
+          const outcome = await startScan({ websiteId });
+          setState(outcome.ok ? "queued" : "error");
+          if (outcome.ok) router.refresh();
+        })
+      }
+      className="rounded-md px-2 py-1 text-caption text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+    >
+      {state === "queued"
+        ? t("scanStatus.queued")
+        : state === "error"
+          ? t("common.retry")
+          : t("dashboard.actionRescan")}
+    </button>
+  );
+}

@@ -25,12 +25,19 @@ export function BulkSelection({
   ids,
   canUpdate,
   canArchive,
+  canScan,
+  clients,
+  groups,
   children,
 }: {
   /** Ids on the CURRENT page, in display order. */
   ids: string[];
   canUpdate: boolean;
   canArchive: boolean;
+  /** "Scan now" is Developer+, a different gate from the rest (§3.5). */
+  canScan: boolean;
+  clients: readonly { id: string; name: string }[];
+  groups: readonly { id: string; name: string }[];
   /** The table, given the selection state as a render prop. */
   children: (selection: {
     selected: ReadonlySet<string>;
@@ -44,6 +51,10 @@ export function BulkSelection({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
+  /** Which assignment panel is open, if either. */
+  const [assigning, setAssigning] = useState<"client" | "group" | null>(null);
+  const [groupChoice, setGroupChoice] = useState("");
+  const [clientChoice, setClientChoice] = useState("");
 
   const allSelected = ids.length > 0 && ids.every((id) => selected.has(id));
 
@@ -59,13 +70,17 @@ export function BulkSelection({
     setSelected(allSelected ? new Set() : new Set(ids));
   }
 
-  function run(action: "pause" | "resume" | "archive") {
+  function run(
+    action: "pause" | "resume" | "archive" | "scan" | "assignClient" | "assignGroup",
+    extra: { clientId?: string | null; groupId?: string | null; groupName?: string } = {},
+  ) {
     setError(null);
     setMessage(null);
     start(async () => {
       const outcome = await bulkWebsiteAction({
         websiteIds: [...selected],
         action,
+        ...extra,
       });
       if (!outcome.ok) {
         setError(outcome.message);
@@ -73,13 +88,18 @@ export function BulkSelection({
       }
       // The skipped count is surfaced, not swallowed: a bulk pause that quietly
       // missed three sites leaves them scanning and nobody knows.
+      // §3.5 asks for "12 of 15 queued" on a bulk scan, not a bare success.
+      const verb = action === "scan" ? t("bulk.queued") : t("bulk.updated");
       setMessage(
         outcome.data.skipped > 0
-          ? `${outcome.data.succeeded} ${t("bulk.updated")} · ${outcome.data.skipped} ${t("bulk.skipped")}`
-          : `${outcome.data.succeeded} ${t("bulk.updated")}`,
+          ? `${outcome.data.succeeded} ${verb} · ${outcome.data.skipped} ${t("bulk.skipped")}`
+          : `${outcome.data.succeeded} ${verb}`,
       );
       setSelected(new Set());
       setConfirmingArchive(false);
+      setAssigning(null);
+      setGroupChoice("");
+      setClientChoice("");
       router.refresh();
     });
   }
@@ -119,7 +139,33 @@ export function BulkSelection({
                 >
                   {t("websites.resume")}
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => setAssigning(assigning === "client" ? null : "client")}
+                >
+                  {t("bulk.assignToClient")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => setAssigning(assigning === "group" ? null : "group")}
+                >
+                  {t("bulk.moveToGroup")}
+                </Button>
               </>
+            ) : null}
+            {canScan ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={pending}
+                onClick={() => run("scan")}
+              >
+                {t("bulk.scanNow")}
+              </Button>
             ) : null}
             {canArchive ? (
               <Button
@@ -141,6 +187,88 @@ export function BulkSelection({
           </span>
         ) : null}
       </div>
+
+      {assigning === "client" ? (
+        <div className="flex flex-wrap items-end gap-2 rounded-md border border-border bg-card p-3">
+          <label className="min-w-[12rem] flex-1">
+            <span className="mb-1 block text-caption font-medium text-muted-foreground">
+              {t("bulk.assignToClient")}
+            </span>
+            <select
+              value={clientChoice}
+              onChange={(event) => setClientChoice(event.target.value)}
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small max-sm:h-11"
+            >
+              {/* An empty value CLEARS the assignment — "unassign" is a real
+                  request, not an accident. */}
+              <option value="">{t("websites.anyClient")}</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={pending}
+            onClick={() => run("assignClient", { clientId: clientChoice || null })}
+          >
+            {t("bulk.apply")}
+          </Button>
+        </div>
+      ) : null}
+
+      {assigning === "group" ? (
+        <div className="flex flex-wrap items-end gap-2 rounded-md border border-border bg-card p-3">
+          <label className="min-w-[12rem] flex-1">
+            <span className="mb-1 block text-caption font-medium text-muted-foreground">
+              {t("bulk.moveToGroup")}
+            </span>
+            {/*
+              One control for both "pick an existing group" and "create a new
+              one": a datalist-backed text input. A separate "new group" flow
+              would be a second screen for typing one word.
+            */}
+            <input
+              list="pdm-website-groups"
+              value={groupChoice}
+              onChange={(event) => setGroupChoice(event.target.value)}
+              placeholder={t("bulk.groupPlaceholder")}
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small max-sm:h-11"
+            />
+            <datalist id="pdm-website-groups">
+              {groups.map((group) => (
+                <option key={group.id} value={group.name} />
+              ))}
+            </datalist>
+            <span className="mt-1 block text-caption text-muted-foreground">
+              {t("bulk.newGroupHint")}
+            </span>
+          </label>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={pending}
+            onClick={() => {
+              const match = groups.find(
+                (group) => group.name.toLowerCase() === groupChoice.trim().toLowerCase(),
+              );
+              run(
+                "assignGroup",
+                match
+                  ? { groupId: match.id }
+                  : groupChoice.trim()
+                    ? { groupName: groupChoice.trim() }
+                    : { groupId: null },
+              );
+            }}
+          >
+            {t("bulk.apply")}
+          </Button>
+        </div>
+      ) : null}
 
       {children({ selected, onToggle: toggle, label: t("bulk.selected") })}
 

@@ -43,7 +43,13 @@ export type AuditAction =
   | "agency.updated"
   | "branding.updated"
   | "scan.triggered"
-  | "scan.cancelled";
+  | "scan.cancelled"
+  /* Written by the client portal with `actorType: "portal_user"` (§6.10). The
+     agency reads these — a client opening their findings is exactly the proof
+     of work the portal exists to provide. */
+  | "portal.login"
+  | "portal.issues_viewed"
+  | "portal.report_downloaded";
 
 export interface AuditEntry {
   action: AuditAction;

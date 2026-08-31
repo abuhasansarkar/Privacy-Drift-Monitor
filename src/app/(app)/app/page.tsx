@@ -1,4 +1,5 @@
 import { t } from "@pdm/shared/copy";
+import { can } from "@pdm/shared/permissions";
 import { Can } from "@/components/can";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -9,11 +10,15 @@ import { PlusIcon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { MutedBadge, SeverityBadge } from "@/components/ui/severity-badge";
 import { StatTile } from "@/components/ui/stat-tile";
+import { AttentionCenter } from "@/components/dashboard/attention-center";
+import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { HealthTrend } from "@/components/dashboard/health-trend";
 import { formatNumber } from "@/lib/format";
 import { DRIFT_CHANGE_LABEL } from "@/lib/labels";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getDashboardOverview } from "@/server/queries/dashboard";
+import { getAttentionItems } from "@/server/queries/attention";
+import { getRecentActivity } from "@/server/queries/activity";
 
 /**
  * DASHBOARD — §3.4, Phase 1 task 1.12.
@@ -28,7 +33,20 @@ import { getDashboardOverview } from "@/server/queries/dashboard";
  */
 export default async function DashboardPage() {
   const ctx = await requireAgencyContext();
-  const overview = await getDashboardOverview(ctx);
+  /*
+   * ⚠️ Fetched in PARALLEL, not in sequence. §3.4 wants six independent
+   * widgets; awaiting them one after another turns the dashboard's load time
+   * into the sum of every query rather than the slowest one.
+   */
+  const [overview, attention, activity] = await Promise.all([
+    getDashboardOverview(ctx),
+    getAttentionItems(ctx),
+    getRecentActivity(ctx),
+  ]);
+
+  // Captured once so every widget formats against the same instant — a per-row
+  // `Date.now()` would drift between the feed and the attention list.
+  const now = new Date();
 
   const columns: Column[] = [
     { key: "site", label: t("websites.columnWebsite") },
@@ -135,6 +153,24 @@ export default async function DashboardPage() {
           label={t("dashboard.driftEvents")}
           value={formatNumber(overview.driftEvents7d)}
         />
+      </div>
+
+      {/* Row 2 — §5.1's two-thirds / one-third split. The Attention Center is
+          the widest thing on the page because it is the one that answers the
+          dashboard's question. */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <AttentionCenter
+          items={attention.items}
+          total={attention.total}
+          websitesMonitored={attention.websitesMonitored}
+          now={now}
+          canAcknowledge={can(ctx.role, "issue:transition")}
+          canRescan={can(ctx.role, "scan:trigger")}
+        />
+
+        <div className="flex flex-col gap-4">
+          <RecentActivity items={activity} now={now} />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

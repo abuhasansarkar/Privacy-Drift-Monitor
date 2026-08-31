@@ -144,3 +144,36 @@ export function IssueActions({
     </div>
   );
 }
+
+/**
+ * A compact "Acknowledge" for a dense row — the Attention Center's second action.
+ *
+ * ⚠️ ACKNOWLEDGE, NOT RESOLVE. Acknowledging says "I have seen this"; resolving
+ * claims it is fixed and triggers a verification re-scan (§6.5). Offering the
+ * stronger one from a dashboard row, one click away, is how issues get closed
+ * without anyone having looked at them.
+ */
+export function AcknowledgeIssueButton({ issueId }: { issueId: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [done, setDone] = useState(false);
+
+  return (
+    <button
+      type="button"
+      disabled={pending || done}
+      onClick={() =>
+        start(async () => {
+          const outcome = await setIssueStatus({ issueId, status: "ACKNOWLEDGED" });
+          if (outcome.ok) {
+            setDone(true);
+            router.refresh();
+          }
+        })
+      }
+      className="rounded-md px-2 py-1 text-caption text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+    >
+      {done ? t("issueStatus.acknowledged") : t("dashboard.actionAcknowledge")}
+    </button>
+  );
+}

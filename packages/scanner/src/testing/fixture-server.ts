@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import { FIXTURES, type Fixture } from "./fixtures";
 
 /**
  * FIXTURE SERVER — PLAN.md Part XII, Phase 2 task 2.14.
@@ -18,188 +19,14 @@ import type { AddressInfo } from "node:net";
  * do NOT go through the guard. That is not a hole: it is the reason the guard's
  * own test suite uses its own vectors rather than these pages, and the two must
  * never be merged into one "just scan it" helper.
+ *
+ * The PAGES live in `./fixtures.ts`; this file only serves them. The split
+ * keeps the §4.15 matrix readable as a matrix rather than buried in HTTP
+ * plumbing.
  */
 
-export interface Fixture {
-  /** F-number from the plan's fixture matrix, for traceability. */
-  id: string;
-  /** What behaviour this page exists to exercise. */
-  describes: string;
-  html: string;
-  /** Extra routes this fixture serves — scripts, beacons, images. */
-  routes?: Record<string, { body: string; contentType: string; status?: number }>;
-}
-
-const page = (body: string, head = "") =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>fixture</title>${head}</head><body>${body}</body></html>`;
-
-/**
- * F01–F12. Deliberately small: a fixture that renders a realistic marketing
- * page would make a failure hard to attribute.
- */
-export const FIXTURES: Record<string, Fixture> = {
-  /* ── Baseline ───────────────────────────────────────────────────────── */
-  F01: {
-    id: "F01",
-    describes: "Static page, no trackers, no banner — the clean baseline",
-    html: page("<h1>Quiet page</h1><p>Nothing loads here.</p>"),
-  },
-
-  F02: {
-    id: "F02",
-    describes: "First-party subresource only — must NOT count as third-party",
-    html: page(
-      "<h1>First party</h1>",
-      `<script src="/assets/app.js"></script>`,
-    ),
-    routes: {
-      "/assets/app.js": { body: "window.__app = 1;", contentType: "application/javascript" },
-    },
-  },
-
-  /* ── Trackers before consent ────────────────────────────────────────── */
-  F03: {
-    id: "F03",
-    describes: "Third-party script fires immediately, before any consent",
-    html: page(
-      "<h1>Pre-consent tracker</h1>",
-      `<script src="__THIRD_PARTY__/tracker.js"></script>`,
-    ),
-  },
-
-  F04: {
-    id: "F04",
-    describes: "Cookie written by script before consent",
-    html: page(
-      "<h1>Pre-consent cookie</h1>",
-      `<script>document.cookie = "_ga=GA1.2.999; path=/";</script>`,
-    ),
-  },
-
-  F05: {
-    id: "F05",
-    describes: "localStorage and sessionStorage written before consent",
-    html: page(
-      "<h1>Pre-consent storage</h1>",
-      `<script>
-        localStorage.setItem("_fbp", "fb.1.1700000000.123456789");
-        localStorage.setItem("theme", "dark");
-        sessionStorage.setItem("sid", "abc123");
-      </script>`,
-    ),
-  },
-
-  /* ── Deferred / late-firing ─────────────────────────────────────────── */
-  F06: {
-    id: "F06",
-    describes: "Tracker fires 1.2s after load — caught only by the observation window",
-    html: page(
-      "<h1>Late tracker</h1>",
-      `<script>
-        setTimeout(function () {
-          var s = document.createElement("script");
-          s.src = "__THIRD_PARTY__/late.js";
-          document.head.appendChild(s);
-        }, 1200);
-      </script>`,
-    ),
-  },
-
-  F07: {
-    id: "F07",
-    describes: "Tracker fires only after a scroll — the scroll step must trigger it",
-    html: page(
-      `<h1>Scroll tracker</h1><div style="height:4000px"></div>`,
-      `<script>
-        var fired = false;
-        addEventListener("scroll", function () {
-          if (fired) return;
-          fired = true;
-          var i = new Image();
-          i.src = "__THIRD_PARTY__/pixel.gif";
-        });
-      </script>`,
-    ),
-  },
-
-  /* ── Consent banners ────────────────────────────────────────────────── */
-  F08: {
-    id: "F08",
-    describes: "Generic banner, Accept and Reject buttons, tracker gated on accept",
-    html: page(
-      `<h1>Generic banner</h1>
-       <div id="cookie-banner" role="dialog" aria-label="Cookie consent">
-         <p>We use cookies.</p>
-         <button id="accept">Accept all</button>
-         <button id="reject">Reject all</button>
-       </div>`,
-      `<script>
-        function load() {
-          var s = document.createElement("script");
-          s.src = "__THIRD_PARTY__/tracker.js";
-          document.head.appendChild(s);
-        }
-        document.addEventListener("DOMContentLoaded", function () {
-          document.getElementById("accept").addEventListener("click", function () {
-            document.cookie = "consent=accepted; path=/";
-            document.getElementById("cookie-banner").remove();
-            load();
-          });
-          document.getElementById("reject").addEventListener("click", function () {
-            document.cookie = "consent=rejected; path=/";
-            document.getElementById("cookie-banner").remove();
-          });
-        });
-      </script>`,
-    ),
-  },
-
-  F09: {
-    id: "F09",
-    describes: "Banner inside a closed-ish shadow root — the Usercentrics shape",
-    html: page(
-      `<h1>Shadow banner</h1><div id="host"></div>`,
-      `<script>
-        document.addEventListener("DOMContentLoaded", function () {
-          var root = document.getElementById("host").attachShadow({ mode: "open" });
-          root.innerHTML =
-            '<div role="dialog" aria-label="Consent">' +
-            '<button id="s-accept">Accept all</button>' +
-            '<button id="s-reject">Reject all</button></div>';
-          root.getElementById("s-reject").addEventListener("click", function () {
-            document.cookie = "consent=rejected; path=/";
-            document.getElementById("host").remove();
-          });
-        });
-      </script>`,
-    ),
-  },
-
-  F10: {
-    id: "F10",
-    describes: "Banner with NO reject control — reject must be UNDETERMINED, not passed",
-    html: page(
-      `<h1>Accept-only banner</h1>
-       <div id="cookie-banner" role="dialog"><button id="accept">Got it</button></div>`,
-    ),
-  },
-
-  /* ── Failure shapes ─────────────────────────────────────────────────── */
-  F11: {
-    id: "F11",
-    describes: "Server returns 500 — a transient scan failure",
-    html: "",
-  },
-
-  F12: {
-    id: "F12",
-    describes: "Page never settles — an endless polling request",
-    html: page(
-      "<h1>Never settles</h1>",
-      `<script>setInterval(function () { fetch("/poll"); }, 150);</script>`,
-    ),
-  },
-};
+export type { Fixture };
+export { FIXTURES, PLAN_FIXTURE_IDS } from "./fixtures";
 
 export interface FixtureServer {
   /** Origin of the page under test, e.g. http://127.0.0.1:53124 */
@@ -223,26 +50,48 @@ function respond(res: ServerResponse, status: number, contentType: string, body:
   res.end(body);
 }
 
-function handler(fixtureId: string, thirdPartyOrigin: () => string) {
+function handler(
+  fixtureId: string,
+  thirdPartyOrigin: () => string,
+  overrides: FixtureOverrides,
+) {
   return (req: IncomingMessage, res: ServerResponse) => {
     const fixture = FIXTURES[fixtureId];
     if (!fixture) return respond(res, 404, "text/plain", "unknown fixture");
 
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
 
-    if (fixture.id === "F11" && url.pathname === "/") {
-      return respond(res, 500, "text/plain", "fixture failure");
+    // F30 disallows our user agent here. Served for every fixture so a scanner
+    // that fetches robots.txt gets a 404 rather than a hang on the other 29.
+    if (url.pathname === "/robots.txt") {
+      return fixture.robotsTxt
+        ? respond(res, 200, "text/plain", fixture.robotsTxt)
+        : respond(res, 404, "text/plain", "not found");
     }
 
     if (url.pathname === "/") {
+      const status = fixture.documentStatus ?? 200;
+      if (status !== 200) {
+        return respond(res, status, "text/plain", "fixture failure");
+      }
+
       // `__THIRD_PARTY__` is substituted at serve time because the port is only
       // known once the server is listening.
-      return respond(
-        res,
-        200,
-        "text/html; charset=utf-8",
-        fixture.html.replaceAll("__THIRD_PARTY__", thirdPartyOrigin()),
-      );
+      const body = fixture.html.replaceAll("__THIRD_PARTY__", thirdPartyOrigin());
+
+      const delay = overrides.documentDelayMs ?? fixture.documentDelayMs ?? 0;
+      if (delay > 0) {
+        // F23's slow first byte. The timer is unref'd so a test that gives up
+        // and closes the server is not held open by a pending response.
+        const timer = setTimeout(
+          () => respond(res, 200, "text/html; charset=utf-8", body),
+          delay,
+        );
+        timer.unref?.();
+        return;
+      }
+
+      return respond(res, 200, "text/html; charset=utf-8", body);
     }
 
     const route = fixture.routes?.[url.pathname];
@@ -252,8 +101,30 @@ function handler(fixtureId: string, thirdPartyOrigin: () => string) {
 
     if (url.pathname === "/poll") return respond(res, 200, "application/json", "{}");
 
+    // A client-routed SPA (F19) navigates to a path the server never rendered.
+    // Answering 200 with the same document is what a real SPA host does.
+    if (fixture.id === "F19") {
+      return respond(
+        res,
+        200,
+        "text/html; charset=utf-8",
+        fixture.html.replaceAll("__THIRD_PARTY__", thirdPartyOrigin()),
+      );
+    }
+
     respond(res, 404, "text/plain", "not found");
   };
+}
+
+export interface FixtureOverrides {
+  /**
+   * Shortens F23's 20-second stall.
+   *
+   * ⚠️ The fixture's own value matches §4.15. A test asserting timeout HANDLING
+   * does not need to wait 20 seconds to prove it, and one that hard-coded a
+   * shorter fixture would stop matching the plan.
+   */
+  documentDelayMs?: number;
 }
 
 /** Third-party origin: serves the scripts and pixels the fixtures pull in. */
@@ -282,12 +153,15 @@ async function listen(server: Server): Promise<number> {
 }
 
 /** Starts a fixture on its own ephemeral port, plus its third-party origin. */
-export async function startFixture(fixtureId: keyof typeof FIXTURES): Promise<FixtureServer> {
+export async function startFixture(
+  fixtureId: keyof typeof FIXTURES,
+  overrides: FixtureOverrides = {},
+): Promise<FixtureServer> {
   const thirdParty = createServer(thirdPartyHandler);
   const thirdPartyPort = await listen(thirdParty);
   const thirdPartyOrigin = `http://127.0.0.1:${thirdPartyPort}`;
 
-  const main = createServer(handler(fixtureId, () => thirdPartyOrigin));
+  const main = createServer(handler(fixtureId, () => thirdPartyOrigin, overrides));
   const mainPort = await listen(main);
 
   return {

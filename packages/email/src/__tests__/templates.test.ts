@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FORBIDDEN_TERMS } from "@pdm/shared/copy/terminology";
 import { defaultBranding, type Branding } from "@pdm/shared/branding";
+import { parseFromAddress } from "../client";
 import { renderMessage, type EmailMessage } from "../templates";
 import { escapeHtml, toPlainText } from "../html";
 
@@ -257,5 +258,64 @@ describe("html escaping", () => {
 
   it("reduces markup to readable text", () => {
     expect(toPlainText("<p>Hello <b>world</b></p><p>Second</p>")).toBe("Hello world\nSecond");
+  });
+});
+
+/**
+ * ⚠️ THIS BLOCK EXISTS BECAUSE THE BUG IT COVERS SURVIVED A GREEN TEST SUITE.
+ *
+ * `EMAIL_FROM` ships in `.env.example` as `"Privacy Drift Monitor
+ * <alerts@example.com>"`, and that file is the contract. The transport read it
+ * as a BARE address and wrapped it again, producing
+ * `Privacy Drift Monitor <Privacy Drift Monitor <alerts@example.com>>`.
+ *
+ * Nothing caught it because with no `RESEND_API_KEY` every send short-circuits
+ * to `simulated` before the From header is ever composed — so the whole email
+ * suite passed while the one thing that talks to the provider was malformed.
+ * That is the shape of defect worth a permanent test.
+ */
+describe("from-address parsing", () => {
+  it("splits the RFC 5322 form `.env.example` ships", () => {
+    expect(parseFromAddress('"Privacy Drift Monitor <alerts@example.com>"', "Fallback")).toEqual({
+      name: "Privacy Drift Monitor",
+      email: "alerts@example.com",
+    });
+  });
+
+  it("handles the same value without surrounding quotes", () => {
+    expect(parseFromAddress("Privacy Drift Monitor <alerts@example.com>", "Fallback")).toEqual({
+      name: "Privacy Drift Monitor",
+      email: "alerts@example.com",
+    });
+  });
+
+  it("accepts a bare address and supplies the fallback name", () => {
+    // An operator who sets a bare address is not wrong — they just did not
+    // include a display name.
+    expect(parseFromAddress("alerts@example.com", "Privacy Drift Monitor")).toEqual({
+      name: "Privacy Drift Monitor",
+      email: "alerts@example.com",
+    });
+  });
+
+  it("falls back when the display name is empty", () => {
+    expect(parseFromAddress("<alerts@example.com>", "Privacy Drift Monitor")).toEqual({
+      name: "Privacy Drift Monitor",
+      email: "alerts@example.com",
+    });
+  });
+
+  it("never yields an address that still contains angle brackets", () => {
+    // The exact shape of the original defect: a re-wrapped address.
+    for (const input of [
+      '"Privacy Drift Monitor <alerts@example.com>"',
+      "Privacy Drift Monitor <alerts@example.com>",
+      "alerts@example.com",
+    ]) {
+      const parsed = parseFromAddress(input, "Fallback");
+      expect(parsed.email).not.toContain("<");
+      expect(parsed.email).not.toContain(">");
+      expect(parsed.email).toContain("@");
+    }
   });
 });
