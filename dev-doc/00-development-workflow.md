@@ -61,6 +61,13 @@ charges.
 threshold whose glob matches nothing makes vitest fail the run, so `packages/billing` is
 added to `thresholds` **in the PR that creates the package** (Phase 6), not before.
 
+⚠️ **THE GATE IS RUN BY `npm run test:coverage`, AND BOTH CI AND `verify` CALL IT.** For four
+phases they did not: CI ran `npm test` and `verify` ran `npm run test` — neither computes
+coverage, so the threshold in `vitest.config.ts` was never evaluated by anything. The first
+time it was actually executed it FAILED, at 82.62%. If you change one of these two call
+sites, change the other: a local `verify` that passes where CI fails is how a gate stops
+being believed.
+
 ## Testing ladder
 
 Full detail in Part XII §12.2. What runs when:
@@ -113,16 +120,54 @@ Reviewers should reject a PR that:
 ## Environment
 
 **Package manager: npm**, using npm workspaces. There is no pnpm and no Turborepo
-(PLAN.md §10.9). `pnpm-workspace.yaml` is an inert tombstone — delete it along with
-`pnpm-lock.yaml` if they are still present.
+(PLAN.md §10.9).
+
+⚠️ `pnpm-workspace.yaml` and `pnpm-lock.yaml` are **deleted**. They were left in place as
+"inert tombstones" for four phases and they were not inert: the `shadcn` CLI detects a
+package manager by looking for a lockfile, found pnpm's, and ran `pnpm install` against an
+npm workspace — rewriting `pnpm-lock.yaml`, creating `node_modules/.pnpm`, and installing
+nothing npm could see. If you ever reintroduce one of those files, this happens again.
 
 ```bash
 docker compose up -d      # postgres, redis, minio, mailpit
 npm install
 npm run db:generate       # required before typecheck — Prisma emits the types
-npm run dev               # web only; worker arrives in Phase 2
-npm run verify            # lint → typecheck → terminology → test → build
+npm run db:migrate        # applies migrations to your local database
+npm run db:seed           # global tables: vendors, plans, flags
+npm run db:seed:demo -- --list                 # which agencies you could seed into
+npm run db:seed:demo -- --agency <your-slug>   # 12 weeks of history in YOUR agency
+npm run dev               # web
+npm run worker            # the scan/analysis/report/ai worker
+npm run verify            # lint → typecheck → terminology → test+coverage → build
 ```
+
+⚠️ `db:seed:demo` writes **fabricated tenant data** (agencies, findings, evidence) and is
+deliberately a separate script from `db:seed`, which only touches global tables and runs
+after every migration. It refuses to run unless `DATABASE_URL` points at localhost.
+
+⚠️ **PASS `--agency <slug>`, or you will not see the data.** Without it the script builds a
+standalone demo agency — which tenant isolation (P4) correctly hides from the agency your
+Clerk account belongs to, so every page renders its empty state and the seed looks broken
+while working exactly as designed. `--list` prints the slugs. In `--agency` mode it never
+deletes the agency: it removes only the rows it created, matched by the reserved `.test`
+hosts, so it is safe to run beside real data.
+
+## The test database
+
+⚠️ **Tests run against `<your-db>_test`, created and migrated automatically by
+`test/global-setup.ts`.** They used to run against the development database, and
+`resetDatabase()` does a `TRUNCATE … CASCADE` — so this sequence silently destroyed a
+morning's demo data:
+
+```bash
+npm run db:seed:demo      # twelve weeks of history
+npm test                  # …truncates all of it
+npm run dev               # every page renders its empty state
+```
+
+Nothing failed and nothing warned; an empty `/app/drift` was indistinguishable from a
+broken query. If you add a test that needs a database, it gets the test one for free — do
+not point anything at `DATABASE_URL` directly.
 
 Workspace-scoped commands use `-w`:
 

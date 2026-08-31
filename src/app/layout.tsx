@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { en } from "@pdm/shared/copy";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,26 +8,52 @@ import "./globals.css";
 /**
  * TYPOGRAPHY — PLAN.md Part XI §11.2.
  *
- * `next/font/google` downloads these at BUILD time and serves them from our own
- * origin, so no visitor IP ever reaches a font CDN — which is the actual
- * requirement (a privacy product leaking IPs to Google Fonts is indefensible).
+ * ⚠️ SELF-HOSTED FROM VENDORED FILES. §11.2 is explicit that this is a PRIVACY
+ * REQUIREMENT, not a preference: "a privacy product that ships its users' IPs
+ * to a font CDN is indefensible."
  *
- * TODO(0.8): §11.2 specifies `next/font/local` with the .woff2 files vendored
- * into the repo. That removes the build-time network dependency entirely and is
- * the stricter reading. Vendoring the files needs a download step, so it is
- * deferred — but the CSS variable names below are already the final ones, so
- * the swap is a change to this file only.
+ * This previously used `next/font/google`, which is *nearly* right — it
+ * downloads the files at build time and serves them from our own origin, so no
+ * visitor IP reaches Google either way. The reason for the swap is the
+ * remaining edge: a build-time network dependency means our build can fail, or
+ * silently fetch a changed file, because of a third party. `next/font/local`
+ * reads the two `.woff2` files committed beside this one, so the fonts are
+ * pinned bytes under review like any other dependency.
+ *
+ * Both faces are OFL-licensed and redistributable.
  */
-const inter = Inter({
+
+/**
+ * Inter Variable — one file covering the whole 100–900 axis.
+ *
+ * ⚠️ `declarations: [{ prop: "font-named-instance", value: "Regular" }]` is not
+ * needed here, but the WEIGHT RANGE is: without it the browser assumes a single
+ * static weight and synthesises bold by smearing the glyphs, which looks
+ * subtly wrong everywhere and is easy to miss.
+ */
+const inter = localFont({
+  src: "./fonts/InterVariable.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
+  weight: "100 900",
   display: "swap",
+  // The stack a reader sees during the swap, and forever if the file 404s.
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
+/**
+ * JetBrains Mono — a single 400 weight, deliberately.
+ *
+ * Mono is used for domains, rule ids, selectors and evidence rows, and nothing
+ * in the app renders those bold (checked: no `font-mono` usage pairs with a
+ * weight utility). Shipping the variable axis would add ~250 KB for a range
+ * nothing selects. Add weights here if that changes.
+ */
+const jetbrainsMono = localFont({
+  src: "./fonts/JetBrainsMono-Regular.woff2",
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
+  weight: "400",
   display: "swap",
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
 });
 
 export const metadata: Metadata = {

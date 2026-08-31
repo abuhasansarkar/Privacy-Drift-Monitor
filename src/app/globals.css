@@ -178,6 +178,17 @@
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
   --color-danger-muted: var(--danger-muted);
+
+  /*
+   * ⚠️ ALIAS, NOT A SECOND COLOUR. shadcn/ui components ship referencing
+   * `destructive`; §11.3 names the same role `danger`, and the whole codebase
+   * uses `danger`. Pointing one at the other means a shadcn component dropped
+   * in unmodified picks up OUR palette — including the dark-mode remap —
+   * instead of arriving with its own red. Never give `--destructive` its own
+   * value: two names for one role is how the two drift apart.
+   */
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
   --color-info-muted: var(--info-muted);

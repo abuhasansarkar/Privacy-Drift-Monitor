@@ -40,6 +40,28 @@ function classes(variant: Variant, size: Size, className?: string) {
   return cn(BASE, VARIANT[variant], SIZE[size], className);
 }
 
+/**
+ * The same class string a `<Button>` would render, for the cases that need a
+ * button's LOOK on an element that cannot be a `<button>`.
+ *
+ * ⚠️ EXPORTED SO THERE IS STILL ONE DEFINITION. Radix primitives (`AlertDialog`
+ * `Action`/`Cancel`) render their own element and cannot be wrapped in our
+ * Button, which does not implement `asChild`. Without this they would carry a
+ * hand-copied approximation of these classes, and the two would drift the first
+ * time a variant changed — which is precisely the "two variants half-applying"
+ * failure the exhaustive maps above exist to prevent.
+ *
+ * Prefer `<Button>` or `<ButtonLink>`. Reach for this only when the element is
+ * not yours to choose.
+ */
+export function buttonClasses(
+  variant: Variant = "secondary",
+  size: Size = "md",
+  className?: string,
+): string {
+  return classes(variant, size, className);
+}
+
 export function Button({
   variant = "secondary",
   size = "md",

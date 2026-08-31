@@ -352,3 +352,26 @@ export const GENERIC_ADAPTER: ConsentAdapter = {
     });
   },
 };
+
+/**
+ * Internals exposed for testing, following the `__testing` convention used in
+ * `providers/openai.ts` and `validate.ts`.
+ *
+ * ⚠️ THE PHRASE LISTS ARE A SEMANTIC CONTRACT, NOT A CONFIG BLOB. A word in the
+ * wrong list does not throw and does not fail a render — it makes the scanner
+ * click a control that means the opposite of what it recorded, and then every
+ * finding derived from that phase is confidently inverted. "Trackers fire after
+ * you reject" is the most serious claim this product makes; it must not be
+ * reachable by having clicked Accept. Hence the disjointness and exclusion
+ * tests, which are only possible if these are reachable from a test.
+ */
+export const __testing = {
+  phrasesFor,
+  ACCEPT_PHRASES,
+  REJECT_PHRASES,
+  WITHDRAW_PHRASES,
+  PREFERENCE_PHRASES,
+  SAVE_WITHOUT_ACCEPTING_PHRASES,
+  BANNER_SELECTORS,
+  CLICKABLE,
+};

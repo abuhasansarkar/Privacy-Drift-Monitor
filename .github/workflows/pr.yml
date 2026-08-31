@@ -91,8 +91,15 @@ jobs:
       - name: Migration check
         run: npm run db:deploy
 
-      - name: Test
-        run: npm test
+      # ⚠️ `test:coverage`, NOT `test`. `00-development-workflow.md` declares a
+      # blocking ≥85% gate on `packages/scanner` — the package where a silent
+      # defect produces false findings. That gate was written down and never
+      # wired: CI ran `npm test`, which does not compute coverage, so the
+      # threshold in `vitest.config.ts` was never evaluated by anything. When it
+      # was finally run it FAILED at 82.62%, having been "enforced" for four
+      # phases. A gate nothing executes is documentation, not a gate.
+      - name: Test + coverage gate
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build

@@ -1,5 +1,26 @@
+import { config as loadEnv } from "dotenv";
 import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { testDatabaseUrl } from "./test/global-setup";
+
+/*
+ * ⚠️ THE TEST SUITE GETS ITS OWN DATABASE, AND THIS IS THE LINE THAT ENFORCES IT.
+ *
+ * `resetDatabase()` TRUNCATEs every non-reference table. Pointed at the dev
+ * database — which it was, for five phases — that means `npm test` silently
+ * destroys whatever `npm run db:seed:demo` just created, and every page then
+ * renders a correct-looking empty state. It cost a debugging session to work
+ * out that an empty `/app/drift` was an empty table, not a broken query.
+ *
+ * `.env` is loaded here explicitly because vitest does not put it on
+ * `process.env` — only Prisma does, lazily, when the client is constructed. So
+ * without this the derivation below has nothing to derive from.
+ *
+ * ⚠️ AND IT MUST BE SET IN `test.env` BELOW, not in `globalSetup`. globalSetup
+ * runs in its own process and its `process.env` writes never reach the workers.
+ */
+loadEnv({ quiet: true });
+const DEV_DATABASE_URL = process.env.DATABASE_URL;
 
 /**
  * Test configuration — PLAN.md Part XII §12.2.
@@ -31,6 +52,20 @@ export default defineConfig({
   test: {
     globals: false,
     environment: "node",
+    /*
+     * Creates and migrates the test database before anything runs, and seeds
+     * the three reference tables `resetDatabase()` deliberately preserves (and
+     * therefore never repopulates).
+     */
+    globalSetup: ["./test/global-setup.ts"],
+    /*
+     * ⚠️ Prisma loads `.env` itself when the client is constructed, but dotenv
+     * does NOT overwrite a variable that is already set — so putting the test
+     * URL here wins, and `drift_monitor` is never opened by a test.
+     */
+    env: DEV_DATABASE_URL
+      ? { DATABASE_URL: testDatabaseUrl(DEV_DATABASE_URL) }
+      : {},
     include: [
       "src/**/*.{test,spec}.ts",
       "packages/*/src/**/*.{test,spec}.ts",
