@@ -31,6 +31,7 @@
     "@clerk/nextjs": "^7.8.3",
     "@pdm/ai": "*",
     "@pdm/analysis": "*",
+    "@pdm/billing": "*",
     "@pdm/database": "*",
     "@pdm/email": "*",
     "@pdm/notifications": "*",

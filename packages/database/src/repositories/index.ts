@@ -1,6 +1,7 @@
 import { forAgency, type TenantClient } from "../tenant";
 import { aiRepository, type AIRepository } from "./ai.repository";
 import { alertRepository, type AlertRepository } from "./alert.repository";
+import { billingRepository, type BillingRepository } from "./billing.repository";
 import { auditRepository, type AuditRepository } from "./audit.repository";
 import { brandingRepository, type BrandingRepository } from "./branding.repository";
 import { clientRepository, type ClientRepository } from "./client.repository";
@@ -46,6 +47,8 @@ export interface Repositories {
   portal: PortalRepository;
   /** Phase 5 — the AI call log, response cache and metering ledger (§8.9). */
   ai: AIRepository;
+  /** Phase 6 — subscription reads and atomic usage metering (§9.2). */
+  billing: BillingRepository;
 }
 
 export function repositoriesFor(agencyId: string): Repositories {
@@ -65,12 +68,14 @@ export function repositoriesFor(agencyId: string): Repositories {
     branding: brandingRepository(db, agencyId),
     portal: portalRepository(db, agencyId),
     ai: aiRepository(db, agencyId),
+    billing: billingRepository(db, agencyId),
   };
 }
 
 export {
   aiRepository,
   alertRepository,
+  billingRepository,
   auditRepository,
   brandingRepository,
   clientRepository,
@@ -85,6 +90,7 @@ export {
 export type {
   AIRepository,
   AlertRepository,
+  BillingRepository,
   AuditRepository,
   BrandingRepository,
   ClientRepository,

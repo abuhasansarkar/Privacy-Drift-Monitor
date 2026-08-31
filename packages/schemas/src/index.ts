@@ -26,6 +26,7 @@ export type {
   RiskLevel,
   ScanFrequency,
   ScanPriority,
+  UsageMetric,
   ScanStatus,
   ScanTrigger,
   Severity,

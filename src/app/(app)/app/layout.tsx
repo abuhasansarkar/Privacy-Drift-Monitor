@@ -10,6 +10,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { AlertTriangleIcon } from "@/components/ui/icons";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getEntitlements } from "@/server/entitlements";
+import { isUnlimited } from "@pdm/billing";
 import { getNotificationBell } from "@/server/queries/notifications";
 import { FLAGS, isFlagEnabled } from "@/server/flags";
 
@@ -72,12 +73,23 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
 
   const enabledFlags = aiAssistant ? [FLAGS.AI_ASSISTANT_PAGE] : [];
 
+  /*
+   * ⚠️ `-1` (unlimited) BECOMES `null`, because `null` is what the sidebar
+   * meter means by "no bar to draw". Passing `-1` straight through would render
+   * a progress bar against a negative denominator on every Scale plan — and
+   * `websitesUsed / -1` is negative, so the bar would be invisible rather than
+   * obviously wrong.
+   */
+  const websiteLimit = isUnlimited(entitlements.maxWebsites)
+    ? null
+    : entitlements.maxWebsites;
+
   return (
     <AppShell
       role={ctx.role}
       agencyName={ctx.agencyName}
       websitesUsed={websitesUsed}
-      websiteLimit={entitlements.websiteLimit}
+      websiteLimit={websiteLimit}
       enabledFlags={enabledFlags}
       unreadNotifications={bell.unread}
       latestNotifications={bell.latest.map((row) => ({

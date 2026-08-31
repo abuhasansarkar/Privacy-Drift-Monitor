@@ -96,6 +96,24 @@ export default defineConfig({
           functions: 85,
           lines: 85,
         },
+        /*
+         * Added in the PR that created `packages/billing`, exactly as
+         * `00-development-workflow.md` requires — a threshold whose glob
+         * matches no file makes vitest fail the run, so it could not be added
+         * before the package existed.
+         *
+         * ⚠️ §12.2 names these two packages together because they share a
+         * failure shape: both produce a WRONG ANSWER rather than an error. The
+         * scanner emits a false finding; billing charges the wrong customer the
+         * wrong amount, or blocks an agency at 39 of the 40 websites it was
+         * sold. Neither throws, and neither is visible without a test.
+         */
+        "packages/billing/src/**": {
+          statements: 85,
+          branches: 85,
+          functions: 85,
+          lines: 85,
+        },
       },
     },
   },
