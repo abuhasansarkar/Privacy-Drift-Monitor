@@ -23,11 +23,16 @@ dashboard nobody opens; alerting without reports is a tool the agency can't bill
 
 ### What each 🟡 is missing
 
-- **4.3** — a real `RESEND_API_KEY` is now configured and validated against the
-  provider (key accepted, `GET /domains` returns 200). **No email has been sent
-  yet**: the account has no verified sending domain, so delivery is restricted.
-  Adding the key immediately exposed two defects no test could have caught while
-  every send short-circuited to `simulated` — both fixed, both now covered:
+- **4.3** — **a real email has now been sent and delivered.** A live
+  `portal-magic-link` went through `processEmailJob` (the real worker path, not
+  the transport directly) and Resend reports `last_event: delivered`. The From
+  line read `Northlight Digital <onboarding@resend.dev>` — the agency's display
+  name on our verified sending address, which is the white-label promise working
+  end to end. The replayed job returned `skipped: "already_sent"`, so the §9.5
+  idempotency guard holds against a real provider rather than against a mock.
+
+  Adding the key immediately exposed **three** defects no test could have caught
+  while every send short-circuited to `simulated` — all fixed, all now covered:
 
   1. **`EMAIL_FROM` was parsed as a bare address.** `.env.example` ships it as
      `"Privacy Drift Monitor <alerts@example.com>"` — RFC 5322 — and the
@@ -41,21 +46,44 @@ dashboard nobody opens; alerting without reports is a tool the agency can't bill
      from transient ones, the same split the scanner already makes for scan
      errors. 429 stays retryable, because a rate limit is exactly what a retry
      is for.
+  3. **White-label was given away for free.** §6.9: "when `whiteLabel` is false,
+     `resolveBranding` returns our default brand regardless of stored values."
+     It returned `defaultBranding(agencyId, agencyName)` — our colours, but the
+     AGENCY's company name — so an unentitled agency's client received an email
+     under their agency's name and the upgrade to Growth would have bought only
+     colours. Worse, the entitlement itself was a hardcoded literal at seven
+     call sites, and in `email.job.ts` it was the EXPRESSION
+     `whiteLabelEnabled: CLIENT_FACING.has(template)`, which forced it on for
+     exactly the templates that matter. **A delivered email found this, not a
+     test** — the resolver's own suite was green because the job never asked it
+     the right question.
 
-  Still outstanding: an actual delivered message, the delivery webhook against a
-  real event (`RESEND_WEBHOOK_SECRET` is unset, so the handler currently fails
-  closed with 401 — which is correct), and manual rendering checks in Gmail,
-  Outlook and Apple Mail.
+     The entitlement now lives in `whiteLabelEntitlement()` inside the resolver,
+     `ResolveOptions.whiteLabelEnabled` is optional and exists for tests, and
+     `worker/src/jobs/__tests__/email-branding.test.ts` asserts the composed
+     From line — the place the bug actually surfaced. Confirmed live: an agency
+     with saved branding and no subscription now sends as
+     `Privacy Drift Monitor <onboarding@resend.dev>`, delivered.
 
-- ~~**4.3 (original note)**~~ — the transport is a fetch client against the
-  Resend HTTP API and had **never run against Resend**: with no `RESEND_API_KEY` every send is recorded
-  as `simulated`, which is deliberate and visible in Alerts → History. The
-  webhook handler verifies Svix signatures but has not seen a real event.
-  Manual render checks in Gmail / Outlook / Apple Mail are still outstanding.
+  **Still outstanding, and worth being precise about:** `AlertHistory` records
+  the message as `sent`, not `delivered`. That upgrade is the delivery webhook's
+  job, and `RESEND_WEBHOOK_SECRET` is unset — so the handler currently answers
+  401 and fails closed, which is the correct behaviour for an unsigned endpoint
+  that writes delivery state. Until the secret is configured, the History tab
+  shows what we handed to the provider, not what the provider did with it.
+  Manual rendering checks in Gmail, Outlook and Apple Mail are also outstanding.
+
+  The sending account has **no verified domain**, so `EMAIL_FROM` points at
+  `onboarding@resend.dev` and delivery is restricted. Production needs a
+  verified domain and that variable changed back.
+
 - **4.6** — routing, sessions, revocation and the client-safe serializers are
-  covered by 14 integration tests, and the pages render. What is untested is the
-  MAILBOX HOP: the invitation email has never actually arrived anywhere, because
-  Resend is unconfigured. Everything either side of that hop is asserted.
+  covered by 14 integration tests, the pages render, and **the mailbox hop is
+  now proven**: the live send under 4.3 above was the `portal-magic-link`
+  template itself, agency-branded, and it was delivered. What remains untested
+  is the hop's two ends meeting — clicking a link from a real inbox through to a
+  session — which needs a portal user seeded against that address rather than a
+  code change.
 - ~~**4.9**~~ — done. Branding, Notifications and **Scan Settings** all exist.
   `respectRobots` defaults to on and its help text says plainly what turning it
   off means, because the consequence lands on somebody else's server; toggling
@@ -115,15 +143,19 @@ From §12.3 and M6–M8 (§12.4). ✅ = verified by a passing test or an observe
 run; 🟡 = implemented and reasoned about, not yet demonstrated.
 
 - 🟡 A critical issue produces an email within 60 s and an in-app notification —
-      the path is built and the queue options are tuned for it, but the 60 s
-      figure has not been measured
+      the path is built, the queue options are tuned for it, and a live send now
+      demonstrably reaches an inbox. The 60 s figure itself has not been
+      measured under load
 - ✅ Quiet hours defer non-critical alerts — `policy.test.ts`, including the
       per-rule critical override and its opt-out
 - ✅ A daily digest groups a day's issues into one email, correct for the agency
       timezone — `digest.test.ts`, including a DST-transition morning
 - ✅ Duplicate alerts are suppressed within 4 hours — `policy.test.ts`
 - 🟡 Delivery status is recorded from Resend webhooks — handler written and
-      signature-verified; never exercised against a real event
+      signature-verified; never exercised against a real event, because
+      `RESEND_WEBHOOK_SECRET` is unset and the handler correctly fails closed.
+      `AlertHistory` therefore stops at `sent`; Resend's own API confirmed
+      `delivered` for the live send, which is the value the webhook would write
 - ✅ A monthly report renders with agency branding and downloads as a PDF —
       observed: `%PDF-`, 3 pages, ~230 KB, under `agencies/<id>/reports/`
 - ✅ **Two agencies' reports rendered concurrently do not cross-contaminate

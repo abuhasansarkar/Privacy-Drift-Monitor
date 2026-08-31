@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { enums } from "@pdm/schemas";
+import {
+  AI_FEATURES,
+  GROUNDING_FIELD,
+  MVP_AI_FEATURES,
+  OUTPUT_SCHEMAS,
+  PROMPTS,
+} from "@pdm/ai";
 import { Prisma } from "../tenant";
 
 /**
@@ -81,5 +88,37 @@ describe("shared Zod enums mirror the Prisma schema", () => {
       unpaired,
       `Prisma enums with no Zod counterpart: ${unpaired.join(", ")}`,
     ).toEqual([]);
+  });
+});
+
+/**
+ * `packages/ai` HOLDS A THIRD COPY of `AIFeature`, for the same reason
+ * `packages/scanner` restates `ScanTrigger`: it must stay testable with no
+ * database, so it cannot import the generated client. `packages/ai/src/types.ts`
+ * says a member that drifts "fails at the persistence boundary, which is why it
+ * must match exactly" — this is the test that makes that true at build time
+ * instead of at 3am.
+ */
+describe("packages/ai mirrors the Prisma AI enums", () => {
+  it("AI_FEATURES === AIFeature", () => {
+    expect([...AI_FEATURES].sort()).toEqual(
+      [...(prismaEnums.get("AIFeature") ?? [])].sort(),
+    );
+  });
+
+  it("every MVP feature is a real AIFeature", () => {
+    for (const feature of MVP_AI_FEATURES) {
+      expect(prismaEnums.get("AIFeature")).toContain(feature);
+    }
+  });
+
+  it("every prompt has an output schema and a declared grounding field", () => {
+    // ⚠️ A feature that can be PROMPTED but has no grounding entry would be
+    // validated against an empty ref set. `validate.ts` fails closed on an
+    // absent entry; this catches it a release earlier.
+    for (const feature of Object.keys(PROMPTS)) {
+      expect(OUTPUT_SCHEMAS).toHaveProperty(feature);
+      expect(Object.hasOwn(GROUNDING_FIELD, feature)).toBe(true);
+    }
   });
 });

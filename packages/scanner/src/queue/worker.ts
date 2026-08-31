@@ -2,6 +2,7 @@ import { Worker, type Job, type Processor } from "bullmq";
 import type IORedis from "ioredis";
 import {
   QUEUE_NAMES,
+  type AiJobData,
   type DigestJobData,
   type EmailJobData,
   type NotificationJobData,
@@ -86,6 +87,25 @@ export function createDigestWorker<TResult>(
   options: QueueWorkerOptions,
 ): Worker<DigestJobData, TResult> {
   return new Worker<DigestJobData, TResult>(QUEUE_NAMES.digest, processor, {
+    connection: options.connection,
+    concurrency: options.concurrency,
+  });
+}
+
+/**
+ * §7.2: concurrency 5.
+ *
+ * ⚠️ FIVE, NOT TWENTY, EVEN THOUGH THE WORK IS PURE I/O. The constraint is the
+ * PROVIDER's rate limit, not ours — running this as wide as the email worker
+ * would turn a burst of auto-explains into a wall of 429s, each one a retry,
+ * each retry another request against the same limit. The queue is also the only
+ * one whose backlog costs money to drain.
+ */
+export function createAiWorker<TResult>(
+  processor: Processor<AiJobData, TResult>,
+  options: QueueWorkerOptions,
+): Worker<AiJobData, TResult> {
+  return new Worker<AiJobData, TResult>(QUEUE_NAMES.ai, processor, {
     connection: options.connection,
     concurrency: options.concurrency,
   });

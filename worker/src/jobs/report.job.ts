@@ -91,12 +91,9 @@ export async function generateReport(
       select: { name: true, timezone: true },
     });
 
-    const branding = await resolveBranding(data.agencyId, {
-      // TODO(Phase 6): read the real `whiteLabel` entitlement. Until billing
-      // lands, every agency renders with their own brand — which is the
-      // permissive direction, and the resolver is the single place it flips.
-      whiteLabelEnabled: true,
-    });
+    // The resolver reads the entitlement itself (§6.9) — see
+    // `whiteLabelEntitlement`. No literal here to go stale.
+    const branding = await resolveBranding(data.agencyId);
 
     const document = await collectReportDocument({
       agencyId: data.agencyId,

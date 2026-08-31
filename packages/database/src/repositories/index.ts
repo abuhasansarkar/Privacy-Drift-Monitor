@@ -1,4 +1,5 @@
 import { forAgency, type TenantClient } from "../tenant";
+import { aiRepository, type AIRepository } from "./ai.repository";
 import { alertRepository, type AlertRepository } from "./alert.repository";
 import { auditRepository, type AuditRepository } from "./audit.repository";
 import { brandingRepository, type BrandingRepository } from "./branding.repository";
@@ -43,6 +44,8 @@ export interface Repositories {
   reports: ReportRepository;
   branding: BrandingRepository;
   portal: PortalRepository;
+  /** Phase 5 — the AI call log, response cache and metering ledger (§8.9). */
+  ai: AIRepository;
 }
 
 export function repositoriesFor(agencyId: string): Repositories {
@@ -61,10 +64,12 @@ export function repositoriesFor(agencyId: string): Repositories {
     reports: reportRepository(db, agencyId),
     branding: brandingRepository(db, agencyId),
     portal: portalRepository(db, agencyId),
+    ai: aiRepository(db, agencyId),
   };
 }
 
 export {
+  aiRepository,
   alertRepository,
   auditRepository,
   brandingRepository,
@@ -78,6 +83,7 @@ export {
   websiteRepository,
 };
 export type {
+  AIRepository,
   AlertRepository,
   AuditRepository,
   BrandingRepository,
@@ -93,9 +99,15 @@ export type {
 export type { AuditAction, AuditEntry } from "./audit.repository";
 export type { ClientListRow } from "./client.repository";
 export type { ScanCompletion, ScanEvidence } from "./scan.repository";
-export type { FindingInput, UpsertResult } from "./issue.repository";
+export type {
+  EvidenceInput,
+  FindingInput,
+  FindingWithEvidence,
+  UpsertResult,
+} from "./issue.repository";
 export type { WebsiteListRow } from "./website.repository";
 export type { AlertHistoryInput, AlertRuleInput } from "./alert.repository";
+export type { AIRequestRecord } from "./ai.repository";
 export type { BrandingInput } from "./branding.repository";
 export type { NotificationInput } from "./notification.repository";
 export type { ReportCreateInput, ReportListQuery } from "./report.repository";

@@ -70,9 +70,7 @@ export async function POST(request: Request) {
     if (!issued) return noContent;
 
     // ⚠️ Agency-branded (§9.5): the client contact hears from their agency.
-    const branding = await resolveBranding(issued.portalUser.agencyId, {
-      whiteLabelEnabled: true,
-    });
+    const branding = await resolveBranding(issued.portalUser.agencyId);
     const message = {
       template: "portal-magic-link" as const,
       data: { magicLinkPath: `/portal/auth?token=${issued.token}` },

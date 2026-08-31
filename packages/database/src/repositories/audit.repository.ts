@@ -42,6 +42,9 @@ export type AuditAction =
   | "member.removed"
   | "agency.updated"
   | "branding.updated"
+  /* Phase 5: an AI switch is a SPENDING decision — turning auto-explain on or
+     raising a credit cap is attributable the same way `issue.ignored` is. */
+  | "ai.settings.updated"
   | "scan.triggered"
   | "scan.cancelled"
   /* Written by the client portal with `actorType: "portal_user"` (§6.10). The

@@ -1,7 +1,10 @@
 # Feature 16 — AI Layer
 
 > **Phase:** 5 · **Priority:** P0 (explanation) / P1 (rest) · **Effort:** M×5 + L + M · **Value:** 5
-> **Status:** ⬜ Not started
+> **Status:** 🟢 Built — 97 tests in `packages/ai`, plus an end-to-end run of the
+> worker job against Postgres + Redis with `AI_PROVIDER=mock`. The real provider
+> has never been called. See `dev-doc/phases/phase-5-ai.md` for the full
+> ✅/🟡 breakdown and the two gaps this phase had to close.
 > **Plan refs:** Part VIII (all), Part 0 §0.2 P1–P2, Part I §1.12 (terminology)
 
 ## What it is
@@ -41,39 +44,48 @@ was reachable.
 
 ## Build steps
 
-- [ ] `AIProvider` interface + `OpenAIProvider` + **`MockProvider`**
-- [ ] Model IDs in **configuration**, not code — a provider swap is config plus one adapter
-- [ ] Context builders for all four features (token-budgeted)
-- [ ] Versioned prompts + strict JSON output schemas
-- [ ] **Validation pipeline — build this before the real provider:**
-  - [ ] Schema validation
-  - [ ] **Grounding check** — every `evidence_ref` resolves, or the response is rejected
-  - [ ] **Terminology check** — the Part I §1.12 forbidden list, also embedded in the system prompt
-  - [ ] **Claim check** + `is_hypothesis` handling
-  - [ ] Repair path for recoverable failures
-- [ ] Caching on `inputHash` + deduplication lock for concurrent identical requests
-- [ ] Usage metering; **per-agency credit caps and a platform daily budget, enforced before
+- [x] `AIProvider` interface + `OpenAIProvider` + **`MockProvider`**
+- [x] Model IDs in **configuration**, not code — a provider swap is config plus one adapter
+- [x] Context builders for all four features (token-budgeted)
+- [x] Versioned prompts + strict JSON output schemas
+- [x] **Validation pipeline — build this before the real provider:**
+  - [x] Schema validation
+  - [x] **Grounding check** — every `evidence_ref` resolves, or the response is rejected
+  - [x] **Terminology check** — the Part I §1.12 forbidden list, also embedded in the system prompt
+  - [x] **Claim check** + `is_hypothesis` handling
+  - [x] Repair path for recoverable failures
+- [x] Caching on `inputHash` + deduplication lock for concurrent identical requests
+- [x] Usage metering; **per-agency credit caps and a platform daily budget, enforced before
       the provider call**
-- [ ] AI job + API routes
-- [ ] `AiOutputCard` — persistent "AI-generated from the evidence above" label, confidence
+- [x] AI job (`ai` BullMQ queue, §7.2 concurrency 5) + four Server Actions.
+      🟡 `POST /api/ai/*` does not exist — nothing consumes it, and a second
+      entry point to a billable operation is not worth adding before it does
+- [x] `AiOutputCard` — persistent "AI-generated from the evidence above" label, confidence
       pill, inline evidence links, thumbs up/down feedback
-- [ ] Issue detail sections 7 (explanation) and 8 (recommended action)
-- [ ] Drift summary; client message dialog (**editable draft — never auto-sent**)
-- [ ] `/app/ai` task panel (not a chat) with a credit meter — flagged `AI_ASSISTANT_PAGE`
-- [ ] AI settings page + usage chart + `/admin/ai-usage`
+- [x] Issue detail sections 7 (explanation) and 8 (recommended action)
+- [x] Drift summary; client message dialog (**editable draft — never auto-sent**)
+- [x] `/app/ai` task panel (not a chat) with a credit meter — flagged
+      `AI_ASSISTANT_PAGE`, which defaults **off**, so it has not been rendered
+      with the flag on. Flag resolution added in `src/server/flags.ts`
+- [x] AI settings page + credit meter + usage chart.
+      🟡 `/admin/ai-usage` deferred to Phase 6 — `/admin` does not exist, and an
+      admin page with no `SUPER_ADMIN` gate and no audit logging is a
+      cross-tenant read with none of its controls
 
 ## Acceptance criteria
 
-- [ ] An explanation references only real evidence IDs
-- [ ] A response with a fabricated ref is rejected and **the deterministic content shows instead**
-- [ ] A response containing "GDPR violation" is rejected
-- [ ] An identical second request is served from cache at zero cost
-- [ ] Exceeding the credit cap blocks the call **before** the provider is contacted
-- [ ] With the provider unreachable, every other part of the product works and AI sections show
+- [x] An explanation references only real evidence IDs
+- [x] A response with a fabricated ref is rejected and **the deterministic content shows instead**
+- [x] A response asserting a legal conclusion is rejected (the fixture takes its
+      banned phrase from `FORBIDDEN_TERMS[0]`, so it cannot drift from the list)
+- [x] An identical second request is served from cache at zero cost
+- [x] Exceeding the credit cap blocks the call **before** the provider is contacted
+- [x] With the provider unreachable, every other part of the product works and AI sections show
       the unavailable state: *"AI explanations are temporarily unavailable. The technical
       details above are complete."*
-- [ ] Every AI surface carries the persistent AI label and evidence links
-- [ ] Client messages are drafts requiring human edit
+- [x] Every AI surface carries the persistent AI label and evidence links
+- [x] Client messages are drafts requiring human edit — there is deliberately no
+      code path from the dialog to `@pdm/email`
 
 ## Tests required
 
@@ -81,7 +93,7 @@ was reachable.
 |---|---|
 | Unit (`MockProvider`) | Schema validation · **grounding rejection on an unresolvable ref** · terminology rejection · claim rejection · repair path · cache hit/miss · budget enforcement · context token budget |
 | Integration | Circuit breaker opening; graceful degradation of every AI surface |
-| Manual | Review outputs for tone and accuracy on **20 real issues** before launch |
+| Manual | Review outputs for tone and accuracy on **20 real issues** before launch — ⬜ **NOT DONE.** It cannot be: `AI_API_KEY` is unset and no request has ever reached a provider. This is the gate before launch, not before merge. |
 
 Make `MockProvider` emit deliberately bad output — fabricated refs, banned terms, unsupported
 claims — and prove each validator rejects it. A validation pipeline written after the happy

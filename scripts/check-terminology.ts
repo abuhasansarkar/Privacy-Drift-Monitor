@@ -36,10 +36,23 @@ const SKIP_DIRS = new Set([
 
 /**
  * Files that legitimately contain the forbidden words: the vocabulary
- * definition itself, and this script.
+ * definition itself, this script, and the AI system preamble.
+ *
+ * ⚠️ THE PROMPT FILE IS HERE BECAUSE A PROHIBITION HAS TO NAME WHAT IT
+ * PROHIBITS. §8.7's preamble tells the model "You must NOT state or imply legal
+ * conclusions" — aimed at the model, in the constraint that enforces §1.12
+ * rather than breaking it. The forbidden list it embeds is interpolated from
+ * `FORBIDDEN_TERMS`, so the words are never typed there; the constraint
+ * sentences themselves are what this skip covers.
+ *
+ * ⚠️ A PER-LINE MARKER IS NOT AN OPTION IN THAT FILE. The preamble is one
+ * template literal, so a trailing `// terminology-allow` would be shipped to
+ * the model as prompt content instead of being stripped as a comment. Keep the
+ * exemption by path.
  */
 const SKIP_FILES = [
   "packages/shared/src/copy/terminology.ts",
+  "packages/ai/src/prompts/index.ts",
   "scripts/check-terminology.ts",
 ];
 

@@ -73,9 +73,16 @@ export async function processEmailJob(
 
   const message = data.message as EmailMessage;
 
-  const branding = await resolveBranding(data.agencyId, {
-    whiteLabelEnabled: CLIENT_FACING.has(message.template),
-  });
+  /*
+   * ⚠️ THE RESOLVER DECIDES THE ENTITLEMENT (§6.9); this job only decides
+   * whether the template is CLIENT-FACING and therefore whether an agency
+   * display name is appropriate at all. Those are two different questions, and
+   * conflating them — passing `whiteLabelEnabled: CLIENT_FACING.has(...)` —
+   * forced white-label on for every client-facing template regardless of plan.
+   * It survived a grep for the literal `whiteLabelEnabled: true` because it was
+   * written as an expression, and only a delivered email showed it.
+   */
+  const branding = await resolveBranding(data.agencyId);
 
   const rendered = renderMessage(message, branding, {
     appUrl: APP_URL,

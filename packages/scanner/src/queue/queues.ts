@@ -23,6 +23,7 @@ export const QUEUE_NAMES = {
   notification: "pdm-notification",
   email: "pdm-email",
   digest: "pdm-digest",
+  ai: "pdm-ai",
   cleanup: "pdm-cleanup",
 } as const;
 
@@ -283,4 +284,65 @@ export async function enqueueReport(
   data: ReportJobData,
 ): Promise<void> {
   await queue.add("generate", data, { jobId: toJobId(data.reportId) });
+}
+
+/* ───────────────────────── Phase 5: the ai queue (§7.2) ─────────────────────
+ *
+ * ⚠️ ITS OWN QUEUE, for the reason §7.1 gives every other split: an AI backlog
+ * must never sit in front of a scan or an alert. It is also the only queue
+ * whose work is BILLABLE and whose upstream imposes rate limits, so it needs a
+ * retry policy nothing else should inherit.
+ */
+
+export interface AiJobData {
+  agencyId: string;
+  /** Mirrors `AIFeature`. Restated so the scanner package stays DB-free. */
+  feature: "EXPLAIN_ISSUE" | "RECOMMEND_FIX" | "SUMMARIZE_DRIFT" | "CLIENT_MESSAGE";
+  entityType: string;
+  entityId: string;
+  issueId: string | null;
+  /** Null for work the scheduler started — auto-explain has no requesting user. */
+  userId: string | null;
+  /**
+   * ⚠️ THE BULLMQ JOB ID, AND THEREFORE THE IDEMPOTENCY KEY. Two analysis runs
+   * over the same scan must not commission the same explanation twice: the
+   * second `add()` for an id already held is ignored. This is the FIRST of two
+   * duplicate controls — the `inputHash` cache in `@pdm/ai` is the second, and
+   * it catches the case where the job HAS drained but the answer is still good.
+   */
+  dedupeKey: string;
+}
+
+/**
+ * §7.2: 2 attempts, exponential from 10 s.
+ *
+ * ⚠️ TWO ATTEMPTS, NOT FIVE — and the reason is money, not latency. An AI call
+ * that failed on a deterministic rejection (a 401, a content filter, an output
+ * our validators refuse) answers identically every time, and every attempt is
+ * billable. The scanner learned this as the DETERMINISTIC/TRANSIENT split and
+ * `packages/email` learned it the hard way by retrying a permanent 403 eight
+ * times; `AIResult.retryable` carries the same decision here, and the job
+ * inspects it before letting BullMQ try again.
+ */
+export const AI_JOB_OPTIONS: JobsOptions = {
+  attempts: 2,
+  backoff: { type: "exponential", delay: 10_000 },
+  removeOnComplete: { age: 24 * 3600, count: 1000 },
+  removeOnFail: { age: 7 * 24 * 3600 },
+};
+
+export function createAiQueue(connection: ConnectionOptions): Queue<AiJobData> {
+  return new Queue<AiJobData>(QUEUE_NAMES.ai, {
+    connection,
+    defaultJobOptions: AI_JOB_OPTIONS,
+  });
+}
+
+export async function enqueueAi(
+  queue: Queue<AiJobData>,
+  data: AiJobData,
+): Promise<void> {
+  // `toJobId` because a natural key like `agency:EXPLAIN_ISSUE:issue-1` carries
+  // colons, and BullMQ throws on those at enqueue time, in production.
+  await queue.add("generate", data, { jobId: toJobId(data.dedupeKey) });
 }

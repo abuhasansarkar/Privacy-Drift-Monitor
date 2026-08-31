@@ -7,6 +7,9 @@ import { formatDate } from "@/lib/format";
 import { DRIFT_CHANGE_LABEL } from "@/lib/labels";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getChangesTab } from "@/server/queries/website-tabs";
+import { readStoredOutput } from "@/server/services/ai";
+import { DriftSummarySection } from "@/components/ai/drift-summary";
+import { can } from "@pdm/shared/permissions";
 
 /**
  * CHANGES TAB — UI_DESIGN_PROMPTS §5.10, Phase 3 task 3.10.
@@ -17,13 +20,23 @@ import { getChangesTab } from "@/server/queries/website-tabs";
  * ⚠️ An empty Changes tab is GOOD NEWS on a site with history, and MEANINGLESS
  * on one with a single scan — drift needs two completed scans to exist at all.
  * The two are given different copy rather than one ambiguous "no changes".
+ *
+ * ⚠️ THE PHASE 5 AI SUMMARY SITS ABOVE THE LIST AND NEVER REPLACES IT (§8.5:
+ * the fallback for this feature is "the structured event list renders alone").
+ * The list stays the authority; the summary is a reading aid over the top of
+ * it. It is also skipped entirely on the empty branch below — there is nothing
+ * to summarise, and the event list is what a reader came for.
  */
 export default async function ChangesTabPage({
   params,
 }: PageProps<"/app/websites/[websiteId]/changes">) {
   const { websiteId } = await params;
   const ctx = await requireWebsiteAccess(websiteId);
-  const events = await getChangesTab(ctx, websiteId);
+  const [events, driftSummary] = await Promise.all([
+    getChangesTab(ctx, websiteId),
+    // Read, never generate, on render — §8.9's "on-demand by default".
+    readStoredOutput(ctx, "SUMMARIZE_DRIFT", "website", websiteId),
+  ]);
 
   if (events.length === 0) {
     return (
@@ -41,6 +54,15 @@ export default async function ChangesTabPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {can(ctx.role, "ai:read") ? (
+        <DriftSummarySection
+          websiteId={websiteId}
+          initial={driftSummary}
+          canGenerate={can(ctx.role, "ai:generate")}
+          hasEvents={events.length > 0}
+        />
+      ) : null}
+
       {[...byDay.entries()].map(([day, dayEvents]) => (
         <section key={day} className="flex flex-col gap-3">
           <h2 className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">

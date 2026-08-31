@@ -34,6 +34,10 @@ export default defineConfig({
     include: [
       "src/**/*.{test,spec}.ts",
       "packages/*/src/**/*.{test,spec}.ts",
+      // The worker holds the jobs, and a job is where two correct packages get
+      // wired together wrongly — which is exactly the seam the branding
+      // entitlement bug lived in.
+      "worker/src/**/*.{test,spec}.ts",
     ],
     exclude: ["**/node_modules/**", "**/.next/**", "**/dist/**"],
     // Tenancy tests share one database and truncate between suites, so they

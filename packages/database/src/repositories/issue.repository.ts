@@ -33,6 +33,45 @@ export interface FindingInput {
   recommendedAction: string;
 }
 
+/**
+ * One recorded row a finding was derived from, ready to become `IssueEvidence`.
+ *
+ * ⚠️ WHY THIS EXISTS, AND WHY IT ARRIVED LATE. §5.6 lists "insert
+ * `IssueEvidence`" in the scan-completion transaction, and §0.2 P2 makes those
+ * rows the anchor every AI citation must resolve to. Phase 3 built the rule
+ * engine's `Finding.evidenceRefs` but never persisted them, so the table had no
+ * writer and Phase 5's grounding check had nothing to check against — the
+ * validator would have rejected every output, correctly and uselessly. This
+ * type and the insert below are the missing half.
+ *
+ * ⚠️ THE PAYLOAD IS A SUMMARY, NOT A COPY. The full row already lives in
+ * `network_requests` / `cookie_records` / `storage_entries`; duplicating it
+ * would double the largest tables in the database and create two versions of
+ * one fact. What is stored is the identifying fields plus a pointer, which is
+ * what both the evidence viewer and the AI context builder need.
+ */
+export interface EvidenceInput {
+  kind:
+    | "NETWORK_REQUEST"
+    | "COOKIE"
+    | "STORAGE_ENTRY"
+    | "SCREENSHOT"
+    | "CONSOLE_ERROR"
+    | "CONSENT_ACTION"
+    | "DRIFT_DIFF";
+  pageUrl: string;
+  consentPhase: string;
+  observedAtMs: number;
+  confidence: number;
+  /** The identifying fields, shaped for `summariseEvidence()` in `@pdm/ai`. */
+  payload: Prisma.InputJsonValue;
+}
+
+/** A finding plus the rows behind it. */
+export interface FindingWithEvidence extends FindingInput {
+  evidence: readonly EvidenceInput[];
+}
+
 export interface UpsertResult {
   created: number;
   updated: number;
@@ -42,6 +81,30 @@ export interface UpsertResult {
 
 /** Statuses that mean "the user has dealt with this". A recurrence reopens. */
 const CLOSED: readonly string[] = ["RESOLVED", "VERIFIED"];
+
+/**
+ * Strips `evidence` before the finding is spread into `issue.create`.
+ *
+ * ⚠️ WITHOUT THIS, `...finding` HANDS PRISMA AN UNKNOWN COLUMN and the create
+ * throws at runtime — the whole scan's reconcile transaction rolls back, on a
+ * field that only exists on some of the union's members. Spreading a
+ * caller-supplied object into a `data` block is the seam; naming the columns is
+ * the fix.
+ */
+function toIssueColumns(finding: FindingInput | FindingWithEvidence): FindingInput {
+  return {
+    ruleId: finding.ruleId,
+    ruleVersion: finding.ruleVersion,
+    fingerprint: finding.fingerprint,
+    category: finding.category,
+    severity: finding.severity,
+    confidence: finding.confidence,
+    title: finding.title,
+    message: finding.message,
+    technicalReason: finding.technicalReason,
+    recommendedAction: finding.recommendedAction,
+  };
+}
 
 export function issueRepository(db: TenantClient, agencyId: string) {
   return {
@@ -56,7 +119,7 @@ export function issueRepository(db: TenantClient, agencyId: string) {
       websiteId: string;
       scanId: string;
       detectedAt: Date;
-      findings: readonly FindingInput[];
+      findings: readonly (FindingInput | FindingWithEvidence)[];
     }): Promise<UpsertResult> {
       const result: UpsertResult = {
         created: 0,
@@ -90,6 +153,46 @@ export function issueRepository(db: TenantClient, agencyId: string) {
       );
 
       await db.$transaction(async (tx) => {
+        /**
+         * §5.6's "insert `IssueEvidence`", inside the same transaction as the
+         * issue it proves.
+         *
+         * ⚠️ DELETE-THEN-INSERT PER (issue, scan), NOT A BLIND INSERT. Analysis
+         * is replayable by design (P6, §4.14: "re-run rules over stored
+         * evidence"), and a blind insert would double the evidence on every
+         * replay — which would inflate `occurrenceCount`-adjacent reads, break
+         * the ≤8 selection in `@pdm/ai` by burying the real rows under
+         * duplicates, and be invisible until someone counted. Scoping the
+         * delete to THIS scan keeps every earlier scan's evidence intact, which
+         * is what makes the table the immutable proof §5 calls it.
+         */
+        const writeEvidence = async (
+          issueId: string,
+          finding: FindingInput | FindingWithEvidence,
+        ) => {
+          const rows = "evidence" in finding ? finding.evidence : [];
+          if (rows.length === 0) return;
+
+          await tx.issueEvidence.deleteMany({
+            where: { issueId, scanId: params.scanId },
+          });
+          await tx.issueEvidence.createMany({
+            data: rows.map((row) => ({
+              issueId,
+              scanId: params.scanId,
+              agencyId,
+              kind: row.kind,
+              pageUrl: row.pageUrl,
+              consentPhase: row.consentPhase as never,
+              observedAtMs: row.observedAtMs,
+              detectionRuleId: finding.ruleId,
+              detectionRuleVersion: finding.ruleVersion,
+              confidence: row.confidence,
+              payload: row.payload,
+            })),
+          });
+        };
+
         for (const finding of params.findings) {
           // Suppressed at CREATION. See the header note.
           if (
@@ -105,7 +208,7 @@ export function issueRepository(db: TenantClient, agencyId: string) {
           });
 
           if (!existing) {
-            await tx.issue.create({
+            const created = await tx.issue.create({
               data: {
                 agencyId,
                 websiteId: params.websiteId,
@@ -115,9 +218,10 @@ export function issueRepository(db: TenantClient, agencyId: string) {
                 lastSeenAt: params.detectedAt,
                 occurrenceCount: 1,
                 status: "NEW",
-                ...finding,
+                ...toIssueColumns(finding),
               },
             });
+            await writeEvidence(created.id, finding);
             result.created += 1;
             continue;
           }
@@ -152,6 +256,12 @@ export function issueRepository(db: TenantClient, agencyId: string) {
                 : {}),
             },
           });
+
+          // ⚠️ EVIDENCE IS WRITTEN ON EVERY SIGHTING, not only at creation. An
+          // issue seen across ten scans must carry ten scans' proof: "when did
+          // this last actually happen" is answered by the evidence, and an
+          // issue whose only evidence is from its first scan cannot answer it.
+          await writeEvidence(existing.id, finding);
 
           if (reopening) result.reopened += 1;
           else result.updated += 1;

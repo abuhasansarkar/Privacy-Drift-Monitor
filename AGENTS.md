@@ -21,15 +21,16 @@ client reports.
 
 ## Current state — read this before claiming anything exists
 
-**Phases 0–4 are complete. `npm run verify` passes: lint, typecheck,
-terminology (318 files), 452 tests, `next build`.** Both processes have been
+**Phases 0–5 are complete. `npm run verify` passes: lint, typecheck,
+terminology (358 files), 618 tests, `next build`.** Both processes have been
 started and exercised against the docker-compose stack.
 
 | | |
 |---|---|
-| Built and exercised | `packages/{config,database,shared,schemas,scanner,analysis,storage,notifications,email,reports}`, `worker/` (scan + analysis + notification + email + report + digest, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` route groups, the scan pipeline, the F01–F30 fixture matrix, all 25 rules, drift, scoring, alerts, the five report types, the client portal, the four legal documents |
-| Built, **never run against the real dependency** | Resend (no `RESEND_API_KEY`: every send records as `simulated`, visibly, in Alerts → History), the Resend delivery webhook, the Clerk webhook, CI |
-| Does **not** exist | `packages/{ai,billing,ui}`, billing and Stripe, the free public scanner, `/admin`, `/app/ai`, `/app/billing`, `/app/help`, `/pricing`, `/blog`, `/resources`, `/about`, `/contact`, shadcn |
+| Built and exercised | `packages/{config,database,shared,schemas,scanner,analysis,storage,notifications,email,reports,ai}`, `worker/` (scan + analysis + notification + email + report + digest + **ai**, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` route groups, the scan pipeline, the F01–F30 fixture matrix, all 25 rules, drift, scoring, alerts, the five report types, the client portal, the four legal documents, and the AI layer (grounding/terminology/claim validators, `inputHash` cache, pre-call budget enforcement, issue sections 7–8, drift summary, client message draft, AI settings) |
+| Built, **never run against the real dependency** | The Resend delivery webhook (`RESEND_WEBHOOK_SECRET` unset — the handler fails closed with 401, which is correct), the Clerk webhook, CI |
+| Exercised against the real dependency | Resend: a live `portal-magic-link` went through `processEmailJob` and Resend reported `delivered`. With no verified domain, `EMAIL_FROM` points at `onboarding@resend.dev` and delivery is restricted — production needs a verified domain. **OpenAI**: both tiers produce validated, grounded output — `gpt-4o-mini` (standard) and `gpt-5-nano` (advanced) — via `worker/src/ai.smoke.ts` |
+| Does **not** exist | `packages/{billing,ui}`, billing and Stripe, the free public scanner, `/admin` (so no `/admin/ai-usage`), `POST /api/ai/*`, `/app/billing`, `/app/help`, `/pricing`, `/blog`, `/resources`, `/about`, `/contact`, shadcn. `/app/ai` EXISTS but is behind `AI_ASSISTANT_PAGE`, which defaults off |
 
 ### Three things here are CONTRACTS, not labels
 
@@ -39,6 +40,7 @@ worked, the tests were green, and the green meant nothing.
 | Contract | Where | What a mismatch costs |
 |---|---|---|
 | Fixture ids `F01`–`F30` | §4.15, `packages/scanner/src/testing/fixtures.ts` | "F28 passes" stops meaning "no spurious drift" |
+| Prompt versions `<FEATURE>_V<n>` | §8.7, `packages/ai/src/prompts/index.ts` | The version is in `inputHash`. **Editing a prompt without bumping it serves output from the OLD prompt forever** — the change appears to do nothing and the reason is invisible |
 | Rule ids `PDM-R001`–`PDM-R025` | §4.11, `packages/analysis/src/rules/` | Renaming one orphans every `Issue` row that stores it |
 | Queue and job ids | §7.2, `packages/scanner/src/queue/queues.ts` | BullMQ rejects a `:` in a job id, at runtime, in production |
 
@@ -66,7 +68,20 @@ All fixed, all worth knowing before you write similar code:
    happy with. Those three files carry an explicit `import * as React`.
 4. **The generic consent adapter did not recognise "Deny"** — which is what
    Usercentrics actually renders. Fixture F07 caught it.
-5. **`server-only` throws in vitest**, because outside a bundler it resolves to
+5. **`EMAIL_FROM` is RFC 5322, not a bare address.** `.env.example` is the
+   contract and ships `"Name <addr>"`; the transport wrapped it a second time.
+   No test caught it, because with no API key every send short-circuits to
+   `simulated` before the From header is built — the whole email suite was green
+   while the one thing that talks to the provider was malformed.
+6. **A permanent provider rejection was retried eight times.** 403 from an
+   unverified domain answers the same way every attempt; `EmailRejectedError`
+   now splits deterministic rejections from transient ones, as the scanner
+   already does for scan errors.
+7. **White-label was given away for free**, and the entitlement was a hardcoded
+   literal at seven call sites — one of them an EXPRESSION that a grep for the
+   literal missed. §6.9 says enforcement lives in the resolver; it now does
+   (`whiteLabelEntitlement`). **A delivered email found this, not a test.**
+8. **`server-only` throws in vitest**, because outside a bundler it resolves to
    the client entry whose job is to throw. `test/server-only-stub.ts` is aliased
    in `vitest.config.ts` so `src/server/**` can be tested directly.
 

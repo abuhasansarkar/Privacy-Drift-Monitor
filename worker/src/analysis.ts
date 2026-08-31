@@ -1,5 +1,9 @@
 import { Prisma, unsafeGlobalClient } from "@pdm/database";
-import { repositoriesFor, type FindingInput } from "@pdm/database/repositories";
+import {
+  repositoriesFor,
+  type EvidenceInput,
+  type FindingInput,
+} from "@pdm/database/repositories";
 import { classify, type VendorPattern } from "@pdm/analysis/classify";
 import {
   evaluateDriftRules,
@@ -82,6 +86,124 @@ function toIssue(finding: Finding, confidence: number): FindingInput {
     // §4.11's "Recommended action" column, authored by the rule that fired.
     recommendedAction: finding.recommendedAction,
   };
+}
+
+/** The stored rows this run has in memory, indexed for the evidence resolver. */
+interface EvidenceIndex {
+  requests: ReadonlyArray<{
+    pageUrl: string;
+    consentPhase: string;
+    url: string;
+    method: string;
+    status: number | null;
+    initiatorUrl: string | null;
+    timestampMs: number;
+    isThirdParty: boolean;
+  }>;
+  cookies: ReadonlyArray<{
+    name: string;
+    domain: string;
+    consentPhase: string;
+    durationDays: number | null;
+    httpOnly: boolean;
+    isThirdParty: boolean;
+  }>;
+  storage: ReadonlyArray<{
+    key: string;
+    origin: string;
+    storageType: string;
+    consentPhase: string;
+  }>;
+}
+
+/** §8.4 caps the AI context at 8; more than this per finding is never read. */
+const MAX_EVIDENCE_PER_FINDING = 12;
+
+/**
+ * Resolves a rule's `evidenceRefs` into the rows that will become
+ * `IssueEvidence` — §5.6's "insert `IssueEvidence`", and the anchor every AI
+ * citation must resolve to (P2, §8.6 stage 2).
+ *
+ * ⚠️ THIS IS A LOOKUP, NOT A DERIVATION. The rule engine already decided which
+ * URLs, cookie names and storage keys it relied on; this only finds the
+ * recorded rows behind them. Nothing here may add a row the rule did not name —
+ * that would be the analysis step inventing evidence, which P6 forbids and
+ * which would make the grounding check a check against fabricated anchors.
+ *
+ * ⚠️ THE PHASE IS PART OF THE MATCH. `ga4@NO_CONSENT` and `ga4@ACCEPT_ALL` are
+ * different facts (the same reason the drift fingerprint carries the phase), so
+ * a finding about pre-consent behaviour must not cite the post-consent request
+ * that happens to share a URL — it would attach exculpatory evidence to an
+ * accusation.
+ */
+function resolveEvidence(finding: Finding, index: EvidenceIndex): EvidenceInput[] {
+  const out: EvidenceInput[] = [];
+  const phase = finding.consentPhase as string;
+
+  for (const url of finding.evidenceRefs.requestUrls) {
+    for (const row of index.requests) {
+      if (row.url !== url || row.consentPhase !== phase) continue;
+      out.push({
+        kind: "NETWORK_REQUEST",
+        pageUrl: row.pageUrl,
+        consentPhase: row.consentPhase,
+        observedAtMs: row.timestampMs,
+        confidence: finding.severity === "CRITICAL" ? 0.95 : 0.85,
+        payload: {
+          method: row.method,
+          url: row.url,
+          status: row.status,
+          initiator: row.initiatorUrl,
+          thirdParty: row.isThirdParty,
+        },
+      });
+      break; // One row per named ref: the first occurrence is the evidence.
+    }
+  }
+
+  for (const name of finding.evidenceRefs.cookieNames) {
+    for (const row of index.cookies) {
+      if (row.name !== name || row.consentPhase !== phase) continue;
+      out.push({
+        kind: "COOKIE",
+        pageUrl: index.requests[0]?.pageUrl ?? "",
+        consentPhase: row.consentPhase,
+        // Cookies are captured at a snapshot point, not at a request offset;
+        // 0 is honest about that rather than inventing a timing.
+        observedAtMs: 0,
+        confidence: 0.9,
+        payload: {
+          name: row.name,
+          domain: row.domain,
+          maxAgeDays: row.durationDays,
+          httpOnly: row.httpOnly,
+          thirdParty: row.isThirdParty,
+        },
+      });
+      break;
+    }
+  }
+
+  for (const key of finding.evidenceRefs.storageKeys) {
+    for (const row of index.storage) {
+      if (row.key !== key || row.consentPhase !== phase) continue;
+      out.push({
+        kind: "STORAGE_ENTRY",
+        pageUrl: row.origin,
+        consentPhase: row.consentPhase,
+        observedAtMs: 0,
+        confidence: 0.85,
+        payload: {
+          storageType: row.storageType,
+          key: row.key,
+          origin: row.origin,
+        },
+      });
+      break;
+    }
+  }
+
+  return out.slice(0, MAX_EVIDENCE_PER_FINDING);
 }
 
 /**
@@ -222,13 +344,25 @@ export async function analyseScan(
     detections.map((detection) => [detection.vendorId ?? "", detection.confidence]),
   );
 
+  /*
+   * ⚠️ EVIDENCE IS RESOLVED HERE, WHERE THE ROWS ARE ALREADY IN MEMORY. They
+   * were loaded above to run the rules; re-reading them inside the repository
+   * would be three more queries per scan for data we are holding.
+   */
+  const evidenceIndex: EvidenceIndex = {
+    requests: requests as never,
+    cookies: cookies as never,
+    storage: storage as never,
+  };
+
   const upsert = await repos.issues.upsertFromScan({
     websiteId: scan.website.id,
     scanId,
     detectedAt: scan.finishedAt ?? new Date(),
-    findings: findings.map((finding) =>
-      toIssue(finding, confidenceByFingerprint.get(finding.subject) ?? 0.9),
-    ),
+    findings: findings.map((finding) => ({
+      ...toIssue(finding, confidenceByFingerprint.get(finding.subject) ?? 0.9),
+      evidence: resolveEvidence(finding, evidenceIndex),
+    })),
   });
 
   /*

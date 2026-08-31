@@ -33,7 +33,7 @@ export default async function PortalLayout({
   // always a redirect rather than a rendered empty state.
   if (!session) redirect("/portal/login");
 
-  const branding = await resolveBranding(session.agencyId, { whiteLabelEnabled: true });
+  const branding = await resolveBranding(session.agencyId);
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-[16px] leading-relaxed">

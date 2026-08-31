@@ -7,6 +7,7 @@ import {
   contrastRatio,
   readableTextOn,
   BASE_DISCLAIMER,
+  PLATFORM_BRAND_NAME,
 } from "@pdm/shared/branding";
 import {
   fromBrandingSnapshot,
@@ -120,6 +121,57 @@ describe("resolveBranding", () => {
     expect(a.primaryColor).toBe("#2563EB");
     expect(a.customDisclaimer).toBeNull();
     expect(a.reportFooterText).toBeNull();
+  });
+
+  /**
+   * ⚠️ THE ASSERTION THAT WAS MISSING, AND THE BUG IT LET THROUGH.
+   *
+   * The test above checked the colour and the disclaimer but never the COMPANY
+   * NAME — and the resolver fell back to `defaultBranding(agencyId, agencyName)`,
+   * which carries the AGENCY's name. So a Starter-plan agency's client received
+   * an email reading "Northlight Digital" while paying for nothing, and the
+   * upgrade to Growth would have bought only colours.
+   *
+   * §6.9 says "our default brand regardless of stored values". The company name
+   * is the most visible part of a brand, so it is the part the assertion has to
+   * name explicitly.
+   */
+  it("uses OUR company name, not the agency's, when white-label is off", async () => {
+    const a = await resolveBranding(agencyA.id, { whiteLabelEnabled: false });
+    expect(a.companyName).toBe(PLATFORM_BRAND_NAME);
+    expect(a.companyName).not.toBe("Northlight Digital");
+
+    const b = await resolveBranding(agencyB.id, { whiteLabelEnabled: false });
+    expect(b.companyName).toBe(PLATFORM_BRAND_NAME);
+    // Two different agencies, both unentitled, both OURS — and identical, which
+    // is what makes this safe to cache.
+    expect(b.companyName).toBe(a.companyName);
+  });
+
+  it("keeps the agency's name when white-label IS entitled", async () => {
+    // The feature still has to work; the fix must not have removed it.
+    const a = await resolveBranding(agencyA.id, WHITE_LABEL);
+    expect(a.companyName).toBe("Northlight Digital");
+    expect(a.isWhiteLabelled).toBe(true);
+  });
+
+  it("resolves the entitlement itself when the caller does not pass one", async () => {
+    /*
+     * ⚠️ THE INTENDED CALL. §6.9 puts the entitlement in the resolver, and it
+     * spent a while as a hardcoded `whiteLabelEnabled: true` at seven call
+     * sites instead. With no subscription row — which is every agency until
+     * billing lands — the answer is our brand.
+     */
+    const resolved = await resolveBranding(agencyA.id);
+    expect(resolved.isWhiteLabelled).toBe(false);
+    expect(resolved.companyName).toBe(PLATFORM_BRAND_NAME);
+  });
+
+  it("does not serve a white-labelled cache entry to an unentitled read", async () => {
+    // Warm the cache with the entitled answer, then ask as an unentitled caller.
+    await resolveBranding(agencyA.id, WHITE_LABEL);
+    const unentitled = await resolveBranding(agencyA.id, { whiteLabelEnabled: false });
+    expect(unentitled.companyName).toBe(PLATFORM_BRAND_NAME);
   });
 
   it("caches per agency and never serves one agency's entry to another", async () => {

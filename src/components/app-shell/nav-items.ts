@@ -1,5 +1,6 @@
 import { t } from "@pdm/shared/copy";
 import type { Permission } from "@pdm/shared/permissions";
+import { FLAGS, type FlagKey } from "@pdm/shared/flags";
 
 /**
  * SIDEBAR NAVIGATION — §3.3.
@@ -15,10 +16,33 @@ import type { Permission } from "@pdm/shared/permissions";
 export interface NavItem {
   href: string;
   label: string;
-  icon: "grid" | "users" | "globe" | "alert" | "drift" | "doc" | "team" | "settings" | "bell";
+  icon:
+    | "grid"
+    | "users"
+    | "globe"
+    | "alert"
+    | "drift"
+    | "doc"
+    | "team"
+    | "settings"
+    | "bell"
+    | "sparkle";
   permission: Permission;
   /** Marks the entry active for `/app/websites/new` as well as the list. */
   matchPrefix?: boolean;
+  /**
+   * A feature flag that must ALSO be on for this entry to render.
+   *
+   * ⚠️ THE PERMISSION AND THE FLAG ARE DIFFERENT QUESTIONS. `permission` asks
+   * "may this role use it"; `flag` asks "does it exist here yet". A Manager has
+   * `ai:generate` whether or not `/app/ai` is switched on, so gating the entry
+   * on the permission alone would show every Manager a link that 404s.
+   *
+   * Resolved on the SERVER (the layout) and passed down as `enabledFlags` —
+   * this file is imported by a Client Component, which cannot read the flag
+   * table.
+   */
+  flag?: FlagKey;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -56,6 +80,16 @@ export const NAV_ITEMS: NavItem[] = [
     label: t("navApp.drift"),
     icon: "drift",
     permission: "issue:read",
+    matchPrefix: true,
+  },
+  {
+    // Between the work queues and the artefacts: it acts ON findings, so it
+    // belongs after them and before Reports.
+    href: "/app/ai",
+    label: t("aiAssistant.title"),
+    icon: "sparkle",
+    permission: "ai:generate",
+    flag: FLAGS.AI_ASSISTANT_PAGE,
     matchPrefix: true,
   },
   {

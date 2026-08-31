@@ -78,7 +78,7 @@ export async function invitePortalUser(
 
     // ⚠️ AGENCY-BRANDED (§9.5). The client contact hears from their agency, not
     // from us — that is the whole point of the white-label promise.
-    const branding = await resolveBranding(ctx.agencyId, { whiteLabelEnabled: true });
+    const branding = await resolveBranding(ctx.agencyId);
     const message = {
       template: "portal-invitation" as const,
       data: {

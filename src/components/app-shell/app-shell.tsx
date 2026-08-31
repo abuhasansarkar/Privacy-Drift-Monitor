@@ -31,6 +31,7 @@ export function AppShell({
   agencyName,
   websitesUsed,
   websiteLimit,
+  enabledFlags,
   unreadNotifications,
   latestNotifications,
   children,
@@ -39,6 +40,8 @@ export function AppShell({
   agencyName: string;
   websitesUsed: number;
   websiteLimit: number | null;
+  /** Feature flags resolved in the server layout — see `NavItem.flag`. */
+  enabledFlags: readonly string[];
   unreadNotifications: number;
   /** The latest five, server-rendered — see the note in `notification-bell`. */
   latestNotifications: BellNotification[];
@@ -93,6 +96,7 @@ export function AppShell({
             agencyName={agencyName}
             websitesUsed={websitesUsed}
             websiteLimit={websiteLimit}
+            enabledFlags={enabledFlags}
           />
         </div>
       </aside>
@@ -120,6 +124,7 @@ export function AppShell({
               agencyName={agencyName}
               websitesUsed={websitesUsed}
               websiteLimit={websiteLimit}
+              enabledFlags={enabledFlags}
               onNavigate={() => setDrawerOpen(false)}
             />
           </div>

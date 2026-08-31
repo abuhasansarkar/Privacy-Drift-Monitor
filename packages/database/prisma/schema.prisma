@@ -1384,7 +1384,31 @@ model AIRequest {
   issueId    String?
 
   /// sha256(feature + promptVersion + canonicalJson(context)) — the cache key.
-  inputHash        String
+  inputHash String
+
+  /// The prompt that produced this output, e.g. `EXPLAIN_ISSUE_V1`.
+  ///
+  /// ⚠️ REQUIRED BY §8.7 AND §8.8, ABSENT FROM §5's MODEL. Part V's `AIRequest`
+  /// does not list this column, but §8.7 says the version is "recorded on every
+  /// `AIRequest` so an output can always be traced to the prompt that produced
+  /// it", and §8.8 reports a "per-prompt-version acceptance rate in admin" —
+  /// neither is possible without it. The two parts of the plan disagree; the
+  /// specific requirement wins and the divergence is recorded here rather than
+  /// silently.
+  ///
+  /// Nullable because rows written before Phase 5 have no prompt.
+  promptVersion String?
+
+  /// Credits billed to the agency: 1 standard, 3 advanced, 0 cached, 0 failed.
+  ///
+  /// ⚠️ DELIBERATELY NOT DERIVED FROM `model` OR `status` AT READ TIME. §8.9's
+  /// accounting says a failed call costs the customer nothing while its
+  /// provider cost is still logged for margin tracking — so what we CHARGED and
+  /// what we SPENT are two different numbers, and recomputing the first from a
+  /// row's tier would silently re-bill every historical failure the day the
+  /// rule changes. `costMicroCents` beside it is our spend.
+  creditsCharged Int @default(0)
+
   promptTokens     Int?
   completionTokens Int?
   totalTokens      Int?
@@ -1405,8 +1429,15 @@ model AIRequest {
 
   @@index([agencyId, createdAt(sort: Desc)])
   @@index([agencyId, feature])
+  /// THE CACHE LOOKUP. `inputHash` is a sha256, so this is effectively unique
+  /// per (feature, promptVersion, context) and the 7-day window filters a
+  /// handful of rows rather than a scan (§8.9).
   @@index([inputHash])
   @@index([status])
+  /// §8.8's per-prompt-version acceptance rate in /admin/ai-usage. Crosses
+  /// agencies deliberately — it measures the PROMPT, not a tenant, and is read
+  /// only through `unsafeGlobalClient` on an admin surface.
+  @@index([feature, promptVersion])
   @@map("ai_requests")
 }
 

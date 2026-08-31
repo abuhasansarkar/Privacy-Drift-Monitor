@@ -15,6 +15,7 @@ import {
   GridIcon,
   ShieldIcon,
   SlidersIcon,
+  SparkleIcon,
   UsersIcon,
 } from "@/components/ui/icons";
 import { isActive, NAV_ITEMS, type NavItem } from "./nav-items";
@@ -38,6 +39,7 @@ const ICONS: Record<NavItem["icon"], typeof GridIcon> = {
   team: UsersIcon,
   settings: SlidersIcon,
   bell: BellIcon,
+  sparkle: SparkleIcon,
 };
 
 export function Sidebar({
@@ -45,6 +47,7 @@ export function Sidebar({
   agencyName,
   websitesUsed,
   websiteLimit,
+  enabledFlags,
   onNavigate,
 }: {
   role: AgencyRole;
@@ -52,11 +55,21 @@ export function Sidebar({
   websitesUsed: number;
   /** Null while entitlements are stubbed — the meter then hides rather than lying. */
   websiteLimit: number | null;
+  /** Flags resolved on the server. An entry with a `flag` needs it listed. */
+  enabledFlags?: readonly string[];
   /** Set by the mobile drawer so tapping a link closes it. */
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const visible = NAV_ITEMS.filter((item) => can(role, item.permission));
+  const visible = NAV_ITEMS.filter(
+    (item) =>
+      can(role, item.permission) &&
+      // ⚠️ AN ENTRY WITH A FLAG IS HIDDEN UNLESS THE FLAG IS RESOLVED ON.
+      // Failing closed matters here: `enabledFlags` is optional, so a caller
+      // that forgets to pass it hides a flagged link rather than showing one
+      // that 404s.
+      (!item.flag || (enabledFlags?.includes(item.flag) ?? false)),
+  );
 
   return (
     <div className="flex h-full flex-col gap-4 bg-background p-3">

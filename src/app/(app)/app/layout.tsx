@@ -11,6 +11,7 @@ import { AlertTriangleIcon } from "@/components/ui/icons";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getEntitlements } from "@/server/entitlements";
 import { getNotificationBell } from "@/server/queries/notifications";
+import { FLAGS, isFlagEnabled } from "@/server/flags";
 
 /**
  * AUTHENTICATED SHELL — §3.1, §3.3.
@@ -53,14 +54,23 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   }
 
   const repos = repositoriesFor(ctx.agencyId);
-  const [websitesUsed, entitlements, bell] = await Promise.all([
+  const [websitesUsed, entitlements, bell, aiAssistant] = await Promise.all([
     repos.db.website.count({ where: { archivedAt: null } }),
     getEntitlements(ctx.agencyId),
     // ⚠️ Scoped to THIS user, not the agency. A notification is addressed to a
     // person, and a shared count would move on its own as colleagues read
     // theirs (§3.11).
     getNotificationBell(ctx),
+    /*
+     * ⚠️ FLAGS ARE RESOLVED HERE, IN THE SERVER LAYOUT, because the sidebar is
+     * a Client Component and cannot read the flag table. `NAV_ITEMS` declares
+     * which entries are flagged; this resolves them and passes the answers
+     * down, so a flagged link is never rendered as a 404 waiting to happen.
+     */
+    isFlagEnabled(FLAGS.AI_ASSISTANT_PAGE, ctx.agencyId),
   ]);
+
+  const enabledFlags = aiAssistant ? [FLAGS.AI_ASSISTANT_PAGE] : [];
 
   return (
     <AppShell
@@ -68,6 +78,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       agencyName={ctx.agencyName}
       websitesUsed={websitesUsed}
       websiteLimit={entitlements.websiteLimit}
+      enabledFlags={enabledFlags}
       unreadNotifications={bell.unread}
       latestNotifications={bell.latest.map((row) => ({
         id: row.id,

@@ -68,7 +68,7 @@ export default async function SharedReportPage({
   const branding =
     fromBrandingSnapshot(
       share.report.brandingSnapshot,
-      await resolveBranding(share.report.agencyId, { whiteLabelEnabled: true }),
+      await resolveBranding(share.report.agencyId),
     ) ?? defaultBranding(share.report.agencyId, "");
 
   const url = await objectStore().signedUrl(share.report.s3Key, 300);

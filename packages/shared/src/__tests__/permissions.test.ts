@@ -97,3 +97,21 @@ describe("website scope", () => {
     expect(isWebsiteInScope(["a", "b"], "c")).toBe(false);
   });
 });
+
+/**
+ * ⚠️ ADDED IN PHASE 5 BECAUSE THE AI ACTIONS GOT THE CALLER SIDE WRONG FIRST.
+ * Three new Server Actions accepted a `websiteId` from the client and checked
+ * only `requirePermission("ai:generate")`, so a member invited with a
+ * website-scope restriction could commission and read an AI summary of a site
+ * they had deliberately not been given. In-tenant, and still unauthorized.
+ *
+ * The function itself was already correct and already covered above; what was
+ * missing was one exactness case, since a `.includes()` on ids that share a
+ * prefix is the shape that would quietly widen a restriction.
+ */
+describe("website scope — exactness", () => {
+  it("does not admit a website by prefix or substring", () => {
+    expect(isWebsiteInScope(["site-1"], "site-10")).toBe(false);
+    expect(isWebsiteInScope(["site-10"], "site-1")).toBe(false);
+  });
+});

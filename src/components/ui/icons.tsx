@@ -263,3 +263,48 @@ export function ActivityIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/**
+ * The AI marker — §8.8's "persistent label" needs a mark as well as words.
+ *
+ * ⚠️ NEVER THE ONLY SIGNAL. §11.6 (WCAG 1.4.1) forbids conveying meaning by
+ * colour alone, and the same reasoning applies to an icon alone: this always
+ * appears beside the literal words "AI-generated", never instead of them.
+ */
+export function SparkleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 1.5l1.5 4L13.5 7l-4 1.5L8 12.5 6.5 8.5 2.5 7l4-1.5z" />
+      <path d="M12.5 11.5l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z" />
+    </Icon>
+  );
+}
+
+/** Thumbs up / down for §8.8's feedback loop. */
+export function ThumbUpIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 14V7l3-5c.9 0 1.5.7 1.5 1.6V6h3.3c.9 0 1.5.8 1.3 1.6l-1.1 5c-.1.8-.8 1.4-1.6 1.4z" />
+      <path d="M4.5 7H2v7h2.5" />
+    </Icon>
+  );
+}
+
+export function ThumbDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 2v7l3 5c.9 0 1.5-.7 1.5-1.6V10h3.3c.9 0 1.5-.8 1.3-1.6l-1.1-5C12.4 2.6 11.7 2 10.9 2z" />
+      <path d="M4.5 9H2V2h2.5" />
+    </Icon>
+  );
+}
+
+/** Copy-to-clipboard, for the client message draft. */
+export function CopyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+      <path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V9A1.5 1.5 0 0 0 4 10.5h1.5" />
+    </Icon>
+  );
+}

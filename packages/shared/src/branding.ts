@@ -33,6 +33,18 @@ export const DEFAULT_PRIMARY_COLOR = "#2563EB";
 export const DEFAULT_ACCENT_COLOR = "#0EA5E9";
 
 /**
+ * OUR brand name — what a client-facing surface says when the agency's plan
+ * does not include white-label.
+ *
+ * ⚠️ NOT THE AGENCY'S NAME. §6.9: "when `whiteLabel` is false,
+ * `resolveBranding` returns our default brand regardless of stored values."
+ * Falling back to the agency's own name would hand out the paid feature's most
+ * visible half for free — the client contact would see their agency's name on
+ * the email either way, and the upgrade would buy only colours.
+ */
+export const PLATFORM_BRAND_NAME = "Privacy Drift Monitor";
+
+/**
  * ⚠️ THE BASE DISCLAIMER IS NOT CUSTOMISABLE AND APPEARS ON EVERY PDF, portal
  * page and client-facing email (§6.8). "Positioned as legal compliance and sued
  * over a missed issue" is a named risk in §12.7; this sentence and the
@@ -51,7 +63,15 @@ export const METHODOLOGY_NOTE =
   "withdrawal — and every network request, cookie and storage write is recorded " +
   "against the consent state it happened under.";
 
-/** The brand used when white-label is off, or when nothing has been saved. */
+/**
+ * The shape used when nothing has been saved yet.
+ *
+ * ⚠️ THIS IS THE **SETTINGS-FORM** FALLBACK, NOT THE ENTITLEMENT FALLBACK.
+ * Prefilling the branding editor with the agency's own name is helpful; serving
+ * it on a client-facing email when they have not paid for white-label is not.
+ * The entitlement path is `platformBranding()` below, and `resolveBranding`
+ * picks between them.
+ */
 export function defaultBranding(agencyId: string, agencyName: string): Branding {
   return {
     agencyId,
@@ -65,6 +85,20 @@ export function defaultBranding(agencyId: string, agencyName: string): Branding 
     reportFooterText: null,
     customDisclaimer: null,
     portalWelcomeText: null,
+    isWhiteLabelled: false,
+  };
+}
+
+/**
+ * OUR brand, for an agency without the white-label entitlement (§6.9).
+ *
+ * ⚠️ IGNORES EVERY STORED VALUE, including the company name — which is the
+ * whole point of putting enforcement in the resolver rather than in each
+ * template. A template cannot render a brand it was never handed.
+ */
+export function platformBranding(agencyId: string): Branding {
+  return {
+    ...defaultBranding(agencyId, PLATFORM_BRAND_NAME),
     isWhiteLabelled: false,
   };
 }

@@ -2,9 +2,11 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { BrowserPool } from "@pdm/scanner/browser/pool";
 import {
   QUEUE_NAMES,
+  createAiQueue,
   createEmailQueue,
   createNotificationQueue,
   createRedisConnection,
+  type AiJobData,
   type DigestJobData,
   type EmailJobData,
   type NotificationJobData,
@@ -13,6 +15,7 @@ import {
 } from "@pdm/scanner/queue/queues";
 // bullmq is reached through the scanner package on purpose — see queue/worker.ts.
 import {
+  createAiWorker,
   createDigestWorker,
   createEmailWorker,
   createNotificationWorker,
@@ -32,6 +35,8 @@ import { runDigest } from "./jobs/digest.job";
 import { processEmailJob } from "./jobs/email.job";
 import { dispatchNotification } from "./jobs/notification.job";
 import { generateReport } from "./jobs/report.job";
+import { closeAiRedis, processAiJob } from "./jobs/ai.job";
+import { enqueueAutoExplain } from "./jobs/auto-explain";
 import { startScheduler } from "./scheduler";
 import { startDigestScheduler } from "./schedulers/digest-scheduler";
 
@@ -149,6 +154,21 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
     await emitScanAlerts(job.data.agencyId, result.scanId, notificationQueue);
   } catch (error) {
     log.error({ err: error }, "alert emission failed; findings are kept");
+  }
+
+  /*
+   * ⚠️ AUTO-EXPLAIN IS LAST, AND ITS FAILURE IS THE LEAST CONSEQUENTIAL THING
+   * IN THIS FUNCTION. It runs after alerts on purpose: an alert has a 60-second
+   * budget (§12.3) and must not queue behind an optional explanation. It is
+   * also wrapped separately, because P3 says findings render with or without AI
+   * — a queue hiccup here must not lose a scan whose evidence cannot be
+   * re-recorded. `enqueueAutoExplain` itself returns 0 unless three switches
+   * are on, the outermost being the AI_AUTO_EXPLAIN kill switch.
+   */
+  try {
+    await enqueueAutoExplain(job.data.agencyId, result.scanId, aiQueue);
+  } catch (error) {
+    log.warn({ err: error }, "auto-explain enqueue failed; findings are unaffected");
   }
 
   // The job's return value is a SUMMARY, not the evidence. BullMQ stores the
@@ -305,7 +325,7 @@ async function persist(
  * everything, which is right for local development and for a single-box
  * deployment; production splits `scan` from `report`.
  */
-const ROLES = (process.env.WORKER_ROLES ?? "scan,scheduler,notification,email,report,digest")
+const ROLES = (process.env.WORKER_ROLES ?? "scan,scheduler,notification,email,report,digest,ai")
   .split(",")
   .map((role) => role.trim())
   .filter(Boolean);
@@ -314,6 +334,8 @@ const hasRole = (role: string): boolean => ROLES.includes(role);
 
 const notificationQueue = createNotificationQueue(connection);
 const emailQueue = createEmailQueue(connection);
+/* The analysis job publishes auto-explain work here (§8.5 feature 1). */
+const aiQueue = createAiQueue(connection);
 
 const workers: { name: string; close: () => Promise<void> }[] = [];
 
@@ -387,6 +409,35 @@ if (hasRole("report")) {
   workers.push({ name: QUEUE_NAMES.report, close: () => reportWorker.close() });
 }
 
+if (hasRole("ai")) {
+  const aiWorker = createAiWorker(
+    (job: Job<AiJobData>) => processAiJob(job.data),
+    /*
+     * ⚠️ §7.2 FIXES THIS AT 5, AND THE LIMIT IS THE PROVIDER'S, NOT OURS. The
+     * work is pure I/O, so the email worker's width would be tempting — and
+     * would turn a burst of auto-explains into a wall of 429s, each one a
+     * retry against the same limit. It is also the only queue whose backlog
+     * costs money to drain.
+     */
+    { connection, concurrency: Number(process.env.AI_CONCURRENCY ?? 5) },
+  );
+  aiWorker.on("failed", (job, error) => {
+    /*
+     * ⚠️ WARN, NOT ERROR — and this is a product decision, not log tidying.
+     * P3 says findings render with or without AI, so a failed explanation
+     * degrades one section of one page and nothing else. Paging on it would
+     * train the on-call to ignore a channel that also carries scan failures.
+     * The `AIRequest` row is already written either way, which is where the
+     * real signal lives (§8.6's per-feature failure rate).
+     */
+    childLogger({ jobId: job?.id, agencyId: job?.data.agencyId }).warn(
+      { err: error, attempt: job?.attemptsMade },
+      "ai job failed",
+    );
+  });
+  workers.push({ name: QUEUE_NAMES.ai, close: () => aiWorker.close() });
+}
+
 if (hasRole("digest")) {
   const digestWorker = createDigestWorker(
     (job: Job<DigestJobData>) => runDigest(job.data, { emailQueue }),
@@ -446,7 +497,11 @@ async function shutdown(signal: string) {
     await pool.close(30_000);
     await closeReportBrowser();
     // 3. Producers, then Redis last: steps 1 and 2 still report through it.
-    await Promise.all([notificationQueue.close(), emailQueue.close()]);
+    //    `closeAiRedis` releases the AI job's own connection — it is separate
+    //    from `connection` because the ports do plain GET/SET/INCR, which must
+    //    not share a client BullMQ has configured for blocking reads.
+    await Promise.all([notificationQueue.close(), emailQueue.close(), aiQueue.close()]);
+    await closeAiRedis();
     await connection.quit();
     logger.info("worker stopped cleanly");
     process.exit(0);
