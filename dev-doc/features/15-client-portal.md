@@ -1,7 +1,7 @@
 # Feature 15 — Client Portal
 
 > **Phase:** 4 · **Priority:** P1 · **Effort:** L · **Value:** 4
-> **Status:** ⬜ Not started
+> **Status:** 🟡 Built — sessions, revocation, cross-client isolation and the client-safe serializers are covered by 14 integration tests. Untested: the mailbox hop, because Resend is unconfigured
 > **Plan refs:** Part III §3.13, Part VI §6.10 (portal security)
 
 ## What it is

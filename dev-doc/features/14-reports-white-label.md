@@ -1,7 +1,7 @@
 # Feature 14 — Reports & White-Label
 
 > **Phase:** 4 · **Priority:** P0 · **Effort:** XL + M + M · **Value:** 5
-> **Status:** ⬜ Not started
+> **Status:** ✅ Built and verified — all five types render real PDFs, and the concurrent two-agency branding test passes
 > **Plan refs:** Part VI §6.9 (branding), Part III §3.11 (`/app/reports`), Part XI (report design)
 
 ## What it is

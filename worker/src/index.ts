@@ -2,18 +2,38 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { BrowserPool } from "@pdm/scanner/browser/pool";
 import {
   QUEUE_NAMES,
+  createEmailQueue,
+  createNotificationQueue,
   createRedisConnection,
+  type DigestJobData,
+  type EmailJobData,
+  type NotificationJobData,
+  type ReportJobData,
   type ScanJobData,
 } from "@pdm/scanner/queue/queues";
 // bullmq is reached through the scanner package on purpose — see queue/worker.ts.
-import { createScanWorker, type Job } from "@pdm/scanner/queue/worker";
+import {
+  createDigestWorker,
+  createEmailWorker,
+  createNotificationWorker,
+  createReportWorker,
+  createScanWorker,
+  type Job,
+} from "@pdm/scanner/queue/worker";
+import { closeReportBrowser } from "@pdm/reports";
 import { screenshotKey } from "@pdm/scanner/record/screenshots";
 import { runScan } from "@pdm/scanner/scan";
 import { objectStore } from "@pdm/storage";
 import { isRetryable, type ScanResult } from "@pdm/scanner/types";
 import { childLogger, logger } from "@pdm/shared/logger";
 import { analyseScan } from "./analysis";
+import { emitScanAlerts } from "./jobs/alerts";
+import { runDigest } from "./jobs/digest.job";
+import { processEmailJob } from "./jobs/email.job";
+import { dispatchNotification } from "./jobs/notification.job";
+import { generateReport } from "./jobs/report.job";
 import { startScheduler } from "./scheduler";
+import { startDigestScheduler } from "./schedulers/digest-scheduler";
 
 /**
  * SCAN WORKER — PLAN.md Part VII §7.2, Phase 2 task 2.1.
@@ -116,6 +136,19 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
     } catch (error) {
       log.error({ err: error }, "analysis failed; evidence is kept");
     }
+  }
+
+  /*
+   * ⚠️ ALERTS ARE EMITTED AFTER ANALYSIS AND OUTSIDE ITS TRY/CATCH, and a
+   * failure here never fails the scan either. The evidence and the findings are
+   * already committed; a queue hiccup must not throw away a recording that
+   * cannot be repeated. It also runs for a FAILED scan — "we could not reach
+   * your site" is exactly the alert an agency needs (§6.6).
+   */
+  try {
+    await emitScanAlerts(job.data.agencyId, result.scanId, notificationQueue);
+  } catch (error) {
+    log.error({ err: error }, "alert emission failed; findings are kept");
   }
 
   // The job's return value is a SUMMARY, not the evidence. BullMQ stores the
@@ -265,43 +298,138 @@ async function persist(
   );
 }
 
-const worker = createScanWorker<ScanSummary>(processScan, {
-  connection,
-  concurrency: CONCURRENCY,
-});
+/**
+ * ⚠️ ROLES SELECT WHAT THIS REPLICA CONSUMES (§7.2, §7.7). Scanning and report
+ * rendering both own a Chromium, and running them on the same box means a
+ * report backlog competes for the memory a scan needs. The default runs
+ * everything, which is right for local development and for a single-box
+ * deployment; production splits `scan` from `report`.
+ */
+const ROLES = (process.env.WORKER_ROLES ?? "scan,scheduler,notification,email,report,digest")
+  .split(",")
+  .map((role) => role.trim())
+  .filter(Boolean);
 
-worker.on("failed", (job, error) => {
-  childLogger({ jobId: job?.id, scanId: job?.data.scanId }).error(
-    { err: error },
-    "scan job failed",
+const hasRole = (role: string): boolean => ROLES.includes(role);
+
+const notificationQueue = createNotificationQueue(connection);
+const emailQueue = createEmailQueue(connection);
+
+const workers: { name: string; close: () => Promise<void> }[] = [];
+
+const scanWorker = hasRole("scan")
+  ? createScanWorker<ScanSummary>(processScan, { connection, concurrency: CONCURRENCY })
+  : null;
+
+if (scanWorker) {
+  scanWorker.on("failed", (job, error) => {
+    childLogger({ jobId: job?.id, scanId: job?.data.scanId }).error(
+      { err: error },
+      "scan job failed",
+    );
+  });
+  workers.push({ name: QUEUE_NAMES.scan, close: () => scanWorker.close() });
+}
+
+/*
+ * ⚠️ NOTIFICATION CONCURRENCY IS HIGH AND REPORT CONCURRENCY IS LOW, and that
+ * is the whole reason these are separate queues. §12.3 requires a critical
+ * issue to reach a mailbox within 60 seconds; a PDF render sitting in front of
+ * it on a shared queue is that criterion failing invisibly.
+ */
+if (hasRole("notification")) {
+  const notificationWorker = createNotificationWorker(
+    (job: Job<NotificationJobData>) => dispatchNotification(job.data, { emailQueue }),
+    { connection, concurrency: Number(process.env.NOTIFICATION_CONCURRENCY ?? 10) },
   );
-});
+  notificationWorker.on("failed", (job, error) => {
+    childLogger({ jobId: job?.id, agencyId: job?.data.agencyId }).error(
+      { err: error },
+      "notification job failed",
+    );
+  });
+  workers.push({
+    name: QUEUE_NAMES.notification,
+    close: () => notificationWorker.close(),
+  });
+}
+
+if (hasRole("email")) {
+  const emailWorker = createEmailWorker(
+    (job: Job<EmailJobData>) => processEmailJob(job.data),
+    { connection, concurrency: Number(process.env.EMAIL_CONCURRENCY ?? 5) },
+  );
+  emailWorker.on("failed", (job, error) => {
+    // Logged at warn, not error: §9.5 expects retries across a Resend outage,
+    // and paging on every attempt would page for two hours over one incident.
+    childLogger({ jobId: job?.id, agencyId: job?.data.agencyId }).warn(
+      { err: error, attempt: job?.attemptsMade },
+      "email send failed; will retry",
+    );
+  });
+  workers.push({ name: QUEUE_NAMES.email, close: () => emailWorker.close() });
+}
+
+if (hasRole("report")) {
+  const reportWorker = createReportWorker(
+    (job: Job<ReportJobData>) => generateReport(job.data, { notificationQueue }),
+    // ⚠️ Deliberately low. Each render owns a Chromium page; §10.12 budgets
+    // p50 under 30 s and p95 under 120 s, and going wide trades both for
+    // throughput nobody asked for.
+    { connection, concurrency: Number(process.env.REPORT_CONCURRENCY ?? 2) },
+  );
+  reportWorker.on("failed", (job, error) => {
+    childLogger({ jobId: job?.id, agencyId: job?.data.agencyId }).error(
+      { err: error },
+      "report job failed",
+    );
+  });
+  workers.push({ name: QUEUE_NAMES.report, close: () => reportWorker.close() });
+}
+
+if (hasRole("digest")) {
+  const digestWorker = createDigestWorker(
+    (job: Job<DigestJobData>) => runDigest(job.data, { emailQueue }),
+    { connection, concurrency: 1 },
+  );
+  digestWorker.on("failed", (job, error) => {
+    childLogger({ jobId: job?.id }).error({ err: error }, "digest job failed");
+  });
+  workers.push({ name: QUEUE_NAMES.digest, close: () => digestWorker.close() });
+}
 
 // The scheduler runs IN the worker process rather than as its own service:
 // it is a database sweep on a timer, and a second deployable would need its own
 // leader election to avoid double-sweeping (§7.5). Set WORKER_ROLES without
 // `scheduler` on the replicas that should not sweep.
-const stopScheduler = (process.env.WORKER_ROLES ?? "scan,scheduler").includes(
-  "scheduler",
-)
+const stopScheduler = hasRole("scheduler")
   ? startScheduler(connection, Number(process.env.SCHEDULER_INTERVAL_MS ?? 60_000))
   : null;
+
+/*
+ * The digest scheduler arms one job per DISTINCT TIMEZONE, never one per
+ * agency (§6.6). It rides on the same `scheduler` role so two replicas cannot
+ * both arm the same day's digest.
+ */
+const stopDigestScheduler = hasRole("scheduler") ? startDigestScheduler(connection) : null;
 
 logger.info(
   {
     workerId: WORKER_ID,
     concurrency: CONCURRENCY,
-    queue: QUEUE_NAMES.scan,
+    roles: ROLES,
+    queues: workers.map((entry) => entry.name),
     scheduler: stopScheduler !== null,
   },
-  "scan worker ready",
+  "worker ready",
 );
 
 /**
  * Shutdown order matters and is the whole point of this block:
- *   1. `worker.close()` stops taking NEW jobs and waits for in-flight ones.
- *   2. `pool.close()` then closes Chromium — after, so no scan loses its browser.
- *   3. Redis last, because steps 1 and 2 still report through it.
+ *   1. Every worker stops taking NEW jobs and waits for in-flight ones.
+ *   2. BOTH browsers close — the scan pool and the report renderer's, which are
+ *      deliberately separate (§6.8) and therefore both leak if either is missed.
+ *   3. Queue producers, then Redis last, because steps 1 and 2 report through it.
  */
 let shuttingDown = false;
 async function shutdown(signal: string) {
@@ -311,8 +439,14 @@ async function shutdown(signal: string) {
 
   try {
     stopScheduler?.();
-    await worker.close();
+    stopDigestScheduler?.();
+    // 1. Stop taking NEW jobs on every queue and let in-flight ones finish.
+    await Promise.all(workers.map((entry) => entry.close()));
+    // 2. Then close both browsers — after, so nothing loses one mid-render.
     await pool.close(30_000);
+    await closeReportBrowser();
+    // 3. Producers, then Redis last: steps 1 and 2 still report through it.
+    await Promise.all([notificationQueue.close(), emailQueue.close()]);
     await connection.quit();
     logger.info("worker stopped cleanly");
     process.exit(0);

@@ -11,6 +11,8 @@ import { cn } from "@/lib/cn";
  */
 const SECTIONS = [
   { href: "/app/settings", label: t("settings.general") },
+  { href: "/app/settings/branding", label: t("branding.title") },
+  { href: "/app/settings/notifications", label: t("notificationSettings.title") },
   { href: "/app/settings/ignored", label: t("ignored.title") },
   { href: "/app/settings/audit", label: t("audit.title") },
 ];

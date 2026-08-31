@@ -1,6 +1,14 @@
 import { forAgency, type TenantClient } from "../tenant";
+import { alertRepository, type AlertRepository } from "./alert.repository";
 import { auditRepository, type AuditRepository } from "./audit.repository";
+import { brandingRepository, type BrandingRepository } from "./branding.repository";
 import { clientRepository, type ClientRepository } from "./client.repository";
+import {
+  notificationRepository,
+  type NotificationRepository,
+} from "./notification.repository";
+import { portalRepository, type PortalRepository } from "./portal.repository";
+import { reportRepository, type ReportRepository } from "./report.repository";
 import { issueRepository, type IssueRepository } from "./issue.repository";
 import { scanRepository, type ScanRepository } from "./scan.repository";
 import { teamRepository, type TeamRepository } from "./team.repository";
@@ -30,6 +38,11 @@ export interface Repositories {
   issues: IssueRepository;
   team: TeamRepository;
   audit: AuditRepository;
+  notifications: NotificationRepository;
+  alerts: AlertRepository;
+  reports: ReportRepository;
+  branding: BrandingRepository;
+  portal: PortalRepository;
 }
 
 export function repositoriesFor(agencyId: string): Repositories {
@@ -43,20 +56,35 @@ export function repositoriesFor(agencyId: string): Repositories {
     issues: issueRepository(db, agencyId),
     team: teamRepository(db, agencyId),
     audit: auditRepository(db),
+    notifications: notificationRepository(db, agencyId),
+    alerts: alertRepository(db, agencyId),
+    reports: reportRepository(db, agencyId),
+    branding: brandingRepository(db, agencyId),
+    portal: portalRepository(db, agencyId),
   };
 }
 
 export {
+  alertRepository,
   auditRepository,
+  brandingRepository,
   clientRepository,
+  notificationRepository,
+  portalRepository,
+  reportRepository,
   issueRepository,
   scanRepository,
   teamRepository,
   websiteRepository,
 };
 export type {
+  AlertRepository,
   AuditRepository,
+  BrandingRepository,
   ClientRepository,
+  NotificationRepository,
+  PortalRepository,
+  ReportRepository,
   IssueRepository,
   ScanRepository,
   TeamRepository,
@@ -67,6 +95,10 @@ export type { ClientListRow } from "./client.repository";
 export type { ScanCompletion, ScanEvidence } from "./scan.repository";
 export type { FindingInput, UpsertResult } from "./issue.repository";
 export type { WebsiteListRow } from "./website.repository";
+export type { AlertHistoryInput, AlertRuleInput } from "./alert.repository";
+export type { BrandingInput } from "./branding.repository";
+export type { NotificationInput } from "./notification.repository";
+export type { ReportCreateInput, ReportListQuery } from "./report.repository";
 export {
   cursorSlice,
   isPrismaError,

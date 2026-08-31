@@ -21,18 +21,33 @@ client reports.
 
 ## Current state — read this before claiming anything exists
 
-**Phase 0 is in progress. A fair amount of code is written; almost none of it is verified.**
+**Phases 0–4 are built. `npm run verify` passes: lint, typecheck, terminology
+(288 files), 400 tests, `next build`.** Both processes have been started and
+exercised against the docker-compose stack.
 
 | | |
 |---|---|
-| Written, **not yet run** | `packages/database` (schema, `client.ts`, `tenant.ts`, factories, seed + `trackers.json`, tenancy + enum-parity suites, a migration under `prisma/migrations/`), `packages/shared` (errors, logger, permissions, flags, url/normalize, copy + `t()`), `packages/schemas`, `packages/scanner` (SSRF guard + vector suite), `packages/config`, design tokens in `globals.css`, `src/proxy.ts`, `(auth)` routes, `src/server/auth/context.ts`, `src/instrumentation.ts`, health routes, the public homepage, CI workflow |
-| Exists and works | `.npmrc`, `docker-compose.yml`, `.env.example`, `tsconfig.json`, `eslint.config.mjs`, `PLAN.md`, `dev-doc/`, `UI_DESIGN_PROMPTS.md` |
-| Does **not** exist | the worker, the scan pipeline, the repository layer, route groups beyond `(auth)`, any `/app` page, the Clerk webhook handler, shadcn / the component library, billing, AI |
+| Built and exercised | `packages/{config,database,shared,schemas,scanner,analysis,storage,notifications,email,reports}`, `worker/` (scan + analysis + notification + email + report + digest, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` route groups, the scan pipeline, drift, scoring, the rule engine, alerts, the five report types, the client portal |
+| Built, **never run against the real dependency** | Resend (no `RESEND_API_KEY`: every send records as `simulated`, visibly, in Alerts → History), the Resend delivery webhook, the Clerk webhook, CI |
+| Does **not** exist | `packages/{ai,billing,ui}`, billing and Stripe, the free public scanner, `/admin`, `/app/ai`, `/app/billing`, `/app/help`, Scan Settings (`AgencyScanSettings` has no editor), shadcn |
 
-"Written, not yet run" means `npm install`, `prisma generate`, `prisma migrate`, `npm test`
-and `npm run build` have never completed against it. **Do not describe any of it as working**,
-and do not report a task as done on the strength of the code existing — `dev-doc/README.md`
-carries the per-task status and the verification commands.
+**Reporting rule, unchanged:** do not describe something as working on the
+strength of the code existing. `dev-doc/phases/phase-4-agency-workflow.md` is
+the model — it marks each acceptance criterion ✅ only where a test or an
+observed run backs it, and 🟡 otherwise.
+
+**Three defects that only appeared when the processes were actually started**,
+all fixed, all worth knowing before you write similar code:
+
+1. **BullMQ rejects a job id containing `:`** — the same trap already documented
+   for queue *names*. `toJobId()` in `packages/scanner/src/queue/queues.ts`
+   rewrites at the enqueue boundary; database keys keep their colons.
+2. **`export *` in a `.ts` barrel is invisible to Node's ESM loader under tsx.**
+   The worker died at boot on a symbol that demonstrably existed. Barrels
+   consumed by `worker/` must re-export explicitly.
+3. **esbuild transformed the report `.tsx` templates with the classic JSX
+   runtime** and threw `React is not defined` at render time, on files `tsc` was
+   happy with. Those three files carry an explicit `import * as React`.
 
 `pnpm-workspace.yaml` is an inert tombstone awaiting deletion; the workspace is npm.
 

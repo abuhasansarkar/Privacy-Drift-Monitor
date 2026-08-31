@@ -6,6 +6,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./branding": "./src/branding.ts",
     "./errors": "./src/errors.ts",
     "./logger": "./src/logger.ts",
     "./rate-limit": "./src/rate-limit.ts",
@@ -14,6 +15,7 @@
     "./flags": "./src/flags.ts",
     "./url/normalize": "./src/url/normalize.ts",
     "./copy": "./src/copy/t.ts",
+    "./copy/labels": "./src/copy/labels.ts",
     "./copy/terminology": "./src/copy/terminology.ts"
   },
   "scripts": {

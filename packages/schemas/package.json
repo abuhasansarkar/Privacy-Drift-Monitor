@@ -11,7 +11,11 @@
     "./primitives": "./src/primitives.ts",
     "./client": "./src/client.ts",
     "./website": "./src/website.ts",
-    "./issue": "./src/issue.ts"
+    "./issue": "./src/issue.ts",
+    "./notification": "./src/notification.ts",
+    "./report": "./src/report.ts",
+    "./branding": "./src/branding.ts",
+    "./portal": "./src/portal.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

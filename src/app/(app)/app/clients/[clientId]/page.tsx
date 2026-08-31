@@ -13,6 +13,8 @@ import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { MONITORING_LABEL, MONITORING_TONE } from "@/lib/labels";
 import { requirePermission } from "@/server/auth/context";
 import { getClientDetail } from "@/server/queries/detail";
+import { repositoriesFor } from "@pdm/database/repositories";
+import { PortalContacts } from "@/components/portal/portal-contacts";
 
 /**
  * CLIENT DETAIL — §3.7, Phase 1 task 1.5, feature 02.
@@ -34,6 +36,13 @@ export default async function ClientDetailPage({
 
   const client = await getClientDetail(ctx, clientId);
   if (!client) notFound();
+
+  // Portal contacts live with the client they belong to: §3.13's portal is a
+  // per-client surface, so there is no agency-wide "portal users" page to
+  // manage them from.
+  const portalContacts = await repositoriesFor(ctx.agencyId).portal.listForClient(
+    clientId,
+  );
 
   const now = new Date();
   const scored = client.websites
@@ -120,6 +129,18 @@ export default async function ClientDetailPage({
           </p>
         </Card>
       </div>
+
+      <PortalContacts
+        clientId={client.id}
+        portalEnabled={client.portalEnabled}
+        contacts={portalContacts.map((contact) => ({
+          id: contact.id,
+          email: contact.email,
+          name: contact.name,
+          status: contact.status,
+          lastLoginIso: contact.lastLoginAt?.toISOString() ?? null,
+        }))}
+      />
 
       {client.contactName || client.contactEmail || client.notes ? (
         <Card>

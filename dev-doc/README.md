@@ -51,7 +51,16 @@ phase doc, pick a task, then open the feature doc it points to for the full spec
 
 ## Current status
 
-**Phase 0 is in progress.** The repo layout is settled: the Next.js app stays at the root
+**Phases 0–4 are built.** `npm run verify` — lint, typecheck, terminology, 400
+tests, build — passes against the whole tree, and both processes have been
+started and exercised. The per-phase docs carry what is verified versus merely
+written; Phase 4's doc is the most precise about the difference and is the
+model to follow.
+
+> ⚠️ The Phase 0 table below is the ORIGINAL foundation checklist and is now
+> largely historical. Where it says "unverified", the suites have since run.
+
+**Phase 0 detail (historical).** The repo layout is settled: the Next.js app stays at the root
 (`src/`), only `packages/*` are workspace members, no Turborepo — see PLAN.md §10.9.
 
 > This table is the single status source for Phase 0. `phases/phase-0-foundation.md`
@@ -107,10 +116,10 @@ to see which one fails first without the others masking it.
 | Phase | Goal | Status |
 |---|---|---|
 | [Phase 0](phases/phase-0-foundation.md) | Monorepo, schema, auth, design system, CI | 🟡 In progress |
-| [Phase 1](phases/phase-1-core-saas-shell.md) | Clients + websites, no scanning yet | ⬜ Not started |
-| [Phase 2](phases/phase-2-scanner.md) | A real scan runs end to end | ⬜ Not started |
-| [Phase 3](phases/phase-3-intelligence.md) | Evidence becomes findings, drift, score | ⬜ Not started |
-| [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | ⬜ Not started |
+| [Phase 1](phases/phase-1-core-saas-shell.md) | Clients + websites, no scanning yet | 🟡 Built |
+| [Phase 2](phases/phase-2-scanner.md) | A real scan runs end to end | 🟡 Built |
+| [Phase 3](phases/phase-3-intelligence.md) | Evidence becomes findings, drift, score | 🟡 Built |
+| [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | 🟡 Built; partially verified — see the phase doc |
 | [Phase 5](phases/phase-5-ai.md) | Grounded explanation and recommendation | ⬜ Not started |
 | [Phase 6](phases/phase-6-commercial-admin.md) | Billing, free scanner, admin panel | ⬜ Not started |
 | [Phase 7](phases/phase-7-hardening-launch.md) | Security, load, a11y, DR, launch | ⬜ Not started |

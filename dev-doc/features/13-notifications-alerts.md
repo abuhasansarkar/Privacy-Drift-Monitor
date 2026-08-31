@@ -1,7 +1,7 @@
 # Feature 13 — Notifications, Alerts & Email
 
 > **Phase:** 4 · **Priority:** P0 · **Effort:** M + L + L · **Value:** 5
-> **Status:** ⬜ Not started
+> **Status:** 🟡 Built — in-app, rules, dispatcher, digests and all 19 templates land; Resend itself has never been called (no API key: sends record as `simulated`)
 > **Plan refs:** Part VI (alerts), Part III §3.11 (`/app/alerts`, `/app/notifications`)
 
 ## What it is

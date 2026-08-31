@@ -9,6 +9,7 @@ import { formatNumber } from "@/lib/format";
 import {
   ActivityIcon,
   AlertCircleIcon,
+  BellIcon,
   DocIcon,
   GlobeIcon,
   GridIcon,
@@ -36,6 +37,7 @@ const ICONS: Record<NavItem["icon"], typeof GridIcon> = {
   doc: DocIcon,
   team: UsersIcon,
   settings: SlidersIcon,
+  bell: BellIcon,
 };
 
 export function Sidebar({

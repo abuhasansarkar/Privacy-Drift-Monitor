@@ -10,11 +10,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@pdm/analysis": "*",
+    "@pdm/database": "*",
+    "@pdm/email": "*",
+    "@pdm/notifications": "*",
+    "@pdm/reports": "*",
     "@pdm/scanner": "*",
     "@pdm/shared": "*",
-    "@pdm/database": "*",
-    "@pdm/storage": "*",
-    "@pdm/analysis": "*"
+    "@pdm/storage": "*"
   },
   "devDependencies": {
     "@pdm/config": "*",

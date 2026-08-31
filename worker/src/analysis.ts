@@ -126,6 +126,8 @@ export interface AnalysisResult {
   reopened: number;
   suppressed: number;
   resolved: number;
+  /** Issues a person marked RESOLVED that this scan confirmed are gone (§6.5). */
+  verified: number;
   score: number;
   scoreConfidence: "FULL" | "PARTIAL";
   driftEvents: number;
@@ -211,12 +213,36 @@ export async function analyseScan(
    * is the same rule that stops PARTIAL becoming a drift baseline (§4.10, P5).
    */
   let resolved = 0;
+  let verified = 0;
   if (scan.status === "COMPLETED") {
+    const seenFingerprints = findings.map((finding) => finding.fingerprint);
+
     resolved = await repos.issues.markResolvedIfAbsent({
       websiteId: scan.website.id,
       scanId,
-      seenFingerprints: findings.map((finding) => finding.fingerprint),
+      seenFingerprints,
       resolvedAt: scan.finishedAt ?? new Date(),
+    });
+
+    /*
+     * ⚠️ VERIFICATION — §6.5, Phase 4 task 4.7. A user marking an issue
+     * RESOLVED is a CLAIM; a scan that re-ran and did not find it is our
+     * EVIDENCE, and only the second earns `VERIFIED`. This runs on every
+     * complete scan, not only on `trigger === "VERIFICATION"`: a scheduled scan
+     * that happens to confirm a fix is exactly as good a proof, and waiting for
+     * a dedicated run would leave the issue sitting in RESOLVED for a week.
+     *
+     * The order matters: `markResolvedIfAbsent` above has just moved this
+     * scan's absent OPEN issues into RESOLVED, and those must NOT be verified
+     * by the same scan that resolved them — a finding has to be absent from a
+     * scan that ran AFTER someone said they fixed it. Hence the exclusion of
+     * `verificationScanId === scanId` below.
+     */
+    verified = await repos.issues.verifyResolved({
+      websiteId: scan.website.id,
+      scanId,
+      seenFingerprints,
+      verifiedAt: scan.finishedAt ?? new Date(),
     });
   }
 
@@ -303,6 +329,7 @@ export async function analyseScan(
     reopened: upsert.reopened,
     suppressed: upsert.suppressed,
     resolved,
+    verified,
     score: score.score,
     scoreConfidence: score.confidence,
   };

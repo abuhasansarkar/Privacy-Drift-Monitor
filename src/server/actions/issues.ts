@@ -6,7 +6,9 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { issue as issueSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ValidationError } from "@pdm/shared/errors";
+import { childLogger } from "@pdm/shared/logger";
 import { requirePermission } from "@/server/auth/context";
+import { triggerScan } from "@/server/services/scan-service";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
 /**
@@ -38,6 +40,32 @@ export async function setIssueStatus(
       throw new ValidationError(t("error.notFound"), {
         reason: `ISSUE_MISSING:${parsed.data.issueId}`,
       });
+    }
+
+    /*
+     * ⚠️ VERIFICATION RE-SCAN — §6.5, Phase 4 task 4.7. Marking an issue
+     * RESOLVED is a CLAIM. We re-scan the website so the next analysis pass can
+     * turn it into VERIFIED, which is the status a client report can defend.
+     *
+     * ⚠️ IT NEVER FAILS THE TRANSITION. A queue hiccup, a scan already in
+     * flight, or the site being paused must not stop a user recording that they
+     * fixed something — the issue stays RESOLVED and the next scheduled scan
+     * verifies it instead.
+     */
+    if (parsed.data.status === "RESOLVED") {
+      try {
+        await triggerScan({
+          agencyId: ctx.agencyId,
+          websiteId: updated.websiteId,
+          userId: ctx.userId,
+          trigger: "VERIFICATION",
+        });
+      } catch (error) {
+        childLogger({ agencyId: ctx.agencyId, websiteId: updated.websiteId }).info(
+          { err: error },
+          "verification scan not queued; the next scheduled scan will verify",
+        );
+      }
     }
 
     revalidatePath("/app/issues");

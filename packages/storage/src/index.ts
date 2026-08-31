@@ -79,6 +79,32 @@ export class ObjectStore {
   }
 
   /**
+   * Reads one object into memory.
+   *
+   * ⚠️ FOR SERVER-SIDE EMBEDDING ONLY — a screenshot inlined into a PDF, a
+   * report streamed through a tenant-asserted download route. It is never a
+   * substitute for `signedUrl`: proxying a browser's image loads through the
+   * app would put every screenshot byte through the Node process.
+   *
+   * Returns null when the object is gone. A missing screenshot degrades a
+   * report by one picture (P1: screenshots corroborate, they never establish a
+   * fact); throwing here would discard the whole document over it.
+   */
+  async get(key: string): Promise<Buffer | null> {
+    try {
+      const result = await this.client.send(
+        new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
+      );
+      const body = result.Body;
+      if (!body) return null;
+      return Buffer.from(await body.transformToByteArray());
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
+  /**
    * A short-lived read URL.
    *
    * ⚠️ THE TTL IS THE ACCESS CONTROL. Once issued, the URL works for anyone who
@@ -145,4 +171,19 @@ const globalForStore = globalThis as unknown as { pdmObjectStore?: ObjectStore }
 export function objectStore(): ObjectStore {
   globalForStore.pdmObjectStore ??= new ObjectStore(storageConfigFromEnv());
   return globalForStore.pdmObjectStore;
+}
+
+/**
+ * S3 and MinIO disagree on the shape of a not-found error — `NoSuchKey` from
+ * one, a bare 404 from the other — so both are matched. Treating an unknown
+ * error as "missing" would hide a credentials failure as an empty report.
+ */
+function isNotFound(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as { name?: unknown; $metadata?: { httpStatusCode?: unknown } };
+  return (
+    candidate.name === "NoSuchKey" ||
+    candidate.name === "NotFound" ||
+    candidate.$metadata?.httpStatusCode === 404
+  );
 }

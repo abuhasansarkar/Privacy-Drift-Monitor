@@ -14,7 +14,8 @@
     "./queue/queues": "./src/queue/queues.ts",
     "./consent/adapter": "./src/consent/adapter.ts",
     "./queue/worker": "./src/queue/worker.ts",
-    "./record/screenshots": "./src/record/screenshots.ts"
+    "./record/screenshots": "./src/record/screenshots.ts",
+    "./queue/jobs": "./src/queue/queues.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

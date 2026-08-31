@@ -191,6 +191,62 @@ export function issueRepository(db: TenantClient, agencyId: string) {
       return count;
     },
 
+    /**
+     * VERIFICATION — §6.5, Phase 4 task 4.7.
+     *
+     * A verification scan ran, and the finding a user marked RESOLVED did not
+     * come back. `RESOLVED` is the user's claim; `VERIFIED` is ours, and the
+     * difference is what makes a resolved issue defensible in a client report.
+     *
+     * ⚠️ ONLY ON A COMPLETE SCAN, enforced by the caller. A PARTIAL scan
+     * produces no findings for the journeys that did not run, and treating that
+     * silence as proof of a fix would stamp VERIFIED on issues nobody re-tested
+     * — the same rule that keeps PARTIAL out of the drift baseline (P5, §4.10).
+     */
+    async verifyResolved(params: {
+      websiteId: string;
+      scanId: string;
+      seenFingerprints: readonly string[];
+      verifiedAt: Date;
+    }): Promise<number> {
+      const { count } = await db.issue.updateMany({
+        where: {
+          websiteId: params.websiteId,
+          fingerprint: { notIn: [...params.seenFingerprints] },
+          status: "RESOLVED",
+          /*
+           * ⚠️ EXCLUDES ISSUES THIS SAME SCAN JUST AUTO-RESOLVED.
+           * `markResolvedIfAbsent` stamps `verificationScanId` with the scan
+           * that resolved them; one scan cannot be both the claim and the
+           * proof. Written as an explicit OR because `{ not: id }` on a
+           * nullable column drops NULL rows in SQL — and NULL is exactly the
+           * case that matters here: an issue a PERSON marked resolved.
+           */
+          OR: [
+            { verificationScanId: null },
+            { verificationScanId: { not: params.scanId } },
+          ],
+        },
+        data: {
+          status: "VERIFIED",
+          verifiedAt: params.verifiedAt,
+          verificationScanId: params.scanId,
+        },
+      });
+      return count;
+    },
+
+    /**
+     * Issues awaiting verification on this website.
+     *
+     * Used to decide whether a verification scan is worth queueing at all — a
+     * browser slot is the scarcest resource in the system (§7.7), and scanning
+     * to verify nothing is the easiest way to waste one.
+     */
+    async countAwaitingVerification(websiteId: string): Promise<number> {
+      return db.issue.count({ where: { websiteId, status: "RESOLVED" } });
+    },
+
     async list(params: {
       status?: string[];
       severity?: Severity[];

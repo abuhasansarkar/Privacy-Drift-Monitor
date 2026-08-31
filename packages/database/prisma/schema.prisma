@@ -25,17 +25,21 @@ datasource db {
 // ───────────────────────────── Identity & Tenancy ─────────────────────────────
 
 model User {
-  id           String    @id @default(uuid())
-  clerkUserId  String    @unique
-  email        String    @unique
-  firstName    String?
-  lastName     String?
-  avatarUrl    String?
-  timezone     String    @default("Europe/London")
-  isSuperAdmin Boolean   @default(false)
-  lastActiveAt DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  clerkUserId          String    @unique
+  email                String    @unique
+  firstName            String?
+  lastName             String?
+  avatarUrl            String?
+  timezone             String    @default("Europe/London")
+  isSuperAdmin         Boolean   @default(false)
+  /// Set from a Resend hard-bounce webhook (§9.5). We stop sending to a
+  /// bounced address and surface it in team settings rather than silently
+  /// continuing to send mail nobody receives.
+  emailUndeliverableAt DateTime?
+  lastActiveAt         DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   memberships     AgencyMember[]
   auditLogs       AuditLog[]
@@ -102,16 +106,16 @@ enum AgencyStatus {
 }
 
 model AgencyMember {
-  id       String       @id @default(uuid())
-  agencyId String
-  userId   String
-  role     AgencyRole   @default(VIEWER)
-  status   MemberStatus @default(ACTIVE)
+  id           String       @id @default(uuid())
+  agencyId     String
+  userId       String
+  role         AgencyRole   @default(VIEWER)
+  status       MemberStatus @default(ACTIVE)
   /// If non-empty, this member may only access these website ids (PLAN.md §6.2).
-  websiteScope String[] @default([])
-  joinedAt DateTime     @default(now())
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  websiteScope String[]     @default([])
+  joinedAt     DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -294,17 +298,17 @@ model Website {
   label             String?
   faviconUrl        String?
 
-  monitoringStatus MonitoringStatus @default(ACTIVE)
-  scanFrequency    ScanFrequency    @default(WEEKLY)
-  scanPriority     ScanPriority     @default(NORMAL)
-  monitoredPaths   String[]         @default(["/"])
-  alertProfile     AlertProfile     @default(DEFAULT)
+  monitoringStatus   MonitoringStatus @default(ACTIVE)
+  scanFrequency      ScanFrequency    @default(WEEKLY)
+  scanPriority       ScanPriority     @default(NORMAL)
+  monitoredPaths     String[]         @default(["/"])
+  alertProfile       AlertProfile     @default(DEFAULT)
   /// Per-site consent adapter + selector overrides. The escape hatch for bespoke CMPs.
-  consentOverride  Json?
+  consentOverride    Json?
   /// Reference into the secret store. NEVER the credential itself.
   basicAuthSecretRef String?
   /// null = inherit the agency setting
-  respectRobots    Boolean?
+  respectRobots      Boolean?
 
   healthScore          Int?
   scoreConfidence      ScoreConfidence?
@@ -383,11 +387,11 @@ model Scan {
   agencyId  String
   websiteId String
 
-  status        ScanStatus  @default(QUEUED)
-  trigger       ScanTrigger
-  triggeredById String?
+  status         ScanStatus  @default(QUEUED)
+  trigger        ScanTrigger
+  triggeredById  String?
   /// Prevents a double-submitted manual scan creating two runs.
-  idempotencyKey String?    @unique
+  idempotencyKey String?     @unique
 
   queuedAt    DateTime  @default(now())
   startedAt   DateTime?
@@ -703,20 +707,20 @@ enum RiskLevel {
 }
 
 model TrackerDetection {
-  id            String       @id @default(uuid())
-  scanId        String
-  agencyId      String
-  websiteId     String
-  vendorId      String?
+  id              String       @id @default(uuid())
+  scanId          String
+  agencyId        String
+  websiteId       String
+  vendorId        String?
   /// Set when vendorId is null — unknown third parties are recorded, never dropped.
-  unknownDomain String?
-  consentPhase  ConsentPhase
-  firstSeenAtMs Int
-  requestCount  Int          @default(1)
-  matchedVia    String
-  confidence    Float
+  unknownDomain   String?
+  consentPhase    ConsentPhase
+  firstSeenAtMs   Int
+  requestCount    Int          @default(1)
+  matchedVia      String
+  confidence      Float
   /// Two independent signal types matched the same vendor. Required for Critical (§4.8).
-  corroborated  Boolean      @default(false)
+  corroborated    Boolean      @default(false)
   evidenceSummary Json
 
   createdAt DateTime @default(now())
@@ -747,7 +751,7 @@ model Issue {
   fingerprint String
   category    IssueCategory
   severity    Severity
-  status      IssueStatus @default(NEW)
+  status      IssueStatus   @default(NEW)
   confidence  Float
 
   /// Deterministic, rule-authored. NEVER AI-generated — must read identically every time.
@@ -1002,21 +1006,21 @@ model DriftSuppression {
 // ───────────────────────────── Reports & Notifications ─────────────────────────────
 
 model Report {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   agencyId    String
   clientId    String?
   websiteId   String?
   createdById String
 
-  type        ReportType
-  status      ReportStatus @default(QUEUED)
-  name        String
-  periodStart DateTime?
-  periodEnd   DateTime?
-  options     Json         @default("{}")
+  type             ReportType
+  status           ReportStatus @default(QUEUED)
+  name             String
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  options          Json         @default("{}")
   /// Branding frozen at generation time, so a re-download years later renders as sent.
   brandingSnapshot Json?
-  idempotencyKey   String? @unique
+  idempotencyKey   String?      @unique
 
   s3Key            String?
   sizeBytes        Int?
@@ -1138,22 +1142,24 @@ enum DigestFrequency {
 }
 
 model AlertRule {
-  id           String             @id @default(uuid())
-  agencyId     String
-  name         String
-  enabled      Boolean            @default(true)
-  scopeType    String
-  scopeId      String?
-  triggerTypes NotificationType[]
-  minSeverity  Severity           @default(HIGH)
-  channels     String[]           @default(["email", "in_app"])
-  digest       DigestFrequency    @default(IMMEDIATE)
+  id                          String             @id @default(uuid())
+  agencyId                    String
+  name                        String
+  enabled                     Boolean            @default(true)
+  scopeType                   String
+  scopeId                     String?
+  triggerTypes                NotificationType[]
+  minSeverity                 Severity           @default(HIGH)
+  channels                    String[]           @default(["email", "in_app"])
+  digest                      DigestFrequency    @default(IMMEDIATE)
   /// 'HH:mm' in the AGENCY timezone.
-  quietHoursStart String?
-  quietHoursEnd   String?
-  recipients      String[]        @default([])
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  quietHoursStart             String?
+  quietHoursEnd               String?
+  /// §6.6: CRITICAL alerts pierce quiet hours by default; this is the opt-OUT.
+  criticalOverridesQuietHours Boolean            @default(true)
+  recipients                  String[]           @default([])
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
 
   agency  Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   history AlertHistory[]
@@ -1163,20 +1169,23 @@ model AlertRule {
 }
 
 model AlertHistory {
-  id           String           @id @default(uuid())
-  alertRuleId  String?
-  agencyId     String
-  type         NotificationType
-  channel      String
-  recipients   String[]
-  entityType   String?
-  entityId     String?
-  status       String
-  providerId   String?
-  deliveredAt  DateTime?
-  openedAt     DateTime?
-  errorMessage String?
-  createdAt    DateTime         @default(now())
+  id             String           @id @default(uuid())
+  alertRuleId    String?
+  agencyId       String
+  type           NotificationType
+  channel        String
+  /// §9.5: every send is checked against this before dispatch, so a retried job
+  /// or a replayed webhook cannot produce a second email.
+  idempotencyKey String?          @unique
+  recipients     String[]
+  entityType     String?
+  entityId       String?
+  status         String
+  providerId     String?
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  errorMessage   String?
+  createdAt      DateTime         @default(now())
 
   alertRule AlertRule? @relation(fields: [alertRuleId], references: [id], onDelete: SetNull)
 
@@ -1187,19 +1196,22 @@ model AlertHistory {
 // ───────────────────────────── Client Portal ─────────────────────────────
 
 model PortalUser {
-  id              String           @id @default(uuid())
-  agencyId        String
-  clientId        String
-  email           String
-  name            String?
-  status          PortalUserStatus @default(INVITED)
-  invitedById     String
+  id                   String           @id @default(uuid())
+  agencyId             String
+  clientId             String
+  email                String
+  name                 String?
+  status               PortalUserStatus @default(INVITED)
+  invitedById          String
   /// Stored hashed.
-  inviteToken     String?          @unique
-  inviteExpiresAt DateTime?
-  lastLoginAt     DateTime?
-  revokedAt       DateTime?
-  createdAt       DateTime         @default(now())
+  inviteToken          String?          @unique
+  inviteExpiresAt      DateTime?
+  lastLoginAt          DateTime?
+  revokedAt            DateTime?
+  /// The ONLY two settings a portal user may change (§3.13). Nothing else.
+  notifyReports        Boolean          @default(true)
+  notifyCriticalAlerts Boolean          @default(true)
+  createdAt            DateTime         @default(now())
 
   agency   Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   client   Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)

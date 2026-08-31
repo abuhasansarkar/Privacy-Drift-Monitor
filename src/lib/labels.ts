@@ -1,36 +1,40 @@
-import type {
-  AgencyRole,
-  ConsentPhase,
-  DriftChangeType,
-  IssueStatus,
-  MonitoringStatus,
-  ScanFrequency,
-} from "@pdm/schemas";
-import { t } from "@pdm/shared/copy";
+import type { IssueStatus, MonitoringStatus } from "@pdm/schemas";
 
 /**
- * ENUM → LABEL maps, in one place.
+ * ENUM → LABEL maps for the app.
  *
- * These were previously inlined per page, which is how a value ends up reading
- * "Manual" in the websites table and "MANUAL" in the Add Website wizard. A
- * `Record<Enum, string>` also fails to compile when the enum gains a member, so
- * a new scan frequency cannot ship with a missing label.
+ * ⚠️ THE LABELS THEMSELVES MOVED TO `@pdm/shared/copy/labels`, because the
+ * report renderer runs in the worker and cannot import from `@/`. A second copy
+ * is how a finding reads "Consent not respected" on screen and
+ * "CONSENT_FAILURE" in the PDF the client receives. This file re-exports them
+ * so existing imports keep working, and owns only the TONE maps — which are a
+ * UI concern with no meaning in print.
  */
 
-export const FREQUENCY_LABEL: Record<ScanFrequency, string> = {
-  DAILY: t("frequency.daily"),
-  WEEKLY: t("frequency.weekly"),
-  MONTHLY: t("frequency.monthly"),
-  MANUAL: t("frequency.manual"),
-};
+export {
+  CONSENT_PHASE_LABEL,
+  DIGEST_LABEL,
+  DRIFT_CHANGE_LABEL,
+  FREQUENCY_LABEL,
+  ISSUE_CATEGORY_LABEL,
+  ISSUE_STATUS_LABEL,
+  MONITORING_LABEL,
+  NOTIFICATION_TYPE_LABEL,
+  PORTAL_SEVERITY_LABEL,
+  PORTAL_STATUS_LABEL,
+  REPORT_STATUS_LABEL,
+  REPORT_TYPE_LABEL,
+  RISK_LABEL,
+  ROLE_LABEL,
+  SCAN_STATUS_LABEL,
+  SEVERITY_LABEL,
+  TRACKER_CATEGORY_LABEL,
+} from "@pdm/shared/copy/labels";
 
-export const MONITORING_LABEL: Record<MonitoringStatus, string> = {
-  ACTIVE: t("monitoring.active"),
-  PAUSED: t("monitoring.paused"),
-  ERROR: t("monitoring.error"),
-};
-
-/** Paired with MONITORING_LABEL — colour never carries the state alone (§11.6). */
+/**
+ * ⚠️ Paired with a label, always — colour never carries the state alone
+ * (§11.6, WCAG 1.4.1).
+ */
 export const MONITORING_TONE = {
   ACTIVE: "success",
   PAUSED: "muted",
@@ -41,21 +45,10 @@ export const MONITORING_TONE = {
  * ⚠️ The first state is NEW, not "Open".
  *
  * UI_DESIGN_PROMPTS §5.12 calls this out explicitly, and it matters because
- * "Open" reads as a binary (open/closed) while the real lifecycle has seven
- * states — including REOPENED, which is a materially different message from a
- * fresh finding: you fixed this and it came back.
+ * "Open" reads as a binary while the real lifecycle has eight states —
+ * including REOPENED, which is a materially different message from a fresh
+ * finding: you fixed this and it came back.
  */
-export const ISSUE_STATUS_LABEL: Record<IssueStatus, string> = {
-  NEW: t("issueStatus.new"),
-  ACKNOWLEDGED: t("issueStatus.acknowledged"),
-  IN_PROGRESS: t("issueStatus.inProgress"),
-  RESOLVED: t("issueStatus.resolved"),
-  VERIFIED: t("issueStatus.verified"),
-  IGNORED: t("issueStatus.ignored"),
-  REOPENED: t("issueStatus.reopened"),
-  UNVERIFIED: t("issueStatus.needsReview"),
-};
-
 export const ISSUE_STATUS_TONE = {
   NEW: "warning",
   ACKNOWLEDGED: "info",
@@ -67,35 +60,24 @@ export const ISSUE_STATUS_TONE = {
   UNVERIFIED: "muted",
 } as const satisfies Record<IssueStatus, string>;
 
-export const DRIFT_CHANGE_LABEL: Record<DriftChangeType, string> = {
-  TRACKER_ADDED: t("drift.changeTrackerAdded"),
-  TRACKER_REMOVED: t("drift.changeTrackerRemoved"),
-  UNKNOWN_VENDOR_ADDED: t("drift.changeUnknownVendorAdded"),
-  COOKIE_ADDED: t("drift.changeCookieAdded"),
-  COOKIE_REMOVED: t("drift.changeCookieRemoved"),
-  THIRD_PARTY_DOMAIN_ADDED: t("drift.changeDomainAdded"),
-  THIRD_PARTY_DOMAIN_REMOVED: t("drift.changeDomainRemoved"),
-  SCRIPT_ADDED: t("drift.changeScriptAdded"),
-  SCRIPT_REMOVED: t("drift.changeScriptRemoved"),
-  CONSENT_BEHAVIOR_CHANGED: t("drift.changeConsentBehavior"),
-  CONSENT_REGRESSION: t("drift.changeConsentRegression"),
-  CMP_CHANGED: t("drift.changeCmpChanged"),
-  CMP_REMOVED: t("drift.changeCmpRemoved"),
-  TRACKER_COUNT_DELTA: t("drift.changeTrackerCountDelta"),
-  SCORE_DROP: t("drift.changeScoreDrop"),
-};
+/** Report status → chip tone. `GENERATING` is in-flight, not a success. */
+export const REPORT_STATUS_TONE = {
+  QUEUED: "muted",
+  GENERATING: "info",
+  READY: "success",
+  FAILED: "danger",
+} as const;
 
-export const CONSENT_PHASE_LABEL: Record<ConsentPhase, string> = {
-  NO_CONSENT: t("scans.phaseNoConsent"),
-  REJECT_ALL: t("scans.phaseRejectAll"),
-  ACCEPT_ALL: t("scans.phaseAcceptAll"),
-  WITHDRAW: t("scans.phaseWithdraw"),
-};
-
-export const ROLE_LABEL: Record<AgencyRole, string> = {
-  OWNER: t("team.roleOwner"),
-  ADMIN: t("team.roleAdmin"),
-  MANAGER: t("team.roleManager"),
-  DEVELOPER: t("team.roleDeveloper"),
-  VIEWER: t("team.roleViewer"),
-};
+/** Alert-history delivery status → chip tone. */
+export const DELIVERY_TONE = {
+  queued: "muted",
+  sent: "info",
+  delivered: "success",
+  opened: "success",
+  bounced: "danger",
+  complained: "danger",
+  failed: "danger",
+  simulated: "muted",
+  suppressed_quiet_hours: "warning",
+  suppressed_duplicate: "muted",
+} as const;

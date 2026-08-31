@@ -4,8 +4,9 @@ import { UserButton } from "@clerk/nextjs";
 import { useEffect, useState, type ReactNode } from "react";
 import { t } from "@pdm/shared/copy";
 import type { AgencyRole } from "@pdm/shared/permissions";
-import { BellIcon, MenuIcon, SearchIcon, XIcon } from "@/components/ui/icons";
+import { MenuIcon, SearchIcon, XIcon } from "@/components/ui/icons";
 import { CommandPalette } from "./command-palette";
+import { NotificationBell, type BellNotification } from "./notification-bell";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -31,6 +32,7 @@ export function AppShell({
   websitesUsed,
   websiteLimit,
   unreadNotifications,
+  latestNotifications,
   children,
 }: {
   role: AgencyRole;
@@ -38,6 +40,8 @@ export function AppShell({
   websitesUsed: number;
   websiteLimit: number | null;
   unreadNotifications: number;
+  /** The latest five, server-rendered — see the note in `notification-bell`. */
+  latestNotifications: BellNotification[];
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -159,16 +163,10 @@ export function AppShell({
             <ThemeToggle />
           </div>
 
-          <button
-            type="button"
-            aria-label={t("shell.notifications")}
-            className="relative grid size-9 place-items-center rounded-md border border-border text-muted-foreground"
-          >
-            <BellIcon />
-            {unreadNotifications > 0 ? (
-              <span className="absolute end-1.5 top-1.5 size-2 rounded-full bg-danger ring-2 ring-background" />
-            ) : null}
-          </button>
+          <NotificationBell
+            unread={unreadNotifications}
+            latest={latestNotifications}
+          />
 
           <UserButton appearance={{ elements: { avatarBox: "h-8 w-8" } }} />
         </header>

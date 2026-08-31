@@ -60,6 +60,8 @@ export const logger: Logger = pino({
 });
 
 export interface LogContext {
+  /** Subsystem tag for lines that belong to no request or job (email, reports). */
+  component?: string;
   requestId?: string;
   jobId?: string;
   agencyId?: string;

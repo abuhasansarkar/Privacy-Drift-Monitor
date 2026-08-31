@@ -15,7 +15,7 @@ import type { Permission } from "@pdm/shared/permissions";
 export interface NavItem {
   href: string;
   label: string;
-  icon: "grid" | "users" | "globe" | "alert" | "drift" | "doc" | "team" | "settings";
+  icon: "grid" | "users" | "globe" | "alert" | "drift" | "doc" | "team" | "settings" | "bell";
   permission: Permission;
   /** Marks the entry active for `/app/websites/new` as well as the list. */
   matchPrefix?: boolean;
@@ -70,6 +70,15 @@ export const NAV_ITEMS: NavItem[] = [
     label: t("navApp.reports"),
     icon: "doc",
     permission: "report:read",
+    matchPrefix: true,
+  },
+  {
+    // Directly before Team: alert rules are configuration, not a work queue,
+    // so they sit with the administrative entries rather than beside Issues.
+    href: "/app/alerts",
+    label: t("alerts.title"),
+    icon: "bell",
+    permission: "alert:read",
     matchPrefix: true,
   },
   {

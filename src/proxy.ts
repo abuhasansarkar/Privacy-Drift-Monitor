@@ -32,6 +32,12 @@ const isPublicRoute = createRouteMatcher([
   // Liveness and readiness probes are called by the platform with no session.
   // Gating these behind auth makes every deploy fail its health check.
   "/api/health(.*)",
+  /*
+   * A shared report link is a bearer credential handed to someone outside the
+   * agency — the token IS the authorisation (§6.8). It resolves exactly one
+   * report and lives outside every authenticated route group.
+   */
+  "/reports/shared(.*)",
 ]);
 
 /**

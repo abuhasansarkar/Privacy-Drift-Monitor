@@ -10,6 +10,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { AlertTriangleIcon } from "@/components/ui/icons";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getEntitlements } from "@/server/entitlements";
+import { getNotificationBell } from "@/server/queries/notifications";
 
 /**
  * AUTHENTICATED SHELL — §3.1, §3.3.
@@ -52,9 +53,13 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   }
 
   const repos = repositoriesFor(ctx.agencyId);
-  const [websitesUsed, entitlements] = await Promise.all([
+  const [websitesUsed, entitlements, bell] = await Promise.all([
     repos.db.website.count({ where: { archivedAt: null } }),
     getEntitlements(ctx.agencyId),
+    // ⚠️ Scoped to THIS user, not the agency. A notification is addressed to a
+    // person, and a shared count would move on its own as colleagues read
+    // theirs (§3.11).
+    getNotificationBell(ctx),
   ]);
 
   return (
@@ -63,9 +68,16 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       agencyName={ctx.agencyName}
       websitesUsed={websitesUsed}
       websiteLimit={entitlements.websiteLimit}
-      // Notifications land in Phase 4. Zero is the honest value for a table
-      // that has no rows yet — not a placeholder count.
-      unreadNotifications={0}
+      unreadNotifications={bell.unread}
+      latestNotifications={bell.latest.map((row) => ({
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        severity: row.severity,
+        linkUrl: row.linkUrl,
+        createdAtIso: row.createdAt.toISOString(),
+        unread: row.readAt === null,
+      }))}
     >
       {children}
     </AppShell>

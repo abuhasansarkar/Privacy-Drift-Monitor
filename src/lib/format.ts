@@ -69,3 +69,20 @@ export function formatDuration(seconds: number): string {
   const rest = whole % 60;
   return minutes > 0 ? `${minutes} m ${rest} s` : `${rest} s`;
 }
+
+/**
+ * Bytes → "1.4 MB". Base-10 units, matching what a file manager shows — a
+ * report listed as 1.4 MB here and 1.3 MiB in a download panel is a support
+ * question nobody needs.
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1000) return `${bytes} B`;
+  const units = ["kB", "MB", "GB"];
+  let value = bytes / 1000;
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit += 1;
+  }
+  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
+}

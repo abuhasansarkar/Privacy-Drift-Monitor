@@ -48,6 +48,10 @@ export type ErrorCode =
   | "STORAGE_UNAVAILABLE"
   | "BILLING_UNAVAILABLE"
   | "QUEUE_UNAVAILABLE"
+  | "EMAIL_UNAVAILABLE"
+  // ── Phase 4 domain ────────────────────────────────────────────────
+  | "REPORT_GENERATION_FAILED"
+  | "PORTAL_AUTH_FAILED"
   // ── catch-all ─────────────────────────────────────────────────────
   | "INTERNAL_ERROR";
 
@@ -282,6 +286,45 @@ export class QueueUnavailableError extends AppError {
 export class BillingUnavailableError extends AppError {
   override readonly code = "BILLING_UNAVAILABLE" as const;
   override readonly httpStatus = 503;
+  override readonly expose = true;
+}
+
+/**
+ * Resend is unreachable or rejected the send. Phase 4, §9.5.
+ *
+ * ⚠️ ALWAYS RETRYABLE, NEVER FATAL TO AN ALERT. The in-app notification has
+ * already been written by the time a send is attempted (§6.6), so an email
+ * failure degrades the delivery channel and never the alert itself.
+ */
+export class EmailUnavailableError extends AppError {
+  override readonly code = "EMAIL_UNAVAILABLE" as const;
+  override readonly httpStatus = 503;
+  override readonly expose = true;
+}
+
+/**
+ * A report could not be produced. Phase 4, §6.8.
+ *
+ * ⚠️ THE USER-FACING MESSAGE MUST SAY THE ALLOWANCE WAS NOT CHARGED (§12.3).
+ * That sentence is in `copy/en.ts` under `reports.failed`, not invented at the
+ * throw site.
+ */
+export class ReportGenerationError extends AppError {
+  override readonly code = "REPORT_GENERATION_FAILED" as const;
+  override readonly httpStatus = 500;
+  override readonly expose = true;
+}
+
+/**
+ * A portal magic link or session was rejected. §6.10.
+ *
+ * ⚠️ DELIBERATELY UNINFORMATIVE. "Expired, already used, revoked or never
+ * existed" are one message on purpose — distinguishing them tells an attacker
+ * which client contacts exist.
+ */
+export class PortalAuthError extends AppError {
+  override readonly code = "PORTAL_AUTH_FAILED" as const;
+  override readonly httpStatus = 401;
   override readonly expose = true;
 }
 

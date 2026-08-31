@@ -17,6 +17,17 @@ import tsconfigPaths from "vite-tsconfig-paths";
  */
 export default defineConfig({
   plugins: [tsconfigPaths()],
+  resolve: {
+    /*
+     * ⚠️ `server-only` is a build-time guard, not a runtime one. Outside a
+     * bundler it resolves to the CLIENT entry, whose whole job is to throw —
+     * so importing any `src/server/**` module in a test failed before a single
+     * assertion ran. Stubbing it here keeps the guard doing its real job (Next
+     * still enforces it at build time) while letting server modules be tested
+     * directly, which is where the portal's security assertions live.
+     */
+    alias: { "server-only": new URL("./test/server-only-stub.ts", import.meta.url).pathname },
+  },
   test: {
     globals: false,
     environment: "node",
