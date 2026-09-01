@@ -1,3 +1,14 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { config as loadEnv } from "dotenv";
+
+for (const envPath of [resolve(process.cwd(), ".env"), resolve(process.cwd(), "../.env")]) {
+  if (existsSync(envPath)) {
+    loadEnv({ path: envPath, quiet: true });
+    break;
+  }
+}
+
 import { repositoriesFor } from "@pdm/database/repositories";
 import { BrowserPool } from "@pdm/scanner/browser/pool";
 import {
