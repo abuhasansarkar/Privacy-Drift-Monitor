@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { unsafeGlobalClient } from "@pdm/database";
 import { logger } from "@pdm/shared/logger";
+import { track } from "@pdm/shared/analytics";
 import type { WebhookIntent } from "@pdm/billing";
 
 /**
@@ -98,7 +99,12 @@ async function apply(intent: WebhookIntent): Promise<WebhookOutcome> {
    */
   const subscription = await db.subscription.findFirst({
     where: { stripeCustomerId: intent.stripeCustomerId },
-    select: { id: true, agencyId: true },
+    /*
+     * ⚠️ `planId` AND `status` ARE SELECTED FOR THE ANALYTICS COMPARISON BELOW,
+     * which has to happen BEFORE the update — afterwards there is nothing left
+     * to compare against and an upgrade is indistinguishable from a downgrade.
+     */
+    select: { id: true, agencyId: true, planId: true, status: true },
   });
 
   switch (intent.kind) {
@@ -119,6 +125,46 @@ async function apply(intent: WebhookIntent): Promise<WebhookOutcome> {
         : null;
 
       if (subscription) {
+        /*
+         * ⚠️ §9.6's SUBSCRIPTION EVENTS ARE EMITTED FROM THE WEBHOOK, NOT FROM
+         * THE CHECKOUT REDIRECT. Same rule as the entitlement change itself
+         * (§9.1): the redirect is not evidence that anything happened, so a
+         * `subscription_started` fired there would count revenue for customers
+         * whose card declined a second later.
+         *
+         * The plan comparison happens BEFORE the update, because afterwards
+         * there is nothing to compare against.
+         */
+        if (plan && plan.id !== subscription.planId) {
+          const previous = await db.plan.findUnique({
+            where: { id: subscription.planId },
+            select: { key: true, sortOrder: true },
+          });
+          if (previous) {
+            void track(
+              plan.sortOrder > previous.sortOrder
+                ? "subscription_upgraded"
+                : "subscription_downgraded",
+              { from_plan: previous.key, to_plan: plan.key },
+              { agencyId: subscription.agencyId },
+            );
+          }
+        }
+        if (
+          intent.status === "ACTIVE" &&
+          (subscription.status === "TRIALING" || subscription.status === "INCOMPLETE")
+        ) {
+          void track(
+            "subscription_started",
+            {
+              plan: plan?.key ?? null,
+              interval: intent.interval,
+              from_trial: subscription.status === "TRIALING",
+            },
+            { agencyId: subscription.agencyId },
+          );
+        }
+
         await db.subscription.update({
           where: { id: subscription.id },
           data: {
@@ -243,7 +289,13 @@ async function findPlanByPriceId(priceId: string) {
     where: {
       OR: [{ stripePriceMonthlyId: priceId }, { stripePriceAnnualId: priceId }],
     },
-    select: { id: true },
+    /*
+     * ⚠️ `key` AND `sortOrder` ARE FOR THE UPGRADE/DOWNGRADE DISTINCTION, and
+     * `sortOrder` is the right comparator rather than price: an annual figure
+     * is larger than a monthly one on a cheaper plan, so comparing amounts
+     * would report a downgrade to Scale-annual as an upgrade from Growth.
+     */
+    select: { id: true, key: true, sortOrder: true },
   });
 }
 
@@ -261,4 +313,52 @@ async function findCheapestPlan() {
     orderBy: { sortOrder: "asc" },
     select: { id: true },
   });
+}
+
+/**
+ * §3.12's "Stripe webhook event log with **replay**".
+ *
+ * ⚠️ IT RE-RUNS OUR HANDLER OVER THE STORED PAYLOAD; IT DOES NOT ASK STRIPE TO
+ * RESEND. The stored payload is what we actually received, so a replay
+ * reproduces the original conditions exactly rather than whatever Stripe's
+ * current state would produce — which is what you want when investigating why
+ * an event did not take.
+ *
+ * ⚠️ IT FORCES THE REPLAY PAST THE DUPLICATE CHECK, and that is the one thing
+ * that makes it useful. `applyWebhookIntent` returns `duplicate` for anything
+ * already marked processed; an operator replaying an event is asserting that
+ * the projection is wrong DESPITE the row saying it succeeded. Re-applying is
+ * safe because every intent in `apply()` is an idempotent upsert — replaying
+ * `customer.subscription.updated` writes the same row twice, which is a no-op.
+ *
+ * ⚠️ IT NEVER RE-DERIVES THE INTENT FROM A HAND-EDITED PAYLOAD. The payload is
+ * read from our own table, not from the request, so an admin cannot craft an
+ * event that grants a plan.
+ */
+export async function replayStripeEvent(payload: unknown): Promise<WebhookOutcome> {
+  const { interpretEvent } = await import("@pdm/billing");
+  const event = payload as Stripe.Event;
+
+  if (!event?.id || !event?.type) {
+    throw new Error("stored payload is not a Stripe event");
+  }
+
+  const intent = interpretEvent(event);
+  const outcome = await apply(intent);
+
+  await db.stripeWebhookEvent.update({
+    where: { stripeEventId: event.id },
+    data: {
+      status: outcome.status === "ignored" ? "ignored" : "processed",
+      processedAt: new Date(),
+      error: outcome.reason ?? null,
+      attempts: { increment: 1 },
+    },
+  });
+
+  logger.warn(
+    { component: "billing-webhook", eventId: event.id, type: event.type },
+    "stripe webhook event replayed by an operator",
+  );
+  return outcome;
 }

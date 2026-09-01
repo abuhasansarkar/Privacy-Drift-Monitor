@@ -65,6 +65,17 @@ const eslintConfig = defineConfig([
       "src/server/services/**/*.ts",
       "src/components/**/*.tsx",
     ],
+    /*
+     * ⚠️ TESTS ARE EXEMPT, and the rule's own name says why: it guards
+     * REQUEST-SCOPED code, where a forgotten `where` crosses a tenant in
+     * production. A test asserting what a pre-tenant table contains — the free
+     * scanner's `FreeScan` rows, for instance — has no agency to scope to, and
+     * every DB-backed suite in `packages/**` and `worker/**` already reads
+     * `prisma` directly because those paths were never in scope. Keeping tests
+     * in scope only here would be an inconsistency that teaches people to
+     * disable the rule, which is worse than exempting it deliberately.
+     */
+    ignores: ["**/__tests__/**"],
     rules: noRawPrisma,
   },
 

@@ -11,11 +11,13 @@ export { logger, childLogger, type LogContext, type Logger } from "./logger";
 export {
   checkRateLimit,
   memoryRateLimitStore,
+  redisRateLimitStore,
   rateLimitHeaders,
   rateLimitKey,
   type RateLimitResult,
   type RateLimitRule,
   type RateLimitStore,
+  type RedisLike,
 } from "./rate-limit";
 export {
   createCircuitBreaker,
@@ -33,3 +35,17 @@ export {
   assertApprovedTerminology,
 } from "./copy/terminology";
 export { t, en, type Copy, type CopyKey } from "./copy/t";
+
+export { verifyTurnstile, type TurnstileResult, type VerifyTurnstileOptions } from "./turnstile";
+export {
+  ANALYTICS_EVENTS,
+  AnalyticsPropertyError,
+  assertSafeProperties,
+  domainHash,
+  setAnalyticsTransport,
+  track,
+  type AnalyticsContext,
+  type AnalyticsEvent,
+  type AnalyticsProperties,
+  type AnalyticsTransport,
+} from "./analytics";

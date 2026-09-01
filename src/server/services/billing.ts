@@ -10,6 +10,7 @@ import {
 } from "@pdm/billing";
 import { BillingUnavailableError, NotFoundError } from "@pdm/shared/errors";
 import { t } from "@pdm/shared/copy";
+import { logger } from "@pdm/shared/logger";
 import type { AgencyContext } from "@/server/auth/context";
 
 /**
@@ -214,4 +215,122 @@ export async function getCheckoutConfirmation(
     status: subscription.status,
     planName: subscription.plan.name,
   };
+}
+
+/**
+ * §3.11's "invoice history (from Stripe, cached)" and "payment method".
+ *
+ * ⚠️ READ FROM STRIPE, NEVER PROJECTED INTO OUR DATABASE. §9.1 makes Stripe the
+ * source of truth for billing state, and an invoice is billing state: it can be
+ * voided, refunded, or re-issued after a tax correction, none of which produces
+ * a webhook we handle. A cached copy would be confidently wrong on exactly the
+ * invoices a customer disputes.
+ *
+ * ⚠️ IT DEGRADES TO AN EMPTY LIST, NEVER TO A 500. Feature doc 17's failure
+ * table: during a Stripe outage "existing subscriptions keep working and a
+ * banner explains billing is temporarily unavailable". The billing page's most
+ * important job is the usage meter, which is ours and always available; losing
+ * the invoice table must not take the page down with it.
+ */
+export interface InvoiceSummary {
+  id: string;
+  number: string | null;
+  createdAt: Date;
+  amountPaidCents: number;
+  currency: string;
+  status: string;
+  /** Stripe-hosted; we never render an invoice ourselves. */
+  hostedUrl: string | null;
+  pdfUrl: string | null;
+}
+
+export interface PaymentMethodSummary {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}
+
+export interface StripeSideData {
+  invoices: InvoiceSummary[];
+  paymentMethod: PaymentMethodSummary | null;
+  billingEmail: string | null;
+  taxIds: string[];
+  /** False when Stripe is unconfigured or unreachable — drives the banner. */
+  available: boolean;
+}
+
+const EMPTY_STRIPE_SIDE: StripeSideData = {
+  invoices: [],
+  paymentMethod: null,
+  billingEmail: null,
+  taxIds: [],
+  available: false,
+};
+
+export async function getStripeSideData(ctx: AgencyContext): Promise<StripeSideData> {
+  const stripe = createStripeClient();
+  if (!stripe) return EMPTY_STRIPE_SIDE;
+
+  const subscription = await db.subscription.findFirst({
+    where: { agencyId: ctx.agencyId },
+    select: { stripeCustomerId: true },
+  });
+  if (!subscription?.stripeCustomerId) {
+    // No customer yet is not an outage — billing works, there is simply nothing
+    // to show. `available: true` keeps the "temporarily unavailable" banner off.
+    return { ...EMPTY_STRIPE_SIDE, available: true };
+  }
+
+  const customerId = subscription.stripeCustomerId;
+
+  try {
+    const [invoices, customer, methods] = await Promise.all([
+      stripe.invoices.list({ customer: customerId, limit: 12 }),
+      stripe.customers.retrieve(customerId),
+      stripe.paymentMethods.list({ customer: customerId, type: "card", limit: 1 }),
+    ]);
+
+    const card = methods.data[0]?.card ?? null;
+    // A deleted customer comes back as `{ deleted: true }` with no fields; the
+    // SDK types it as a union and reading `.email` off it is a type error, which
+    // is the language doing exactly the right thing here.
+    const live = customer.deleted ? null : customer;
+
+    return {
+      available: true,
+      invoices: invoices.data.map((invoice) => ({
+        id: invoice.id ?? "",
+        number: invoice.number,
+        createdAt: new Date(invoice.created * 1000),
+        amountPaidCents: invoice.amount_paid,
+        currency: invoice.currency,
+        status: invoice.status ?? "draft",
+        hostedUrl: invoice.hosted_invoice_url ?? null,
+        pdfUrl: invoice.invoice_pdf ?? null,
+      })),
+      paymentMethod: card
+        ? {
+            brand: card.brand,
+            last4: card.last4,
+            expMonth: card.exp_month,
+            expYear: card.exp_year,
+          }
+        : null,
+      billingEmail: live?.email ?? null,
+      taxIds: (live?.tax_ids?.data ?? []).map((row) => row.value),
+    };
+  } catch (error) {
+    /*
+     * ⚠️ SWALLOWED ON PURPOSE, AND LOGGED. This is the outage path of §9.1's
+     * failure table. The caller renders a banner from `available: false`; the
+     * usage meters, plan card and entitlements — all of which are ours — carry
+     * on unaffected.
+     */
+    logger.warn(
+      { component: "billing", agencyId: ctx.agencyId, err: String(error) },
+      "stripe side data unavailable",
+    );
+    return EMPTY_STRIPE_SIDE;
+  }
 }

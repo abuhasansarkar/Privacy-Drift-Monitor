@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "playwright";
-import { DEFAULT_BUDGET, navigate } from "../navigate";
+import { DEFAULT_BUDGET, allowAnyUrl, navigate } from "../navigate";
+
+/**
+ * ⚠️ EVERY CALL PASSES `allowAnyUrl`. These fakes use `.test` hostnames, which
+ * do not resolve, so the real guard (now applied inside `navigate` — §10.3
+ * R4/R5) refuses them before Playwright is reached and every outcome would be
+ * SSRF_BLOCKED. The guard's own enforcement is asserted in
+ * `ssrf-navigation.test.ts`; this file is about the error CLASSIFICATION that
+ * happens after a URL is allowed.
+ */
+const PASS = { guard: allowAnyUrl };
 
 /**
  * NAVIGATION OUTCOMES — PLAN.md Part IV §4.3, §4.4, Phase 2 task 2.5.
@@ -33,6 +43,8 @@ describe("navigate — error classification", () => {
         throw new Error("page.goto: Timeout 30000ms exceeded.");
       }),
       "https://slow.test",
+      DEFAULT_BUDGET,
+      PASS,
     );
 
     expect(outcome).toEqual({ ok: false, reason: "NAV_TIMEOUT", status: null });
@@ -47,6 +59,8 @@ describe("navigate — error classification", () => {
         throw new Error("net::ERR_NAME_NOT_RESOLVED");
       }),
       "https://nope.test",
+      DEFAULT_BUDGET,
+      PASS,
     );
 
     expect(outcome).toEqual({ ok: false, reason: "NAV_FAILED", status: null });
@@ -61,6 +75,8 @@ describe("navigate — error classification", () => {
         throw "socket hang up";
       }),
       "https://odd.test",
+      DEFAULT_BUDGET,
+      PASS,
     );
 
     expect(outcome.ok).toBe(false);
@@ -71,7 +87,12 @@ describe("navigate — error classification", () => {
     // ⚠️ `page.goto` resolves to null for a navigation that produced no
     // response (a download, an aborted commit). Reading `.status()` off it
     // would throw; treating it as OK would record a phase that never loaded.
-    const outcome = await navigate(pageThatGoes(() => null), "https://x.test");
+    const outcome = await navigate(
+      pageThatGoes(() => null),
+      "https://x.test",
+      DEFAULT_BUDGET,
+      PASS,
+    );
     expect(outcome).toEqual({ ok: false, reason: "NAV_FAILED", status: null });
   });
 
@@ -82,6 +103,8 @@ describe("navigate — error classification", () => {
     const outcome = await navigate(
       pageThatGoes(() => ({ status: () => 404 })),
       "https://gone.test",
+      DEFAULT_BUDGET,
+      PASS,
     );
     expect(outcome).toEqual({ ok: false, reason: "HTTP_ERROR", status: 404 });
   });
@@ -90,6 +113,8 @@ describe("navigate — error classification", () => {
     const outcome = await navigate(
       pageThatGoes(() => ({ status: () => 503 })),
       "https://down.test",
+      DEFAULT_BUDGET,
+      PASS,
     );
     expect(outcome).toEqual({ ok: false, reason: "HTTP_ERROR", status: 503 });
   });
@@ -106,10 +131,12 @@ describe("navigate — error classification", () => {
       waitForLoadState: vi.fn(async () => undefined),
     } as unknown as Page;
 
-    const outcome = await navigate(page, "https://redirect.test", {
-      ...DEFAULT_BUDGET,
-      settleMaxMs: 10,
-    });
+    const outcome = await navigate(
+      page,
+      "https://redirect.test",
+      { ...DEFAULT_BUDGET, settleMaxMs: 10 },
+      PASS,
+    );
     expect(outcome.ok).toBe(true);
   });
 
@@ -122,7 +149,12 @@ describe("navigate — error classification", () => {
       waitForLoadState: vi.fn(async () => undefined),
     } as unknown as Page;
 
-    await navigate(page, "https://x.test", { ...DEFAULT_BUDGET, navTimeoutMs: 1234, settleMaxMs: 10 });
+    await navigate(
+      page,
+      "https://x.test",
+      { ...DEFAULT_BUDGET, navTimeoutMs: 1234, settleMaxMs: 10 },
+      PASS,
+    );
 
     expect(goto).toHaveBeenCalledWith(
       "https://x.test",

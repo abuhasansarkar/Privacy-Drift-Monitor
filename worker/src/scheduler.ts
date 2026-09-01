@@ -1,6 +1,7 @@
 import { unsafeGlobalClient } from "@pdm/database";
 import { repositoriesFor } from "@pdm/database/repositories";
 import {
+  createEmailQueue,
   createNotificationQueue,
   createScanQueue,
   enqueueScan,
@@ -13,6 +14,8 @@ import {
   notifyQuotaExceeded,
 } from "./jobs/scan-quota";
 import { reconcileCounters } from "./jobs/reconcile-counters";
+import { sweepGrace } from "./jobs/grace";
+import { runRetention } from "./jobs/cleanup";
 import { reconcileStripe } from "./jobs/reconcile-stripe";
 import type IORedis from "ioredis";
 
@@ -246,6 +249,53 @@ export function startScheduler(connection: IORedis, intervalMs = 60_000) {
          * run in every environment.
          */
         await reconcileStripe();
+
+        /*
+         * ⚠️ §9.2's GRACE SWEEP, ON THE SAME NIGHTLY CADENCE and deliberately
+         * AFTER the Stripe reconciliation. Grace is decided from the plan the
+         * agency is on; running it first would evaluate an agency that upgraded
+         * yesterday against the plan it had before the missed webhook was
+         * caught up — and pause sites it has already paid to keep.
+         *
+         * It is idempotent: the set of sites it can pause shrinks as it acts,
+         * and the email idempotency key is keyed on the day.
+         */
+        const emailQueue = createEmailQueue(connection);
+        try {
+          const grace = await sweepGrace(emailQueue);
+          if (grace.entered > 0 || grace.paused > 0 || grace.cleared > 0) {
+            logger.info(
+              {
+                entered: grace.entered,
+                cleared: grace.cleared,
+                paused: grace.paused,
+              },
+              "grace sweep acted",
+            );
+          }
+        } finally {
+          await emailQueue.close();
+        }
+
+        /*
+         * ⚠️ §5.8's RETENTION SWEEP RUNS LAST IN THE NIGHTLY BLOCK, AFTER
+         * GRACE. It deletes customer data permanently, and doing that before
+         * the reconciliations means deleting against a plan we had not yet
+         * corrected — an agency whose upgrade webhook was missed would have its
+         * evidence trimmed to the OLD plan's retention, and there is no undo.
+         *
+         * It is also the slowest job here by a wide margin (it is deliberately
+         * paced), so anything that must not wait behind it goes first.
+         */
+        const retention = await runRetention();
+        const removed =
+          retention.agencies.reduce(
+            (total, row) => total + row.scansStripped + row.scansDeleted,
+            0,
+          ) + retention.freeScansPurged;
+        if (removed > 0) {
+          logger.info({ removed }, "retention sweep removed data");
+        }
       }
     } catch (error) {
       logger.error({ err: error }, "scheduler tick failed");

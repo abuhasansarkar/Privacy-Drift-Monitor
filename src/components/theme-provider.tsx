@@ -61,7 +61,21 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("dark", dark);
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({
+  children,
+  /**
+   * The CSP nonce for this request, from `src/proxy.ts`.
+   *
+   * ⚠️ OPTIONAL, BECAUSE THE STATIC MARKETING PAGES HAVE NONE — their policy
+   * uses `'unsafe-inline'` instead, for the reason set out in `proxy.ts`. An
+   * `undefined` nonce renders no attribute, which is exactly right there and
+   * exactly wrong anywhere the strict policy applies; the layout passes it.
+   */
+  nonce,
+}: {
+  children: ReactNode;
+  nonce?: string;
+}) {
   // Initialized from storage on the client; the server renders "system" and the
   // inline script has already applied the real class before hydration.
   const [theme, setThemeState] = useState<Theme>(readStoredTheme);
@@ -90,7 +104,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <script dangerouslySetInnerHTML={{ __html: APPLY_ON_LOAD }} />
+      {/*
+        ⚠️ THE NONCE IS REQUIRED, NOT OPTIONAL (§10.1). This is the one inline
+        script the app ships, and under a nonce-based CSP an inline script
+        without one is refused — which means the stored theme is not applied
+        before hydration and every dark-mode user gets a white flash on every
+        navigation. The nonce is read from the request header the proxy sets.
+      */}
+      <script nonce={nonce} dangerouslySetInnerHTML={{ __html: APPLY_ON_LOAD }} />
       {children}
     </ThemeContext.Provider>
   );

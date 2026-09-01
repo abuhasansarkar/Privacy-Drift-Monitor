@@ -108,3 +108,52 @@ export function rateLimitHeaders(result: RateLimitResult): Record<string, string
 export function rateLimitKey(namespace: string, identifier: string): string {
   return `ratelimit:${namespace}:${identifier}`;
 }
+
+/**
+ * A minimal Redis surface — INCR plus the two TTL commands.
+ *
+ * ⚠️ STRUCTURAL, NOT `ioredis`. `@pdm/shared` is imported by the web app, the
+ * worker and every package; taking a hard dependency on a Redis client here
+ * would drag it into the report renderer and the pure analysis packages, which
+ * is how a "shared" package becomes a runtime nobody can test. Any client with
+ * these three methods satisfies it — ioredis does, and so does a fake.
+ */
+export interface RedisLike {
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<unknown>;
+  ttl(key: string): Promise<number>;
+}
+
+/**
+ * The production store: one shared window across every web instance.
+ *
+ * ⚠️ THE TTL IS SET ONLY ON THE FIRST INCREMENT, and that is the whole
+ * correctness argument. Calling `EXPIRE` on every request slides the window
+ * forward with the traffic, so a client making one request per second never
+ * reaches the end of its window and is never reset — the limit becomes
+ * permanent rather than periodic. `INCR` returning 1 is the signal that this
+ * request created the key.
+ *
+ * ⚠️ A KEY WITHOUT A TTL IS REPAIRED, NOT TRUSTED. If a process died between
+ * the `INCR` and the `EXPIRE`, the counter would persist forever and lock that
+ * identifier out permanently — one crash, one IP banned for the life of the
+ * Redis instance. `ttl < 0` means "no expiry set", and the fix is to set it.
+ */
+export function redisRateLimitStore(client: RedisLike): RateLimitStore {
+  return {
+    async increment(key, windowSeconds) {
+      const count = await client.incr(key);
+      if (count === 1) {
+        await client.expire(key, windowSeconds);
+        return { count, ttlSeconds: windowSeconds };
+      }
+
+      const ttl = await client.ttl(key);
+      if (ttl < 0) {
+        await client.expire(key, windowSeconds);
+        return { count, ttlSeconds: windowSeconds };
+      }
+      return { count, ttlSeconds: ttl };
+    },
+  };
+}

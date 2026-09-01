@@ -3,7 +3,7 @@ import type { BrowserPool } from "./browser/pool";
 import { resolveAdapter, type ConsentAdapter } from "./consent/adapter";
 import { CMP_ADAPTERS } from "./consent/cmp-adapters";
 import { GENERIC_ADAPTER } from "./consent/generic-adapter";
-import { DEFAULT_BUDGET, type NavigationBudget } from "./navigate";
+import { DEFAULT_BUDGET, type NavigationBudget, type UrlGuard } from "./navigate";
 import { runPhase, type ConsentAction } from "./phase-runner";
 import {
   deriveScanStatus,
@@ -49,6 +49,12 @@ export interface ScanDeps {
   budget?: NavigationBudget;
   scannerVersion?: string;
   workerId?: string;
+  /**
+   * ⚠️ THE SSRF GUARD, INJECTABLE FOR FIXTURES ONLY (§10.3 R4/R5). §4.15's
+   * fixtures are served from `127.0.0.1`, which the guard blocks by design.
+   * Omitting it uses the real guard, so production fails CLOSED.
+   */
+  urlGuard?: UrlGuard;
 }
 
 /**
@@ -61,6 +67,14 @@ export interface ScanDeps {
 function scanErrorFor(message: string | null): ScanErrorCode {
   if (message === "NAV_TIMEOUT") return "NAV_TIMEOUT";
   if (message === "HTTP_ERROR") return "HTTP_CLIENT_ERROR";
+  /*
+   * ⚠️ SSRF_BLOCKED IS DETERMINISTIC AND MUST NEVER BE RETRIED. §4.4's split
+   * decides how many browser slots a failure costs, and the answer for a
+   * refused address is one: it will be refused identically on every attempt,
+   * and three tries against an address someone is probing is three times the
+   * log noise for the same non-event.
+   */
+  if (message === "SSRF_BLOCKED") return "SSRF_BLOCKED";
   return "NETWORK_RESET";
 }
 
@@ -129,6 +143,7 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
       registrableDomain: input.registrableDomain,
       budget,
       blockMedia: input.blockMedia,
+      urlGuard: deps.urlGuard,
       action: actionFor(phase, adapters, (detection) => {
         // First detection wins and is recorded on the scan. A CMP that reports
         // differently in a later phase is drift, not a correction.

@@ -104,6 +104,119 @@ jobs:
       - name: Build
         run: npm run build
 
+  # ⚠️ A SEPARATE JOB, NOT A STEP IN `verify`. An audit failure is a supply-chain
+  # signal, not a code defect, and burying it behind twenty minutes of tests
+  # means nobody sees it until everything else has already passed.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # ⚠️ ONE ADVISORY IS ALLOWED THROUGH, AND IT IS NAMED. GHSA-ggr8-5vv4-36mx
+      # (deepmerge-ts) is reachable only via the Prisma CLI, which is a
+      # devDependency and is never deployed; `@prisma/config` pins the exact
+      # vulnerable version, so no override can lift it. The reachability
+      # analysis and the conditions for revisiting are in
+      # `dev-doc/ops/security-review.md`. Every OTHER high or critical finding
+      # fails this job.
+      - name: Dependency audit
+        run: |
+          npm audit --audit-level=high --json > audit.json || true
+          node -e "
+            const report = require('./audit.json');
+            const allowed = new Set(['GHSA-ggr8-5vv4-36mx']);
+            const unexpected = Object.values(report.vulnerabilities ?? {})
+              .filter((v) => ['high', 'critical'].includes(v.severity))
+              .filter((v) => !(v.via ?? []).every((via) =>
+                typeof via === 'string' || allowed.has(via.url?.split('/').pop() ?? '')));
+            if (unexpected.length) {
+              console.error('Unexpected high/critical advisories:');
+              for (const v of unexpected) console.error(' -', v.name, v.severity);
+              process.exit(1);
+            }
+            console.log('No unexpected high/critical advisories.');
+          "
+
+  # ⚠️ E2E IS ITS OWN JOB BECAUSE IT NEEDS A BROWSER AND A RUNNING SERVER, and
+  # because it is the slowest gate. §12.3 task 7.7 requires it green; §7.6
+  # requires the axe assertions inside it.
+  #
+  # ⚠️ IT NEEDS A REAL CLERK TEST INSTANCE, so it runs only where those secrets
+  # exist. Skipping silently on a fork is deliberate — a fork PR cannot have
+  # them, and failing every fork contribution on a missing secret teaches people
+  # to ignore red.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push' }}
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pdm
+          POSTGRES_PASSWORD: pdm
+          POSTGRES_DB: pdm_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pdm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pdm:pdm@localhost:5432/pdm_test
+      REDIS_URL: redis://localhost:6379
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.E2E_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.E2E_CLERK_SECRET_KEY }}
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ci-fixed-key-not-a-real-secret-000000
+      PORTAL_TOKEN_SECRET: ci-fixed-portal-secret-000000000000
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:deploy
+      - run: npm run db:seed
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # Idempotent: creates the Clerk user, organization and membership the
+      # sign-in flow needs. Refuses to run against a live Clerk instance.
+      - name: Provision the E2E account
+        if: ${{ env.CLERK_SECRET_KEY != '' }}
+        run: npm run e2e:account
+
+      - name: E2E + accessibility
+        if: ${{ env.CLERK_SECRET_KEY != '' }}
+        run: npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 10

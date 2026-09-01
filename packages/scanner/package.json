@@ -15,7 +15,9 @@
     "./consent/adapter": "./src/consent/adapter.ts",
     "./queue/worker": "./src/queue/worker.ts",
     "./record/screenshots": "./src/record/screenshots.ts",
-    "./queue/jobs": "./src/queue/queues.ts"
+    "./queue/jobs": "./src/queue/queues.ts",
+    "./navigate": "./src/navigate.ts",
+    "./testing/fixture-server": "./src/testing/fixture-server.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

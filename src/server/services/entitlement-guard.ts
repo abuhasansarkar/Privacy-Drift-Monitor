@@ -1,6 +1,7 @@
 import "server-only";
 import { EntitlementExceededError } from "@pdm/shared/errors";
 import { t } from "@pdm/shared/copy";
+import { track } from "@pdm/shared/analytics";
 import type { EntitlementSet } from "@pdm/billing";
 import type { UsageMetric } from "@pdm/schemas";
 import {
@@ -38,6 +39,18 @@ export async function requireCapacity(
   const check = await checkMetricLimit(agencyId, metric, quantity);
   if (check.allowed) return;
 
+  /*
+   * ⚠️ §9.6's `entitlement_limit_hit`, EMITTED FROM THE GUARD RATHER THAN FROM
+   * NINE CALL SITES. This is the single most commercially important event in
+   * the product — it is the moment a customer wanted something their plan does
+   * not include — and putting it at the call sites would mean nine chances to
+   * forget it and nine subtly different property shapes.
+   *
+   * `void`, never awaited: a 402 is already a slow path for the user, and
+   * telemetry must not make it slower.
+   */
+  void track("entitlement_limit_hit", { metric, used: check.used, limit: check.limit }, { agencyId });
+
   throw new EntitlementExceededError(limitMessage(metric, check.used, check.limit), {
     reason: `LIMIT:${metric}:used=${check.used}:limit=${check.limit}:agency=${agencyId}`,
   });
@@ -58,6 +71,8 @@ export async function requireAndConsume(
 ): Promise<void> {
   const { allowed, check } = await consumeMetric(agencyId, metric, quantity);
   if (allowed) return;
+
+  void track("entitlement_limit_hit", { metric, used: check.used, limit: check.limit }, { agencyId });
 
   throw new EntitlementExceededError(limitMessage(metric, check.used, check.limit), {
     reason: `QUOTA:${metric}:used=${check.used}:limit=${check.limit}:agency=${agencyId}`,

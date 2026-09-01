@@ -13,11 +13,12 @@ import type { Instrumentation } from "next";
  * `NEXT_RUNTIME` guard is still correct defensively — this file is also loaded
  * during the build's static analysis pass, where heavyweight imports are waste.
  *
- * Sentry is deliberately NOT wired up yet: the DSN is empty until Phase 7
- * (§12.3) and a half-configured error reporter is worse than none, because it
- * looks like coverage. `onRequestError` logs through the same structured
- * pipeline as everything else, so nothing is lost in the meantime — swapping in
- * `Sentry.captureRequestError` is a change to this file only.
+ * ⚠️ SENTRY INITIALISES ONLY WHEN A DSN IS SET, and reports through
+ * `captureRequestError` alongside — never instead of — the structured log. Two
+ * sinks is deliberate: the log is what you grep at 3 a.m. with no internet, and
+ * Sentry is what tells you it is happening at all. `sentryOptions()` returns
+ * null with no DSN, so every environment without one behaves exactly as it did
+ * before this was wired.
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
@@ -28,11 +29,19 @@ export async function register(): Promise<void> {
   // List. It crashed the boot with MODULE_NOT_FOUND instead of logging.
   const { logger } = await import("@pdm/shared/logger");
 
+  const { sentryOptions } = await import("@/lib/sentry");
+  const options = sentryOptions();
+  if (options) {
+    const Sentry = await import("@sentry/nextjs");
+    Sentry.init(options);
+  }
+
   logger.info(
     {
       service: process.env.SERVICE_NAME ?? "web",
       version: process.env.GIT_SHA ?? "dev",
       nodeEnv: process.env.NODE_ENV,
+      sentry: options !== null,
     },
     "server started",
   );
@@ -55,6 +64,18 @@ export const onRequestError: Instrumentation.onRequestError = async (
   // hook (the very first thing the server loads) depend on the Public Suffix
   // List. It crashed the boot with MODULE_NOT_FOUND instead of logging.
   const { logger } = await import("@pdm/shared/logger");
+
+  const { sentryConfigured } = await import("@/lib/sentry");
+  if (sentryConfigured()) {
+    /*
+     * ⚠️ `captureRequestError`, NOT `captureException`. It attaches the router
+     * kind, route path and render source that Next hands us — without them a
+     * Server Component error is a stack trace with no page attached, which is
+     * the difference between a five-minute fix and an afternoon.
+     */
+    const Sentry = await import("@sentry/nextjs");
+    Sentry.captureRequestError(error, request, context);
+  }
 
   logger.error(
     {

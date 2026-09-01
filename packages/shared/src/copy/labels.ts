@@ -28,6 +28,7 @@ import type {
   ScanFrequency,
   ScanStatus,
   Severity,
+  SubscriptionStatus,
   TrackerCategory,
 } from "@pdm/schemas";
 
@@ -165,6 +166,26 @@ export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
   GENERATING: t("reports.statusGenerating"),
   READY: t("reports.statusReady"),
   FAILED: t("reports.statusFailed"),
+};
+
+/**
+ * §9.1's subscription statuses, in the customer's words.
+ *
+ * ⚠️ `Record<SubscriptionStatus, string>` MATTERS MORE HERE THAN ELSEWHERE. If
+ * Stripe's projection ever gains a status our enum does not cover, this fails to
+ * compile rather than rendering `INCOMPLETE_EXPIRED` on a billing page — and a
+ * raw enum on the page that says whether somebody's service is on is the worst
+ * place in the product to leak an identifier.
+ */
+export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  TRIALING: t("subscriptionStatus.trialing"),
+  ACTIVE: t("subscriptionStatus.active"),
+  PAST_DUE: t("subscriptionStatus.pastDue"),
+  CANCELED: t("subscriptionStatus.canceled"),
+  UNPAID: t("subscriptionStatus.unpaid"),
+  INCOMPLETE: t("subscriptionStatus.incomplete"),
+  INCOMPLETE_EXPIRED: t("subscriptionStatus.incompleteExpired"),
+  PAUSED: t("subscriptionStatus.paused"),
 };
 
 export const DIGEST_LABEL: Record<DigestFrequency, string> = {

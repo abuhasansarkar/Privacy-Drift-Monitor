@@ -27,6 +27,8 @@ export type {
   ScanFrequency,
   ScanPriority,
   UsageMetric,
+  SubscriptionStatus,
+  BillingInterval,
   ScanStatus,
   ScanTrigger,
   Severity,

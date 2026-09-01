@@ -43,7 +43,20 @@
   --popover: #ffffff;
   --popover-foreground: #0a0a0a;
   --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  /*
+   * ⚠️ #6b6b74, NOT ZINC-500 (#71717a), AND THE DIFFERENCE IS ONE FAILED
+   * CHECKPOINT. Zinc-500 on zinc-100 is 4.39:1 — just under the 4.5:1 AA
+   * threshold — and this is the most-used colour pair in the product: every
+   * caption, every hint, every neutral chip. `axe-core` found it on a "0 Active"
+   * badge on the dashboard, which is as unremarkable a piece of UI as exists
+   * here, and that is the point: it was failing on hundreds of elements.
+   *
+   *     #6b6b74 on #f4f4f5 (muted)  = 4.80
+   *     #6b6b74 on #ffffff (card)   = 5.28
+   *
+   * The change is imperceptible side by side and is the whole fix.
+   */
+  --muted-foreground: #6b6b74;
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --border: #e4e4e7;
@@ -55,27 +68,67 @@
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
 
-  --success: #16a34a;
+  /*
+   * ⚠️ THESE FOUR ARE DARKER THAN THE TAILWIND PALETTE THEY CAME FROM, AND
+   * THAT IS THE FIX FOR A REAL WCAG FAILURE. Every semantic colour is used two
+   * ways — as TEXT on its own `-muted` background (a chip, a banner line) and
+   * as a BACKGROUND with `-foreground` on top — and the first use is the one
+   * that fails. `axe-core` caught warning at 3.07:1 against a 4.5:1 threshold
+   * on the homepage; measuring the rest found success at 3.15, info at 3.54 and
+   * danger at 4.41, none of which had rendered on a scanned page yet.
+   *
+   * Contrast against the `-muted` background, which is the binding constraint:
+   *
+   *     success #15803d on #f0fdf4 = 4.79   (was #16a34a = 3.15)
+   *     warning #b45309 on #fffbeb = 4.84   (was #d97706 = 3.07)
+   *     danger  #b91c1c on #fef2f2 = 5.91   (was #dc2626 = 4.41)
+   *     info    #0e7490 on #ecfeff = 5.15   (was #0891b2 = 3.54)
+   *
+   * White on each is 5.0:1 or better, so the background use improved too.
+   *
+   * ⚠️ DARK MODE ALREADY PASSED and is unchanged — its muted backgrounds are
+   * near-black, so a bright accent has plenty of contrast. Changing both to
+   * match would have made the dark theme worse for no reason.
+   */
+  --success: #15803d;
   --success-foreground: #ffffff;
   --success-muted: #f0fdf4;
-  --warning: #d97706;
+  --warning: #b45309;
   --warning-foreground: #ffffff;
   --warning-muted: #fffbeb;
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-foreground: #ffffff;
   --danger-muted: #fef2f2;
-  --info: #0891b2;
+  --info: #0e7490;
   --info-foreground: #ffffff;
   --info-muted: #ecfeff;
 
   /* Finding severity — paired with ShieldAlert / AlertTriangle / AlertCircle / Info / Circle */
+  /*
+   * ⚠️ SEVERITY IS THE MOST-RENDERED COLOURED TEXT IN THE PRODUCT — every issue
+   * row, every badge, every report — so a contrast failure here is the most
+   * widespread one possible. Three of the four failed 4.5:1 against their own
+   * background and have been darkened:
+   *
+   *     high   #c2410c on #fff7ed = 4.88   (was #ea580c = 3.35)
+   *     medium #a16207 on #fefce8 = 4.76   (was #ca8a04 = 2.84)
+   *     low    #0369a1 on #f0f9ff = 5.57   (was #0284c7 = 3.84)
+   *
+   * `critical` already passed at 5.91 and is unchanged.
+   *
+   * ⚠️ THE HUES ARE PRESERVED — red, orange, amber, blue in that order. §11.6
+   * forbids conveying severity by colour ALONE, which is why every badge also
+   * carries an icon and a word; but the ordering still has to read as an
+   * escalation at a glance, and swapping a hue to chase contrast would break
+   * that for no accessibility gain.
+   */
   --severity-critical: #b91c1c;
   --severity-critical-bg: #fef2f2;
-  --severity-high: #ea580c;
+  --severity-high: #c2410c;
   --severity-high-bg: #fff7ed;
-  --severity-medium: #ca8a04;
+  --severity-medium: #a16207;
   --severity-medium-bg: #fefce8;
-  --severity-low: #0284c7;
+  --severity-low: #0369a1;
   --severity-low-bg: #f0f9ff;
   --severity-info: #64748b;
   --severity-info-bg: #f8fafc;

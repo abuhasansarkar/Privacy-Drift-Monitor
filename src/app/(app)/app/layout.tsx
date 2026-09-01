@@ -7,6 +7,7 @@ import {
   NotAMemberError,
 } from "@pdm/shared/errors";
 import { AppShell } from "@/components/app-shell/app-shell";
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import { AlertTriangleIcon } from "@/components/ui/icons";
 import { requireAgencyContext } from "@/server/auth/context";
 import { getEntitlements } from "@/server/entitlements";
@@ -43,9 +44,18 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       return redirect("/app/onboarding");
     }
     if (error instanceof AgencySuspendedError) {
-      // §3.3 routes this to /app/billing?suspended=1. Billing is Phase 6 and
-      // that route does not exist yet; redirecting to a 404 is worse than
-      // saying what happened, so the notice renders here until it does.
+      /*
+       * ⚠️ §3.3 SAYS "route to /app/billing?suspended=1"; WE RENDER INLINE
+       * INSTEAD, and the reason is a redirect loop, not a missing route.
+       * `/app/billing` exists (task 6.3) and calls `requirePermission`, which
+       * calls `requireAgencyContext`, which throws this same error — so the
+       * redirect would land on a page that redirects to itself forever.
+       *
+       * Suspension is OUR action against an agency (abuse, non-payment escalated
+       * past read-only), not a self-service billing state; the notice names it
+       * and the copy points at support. Read-only from a failed payment is a
+       * different state entirely and DOES reach the billing page normally.
+       */
       return <SuspendedNotice message={error.message} />;
     }
     if (error instanceof NotAMemberError) {
@@ -85,25 +95,34 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
     : entitlements.maxWebsites;
 
   return (
-    <AppShell
-      role={ctx.role}
-      agencyName={ctx.agencyName}
-      websitesUsed={websitesUsed}
-      websiteLimit={websiteLimit}
-      enabledFlags={enabledFlags}
-      unreadNotifications={bell.unread}
-      latestNotifications={bell.latest.map((row) => ({
-        id: row.id,
-        title: row.title,
-        body: row.body,
-        severity: row.severity,
-        linkUrl: row.linkUrl,
-        createdAtIso: row.createdAt.toISOString(),
-        unread: row.readAt === null,
-      }))}
-    >
-      {children}
-    </AppShell>
+    <>
+      {/*
+        ⚠️ ABOVE THE SHELL, NOT INSIDE IT. A banner that scrolls away with the
+        page content is a banner an operator stops seeing after thirty seconds
+        — and §3.12's requirement is that impersonation is unmistakable for as
+        long as it is active. It renders nothing when no session is running.
+      */}
+      <ImpersonationBanner />
+      <AppShell
+        role={ctx.role}
+        agencyName={ctx.agencyName}
+        websitesUsed={websitesUsed}
+        websiteLimit={websiteLimit}
+        enabledFlags={enabledFlags}
+        unreadNotifications={bell.unread}
+        latestNotifications={bell.latest.map((row) => ({
+          id: row.id,
+          title: row.title,
+          body: row.body,
+          severity: row.severity,
+          linkUrl: row.linkUrl,
+          createdAtIso: row.createdAt.toISOString(),
+          unread: row.readAt === null,
+        }))}
+      >
+        {children}
+      </AppShell>
+    </>
   );
 }
 

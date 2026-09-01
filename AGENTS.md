@@ -81,7 +81,30 @@ All fixed, all worth knowing before you write similar code:
    literal at seven call sites — one of them an EXPRESSION that a grep for the
    literal missed. §6.9 says enforcement lives in the resolver; it now does
    (`whiteLabelEntitlement`). **A delivered email found this, not a test.**
-8. **`server-only` throws in vitest**, because outside a bundler it resolves to
+8. **The SSRF guard had no call site inside the scanner.** `assertSafeUrl` ran
+   once, in the web app, when a URL was submitted; `assertSafeRedirect` and
+   `MAX_REDIRECT_HOPS` were written, exported, unit-tested — and called from
+   nowhere. So DNS rebinding (§10.3 R4) and a 302 to an internal address (R5)
+   were both unguarded, and the fixture suite passed *because* nothing was
+   enforced. The guard now lives in one `page.route` handler shared with media
+   blocking (two `route("**/*")` registrations mean only one runs), `navigate()`
+   re-checks the entry URL, and `urlGuard` is injectable **only** so §4.15's
+   127.0.0.1 fixtures can run — the default is the real guard, so a forgotten
+   parameter fails closed. Found while building the free public scanner, which
+   turns both vectors from "a customer could probe our network" into "anyone
+   can". See `packages/scanner/src/__tests__/ssrf-navigation.test.ts`.
+9. **Six design tokens failed WCAG AA contrast, and every one of them shipped.**
+   `axe-core` in the Phase 7 E2E suite found `--warning` at 3.07:1 on its own
+   `--warning-muted` background; measuring the rest of the palette found
+   `--success` (3.15), `--info` (3.54), `--danger` (4.41), `--severity-high`
+   (3.35), `--severity-medium` (2.84), `--severity-low` (3.84) and
+   `--muted-foreground` (4.39) all under the 4.5:1 threshold. The last is the
+   most-used pair in the product — every caption and neutral chip. All are now
+   darkened with the measured ratio recorded beside them in `globals.css`; dark
+   mode already passed and is unchanged. **A design system reviewed by eye is
+   not a design system that passes**, and none of the 930 unit tests could have
+   caught this.
+10. **`server-only` throws in vitest**, because outside a bundler it resolves to
    the client entry whose job is to throw. `test/server-only-stub.ts` is aliased
    in `vitest.config.ts` so `src/server/**` can be tested directly.
 

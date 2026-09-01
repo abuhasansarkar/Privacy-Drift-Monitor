@@ -31,32 +31,20 @@
 
 import { PrismaClient } from "@prisma/client";
 import Stripe from "stripe";
+import { PLAN_CATALOGUE } from "@pdm/billing";
 
 const prisma = new PrismaClient();
 
-/** §9.3's table, in minor units. Monthly / annual (2 months free). */
-const PRICES: Record<string, Record<string, { monthly: number; annual: number }>> = {
-  starter: {
-    usd: { monthly: 4_900, annual: 49_000 },
-    gbp: { monthly: 3_900, annual: 39_000 },
-    eur: { monthly: 4_500, annual: 45_000 },
-  },
-  growth: {
-    usd: { monthly: 14_900, annual: 149_000 },
-    gbp: { monthly: 11_900, annual: 119_000 },
-    eur: { monthly: 13_900, annual: 139_000 },
-  },
-  agency: {
-    usd: { monthly: 34_900, annual: 349_000 },
-    gbp: { monthly: 27_900, annual: 279_000 },
-    eur: { monthly: 32_500, annual: 325_000 },
-  },
-  scale: {
-    usd: { monthly: 79_900, annual: 799_000 },
-    gbp: { monthly: 63_900, annual: 639_000 },
-    eur: { monthly: 74_500, annual: 745_000 },
-  },
-};
+/**
+ * §9.3's table, in minor units — read from `@pdm/billing`'s catalogue.
+ *
+ * ⚠️ IT USED TO BE A SECOND COPY OF THE NUMBERS HERE. A Stripe Price is
+ * immutable, so a copy that drifted from the seed's would not fail loudly — it
+ * would create a real, chargeable price at the wrong amount and leave both
+ * versions live.
+ */
+const PRICES: Record<string, Record<string, { monthly: number; annual: number }>> =
+  Object.fromEntries(PLAN_CATALOGUE.map((plan) => [plan.key, plan.prices]));
 
 const CURRENCIES = ["usd", "gbp", "eur"] as const;
 const INTERVALS = [

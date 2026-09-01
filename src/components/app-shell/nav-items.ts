@@ -26,7 +26,8 @@ export interface NavItem {
     | "team"
     | "settings"
     | "bell"
-    | "sparkle";
+    | "sparkle"
+    | "card";
   permission: Permission;
   /** Marks the entry active for `/app/websites/new` as well as the list. */
   matchPrefix?: boolean;
@@ -120,6 +121,24 @@ export const NAV_ITEMS: NavItem[] = [
     label: t("navApp.team"),
     icon: "team",
     permission: "team:read",
+    matchPrefix: true,
+  },
+  {
+    // Below Team and above Settings: billing is an owner-level concern, and
+    // §6.2 gives only Owner/Admin `billing:read`, so most sessions never see it.
+    href: "/app/billing",
+    label: t("billing.title"),
+    icon: "card",
+    permission: "billing:read",
+    matchPrefix: true,
+  },
+  {
+    // Last, below Settings: help is a destination you go to when something is
+    // wrong, not one you navigate to as part of the work.
+    href: "/app/help",
+    label: t("help.title"),
+    icon: "doc",
+    permission: "website:read",
     matchPrefix: true,
   },
   {

@@ -1,4 +1,5 @@
-import type { Page, Route } from "playwright";
+import type { Page, Request, Route } from "playwright";
+import { MAX_REDIRECT_HOPS, assertSafeUrl, SsrfBlockedError } from "./net/guard";
 
 /**
  * NAVIGATION, SETTLE, OBSERVATION — PLAN.md Part IV §4.3, Phase 2 tasks 2.4/2.5.
@@ -26,7 +27,108 @@ export const DEFAULT_BUDGET: NavigationBudget = {
 
 export type NavigationOutcome =
   | { ok: true; status: number; settled: boolean }
-  | { ok: false; reason: "NAV_TIMEOUT" | "NAV_FAILED" | "HTTP_ERROR"; status: number | null };
+  | {
+      ok: false;
+      reason: "NAV_TIMEOUT" | "NAV_FAILED" | "HTTP_ERROR" | "SSRF_BLOCKED";
+      status: number | null;
+    };
+
+/**
+ * Validates a URL we are about to navigate to. Defaults to the real guard.
+ *
+ * ⚠️ INJECTABLE ONLY SO THE FIXTURE SUITE CAN RUN. Every fixture in §4.15 is
+ * served from `127.0.0.1`, which the guard blocks by design and must keep
+ * blocking. Production paths never pass this — the default is the guard, so
+ * forgetting the parameter fails CLOSED.
+ */
+export type UrlGuard = (url: string) => Promise<unknown>;
+
+/** Allows anything. **Fixture tests only** — never reachable from a real scan. */
+export const allowAnyUrl: UrlGuard = async () => undefined;
+
+/**
+ * SSRF ENFORCEMENT AT NAVIGATION TIME — PLAN.md Part X §10.3 R4/R5,
+ * AGENTS.md ("SSRF guard on every navigation **and every redirect hop**").
+ *
+ * ⚠️ VALIDATING ONCE AT SUBMISSION IS NOT ENOUGH, AND THE TWO REASONS ARE BOTH
+ * REAL ATTACKS:
+ *
+ *   R4 — DNS REBINDING. `attacker.com` resolves to a public address when the
+ *        web app validates it and to `169.254.169.254` a second later when the
+ *        browser resolves it again. The submission check cannot prevent this;
+ *        only re-resolving at the moment of navigation can.
+ *   R5 — REDIRECTS. `attacker.com` is a perfectly good public host that answers
+ *        302 to `http://127.0.0.1:6379/`. Playwright follows redirects inside
+ *        `goto()`, so without a per-hop check the guard never sees the address
+ *        that is actually fetched.
+ *
+ * ⚠️ THIS RUNS ON NAVIGATION REQUESTS ONLY, NOT SUBRESOURCES. A page that loads
+ * an image from a private address is EVIDENCE — recording it is the product's
+ * job, and blocking it would both change the site's observed behaviour and hide
+ * a finding. What must never happen is that WE follow the browser somewhere
+ * private and treat the response as content to scan.
+ *
+ * ⚠️ IT SHARES ONE ROUTE HANDLER WITH MEDIA BLOCKING. Playwright dispatches to
+ * the most recently registered matching handler and does not chain unless the
+ * handler calls `fallback()`; two separate `page.route("**​/*")` registrations
+ * silently mean only one of them runs.
+ */
+function countRedirectHops(request: Request): number {
+  let hops = 0;
+  let current: Request | null = request.redirectedFrom();
+  while (current) {
+    hops += 1;
+    current = current.redirectedFrom();
+  }
+  return hops;
+}
+
+export interface RouteGuardOptions {
+  blockMedia: boolean;
+  guard: UrlGuard;
+  /** Set when a navigation was refused, so `navigate()` can report the reason. */
+  onBlocked: (url: string, reason: string) => void;
+}
+
+export async function installRouteGuard(
+  page: Page,
+  options: RouteGuardOptions,
+): Promise<void> {
+  await page.route("**/*", async (route: Route) => {
+    const request = route.request();
+
+    if (request.isNavigationRequest()) {
+      /*
+       * ⚠️ THE HOP LIMIT IS CHECKED BEFORE THE ADDRESS. An infinite redirect
+       * loop between two public hosts never trips the address check and would
+       * hold a browser slot until the navigation timeout — which, multiplied by
+       * the free scanner's anonymous submitters, is a denial of service against
+       * our own pool.
+       */
+      if (countRedirectHops(request) > MAX_REDIRECT_HOPS) {
+        options.onBlocked(request.url(), "TOO_MANY_REDIRECTS");
+        return route.abort("blockedbyclient");
+      }
+
+      try {
+        await options.guard(request.url());
+      } catch (error) {
+        options.onBlocked(
+          request.url(),
+          error instanceof SsrfBlockedError ? error.reason : "GUARD_FAILED",
+        );
+        return route.abort("blockedbyclient");
+      }
+    }
+
+    if (options.blockMedia) {
+      const type = request.resourceType();
+      if (type === "media" || type === "font") return route.abort();
+    }
+
+    return route.continue();
+  });
+}
 
 /**
  * Media blocking — record-then-abort (§4.4, task 2.4).
@@ -61,12 +163,33 @@ export async function navigate(
   page: Page,
   url: string,
   budget: NavigationBudget = DEFAULT_BUDGET,
+  options: { guard?: UrlGuard; blocked?: () => string | null } = {},
 ): Promise<NavigationOutcome> {
+  /*
+   * ⚠️ THE FIRST HOP IS CHECKED HERE AS WELL AS IN THE ROUTE HANDLER. A URL
+   * with a bad scheme or a blocked port never reaches the route handler at all
+   * — `goto("file:///etc/passwd")` fails inside Playwright with a message that
+   * says nothing about why — so the entry check is what turns those into a
+   * clean SSRF_BLOCKED rather than a generic NAV_FAILED.
+   */
+  const guard = options.guard ?? assertSafeUrl;
+  try {
+    await guard(url);
+  } catch {
+    return { ok: false, reason: "SSRF_BLOCKED", status: null };
+  }
+
   try {
     const response = await page.goto(url, {
       waitUntil: "commit",
       timeout: budget.navTimeoutMs,
     });
+
+    // A navigation the route handler refused surfaces here as a null response
+    // or an aborted goto; `blocked()` distinguishes it from a dead server.
+    if (options.blocked?.()) {
+      return { ok: false, reason: "SSRF_BLOCKED", status: null };
+    }
 
     if (!response) return { ok: false, reason: "NAV_FAILED", status: null };
 
@@ -77,6 +200,9 @@ export async function navigate(
     const settled = await settle(page, budget.settleMaxMs);
     return { ok: true, status, settled };
   } catch (error) {
+    if (options.blocked?.()) {
+      return { ok: false, reason: "SSRF_BLOCKED", status: null };
+    }
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,

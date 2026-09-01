@@ -67,7 +67,13 @@ export default defineConfig({
       ? { DATABASE_URL: testDatabaseUrl(DEV_DATABASE_URL) }
       : {},
     include: [
-      "src/**/*.{test,spec}.ts",
+      /*
+       * ⚠️ `.tsx` TOO, so a COMPONENT can be smoke-rendered. AGENTS.md defect 3
+       * is the reason: esbuild transformed the report templates with the classic
+       * JSX runtime and threw "React is not defined" at render time — on files
+       * `tsc` was perfectly happy with. A type-check is not a render.
+       */
+      "src/**/*.{test,spec}.{ts,tsx}",
       "packages/*/src/**/*.{test,spec}.ts",
       // The worker holds the jobs, and a job is where two correct packages get
       // wired together wrongly — which is exactly the seam the branding

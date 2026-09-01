@@ -51,5 +51,11 @@ export {
   resolvePriceId,
 } from "./stripe";
 
+export type { GraceInput, GraceResolution, GraceState, PausableSite } from "./grace";
+export { GRACE_DAYS, countToPause, resolveGrace, selectSitesToPause } from "./grace";
+
+export type { CataloguePlan, CataloguePrices } from "./catalogue";
+export { PLAN_CATALOGUE, annualSavingMinorUnits } from "./catalogue";
+
 export type { WebhookIntent } from "./webhook";
 export { HANDLED_EVENT_TYPES, interpretEvent, isHandledEventType } from "./webhook";

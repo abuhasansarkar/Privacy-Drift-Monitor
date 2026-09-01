@@ -9,6 +9,7 @@ import {
   type AiJobData,
   type DigestJobData,
   type EmailJobData,
+  type FreeScanJobData,
   type NotificationJobData,
   type ReportJobData,
   type ScanJobData,
@@ -20,12 +21,14 @@ import {
   createEmailWorker,
   createNotificationWorker,
   createReportWorker,
+  createFreeScanWorker,
   createScanWorker,
   type Job,
 } from "@pdm/scanner/queue/worker";
 import { closeReportBrowser } from "@pdm/reports";
 import { screenshotKey } from "@pdm/scanner/record/screenshots";
 import { runScan } from "@pdm/scanner/scan";
+import { processFreeScan } from "./jobs/free-scan";
 import { objectStore } from "@pdm/storage";
 import { isRetryable, type ScanResult } from "@pdm/scanner/types";
 import { childLogger, logger } from "@pdm/shared/logger";
@@ -325,7 +328,8 @@ async function persist(
  * everything, which is right for local development and for a single-box
  * deployment; production splits `scan` from `report`.
  */
-const ROLES = (process.env.WORKER_ROLES ?? "scan,scheduler,notification,email,report,digest,ai")
+const ROLES = (process.env.WORKER_ROLES ??
+  "scan,scheduler,notification,email,report,digest,ai,free-scan")
   .split(",")
   .map((role) => role.trim())
   .filter(Boolean);
@@ -351,6 +355,34 @@ if (scanWorker) {
     );
   });
   workers.push({ name: QUEUE_NAMES.scan, close: () => scanWorker.close() });
+}
+
+/*
+ * ⚠️ THE FREE SCANNER GETS ITS OWN WORKER, ITS OWN QUEUE AND ITS OWN
+ * CONCURRENCY CAP (§3.2: "cannot starve paying customers"). It shares the
+ * BROWSER POOL with paid scans, which is deliberate — one pool means one place
+ * that owns Chromium lifecycle and context cleanup — but the pool's capacity is
+ * `SCAN_CONCURRENCY`, and this worker can never hold more than
+ * `FREE_SCAN_CONCURRENCY` of it at once. Set the two so the free cap is a small
+ * fraction of the pool, or a burst of anonymous submissions will make paid
+ * scans queue behind them for a browser slot.
+ */
+if (hasRole("free-scan")) {
+  const freeScanWorker = createFreeScanWorker(
+    (job: Job<FreeScanJobData>) =>
+      processFreeScan(job, { pool, scannerVersion: SCANNER_VERSION, workerId: WORKER_ID }),
+    {
+      connection,
+      concurrency: Number(process.env.FREE_SCAN_CONCURRENCY ?? 1),
+    },
+  );
+  freeScanWorker.on("failed", (job, error) => {
+    childLogger({ jobId: job?.id, freeScanId: job?.data.freeScanId }).warn(
+      { err: error },
+      "free scan job failed",
+    );
+  });
+  workers.push({ name: QUEUE_NAMES.freeScan, close: () => freeScanWorker.close() });
 }
 
 /*

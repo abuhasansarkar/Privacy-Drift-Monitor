@@ -45,6 +45,18 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               {t("nav.features")}
             </Link>
             <Link
+              href="/free-scanner"
+              className="text-sm text-muted-foreground transition hover:text-foreground max-sm:hidden"
+            >
+              {t("nav.freeScanner")}
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-sm text-muted-foreground transition hover:text-foreground max-sm:hidden"
+            >
+              {t("nav.pricing")}
+            </Link>
+            <Link
               href="/how-it-works"
               className="text-sm text-muted-foreground transition hover:text-foreground max-sm:hidden"
             >
@@ -71,6 +83,31 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             the footer of every public page rather than buried, because the
             disclaimer above is a summary and this is where the full text lives.
           */}
+          {/*
+            §3.2's remaining public pages. In the footer rather than the header
+            because the header's job on a phone is the auth CTA — see the note
+            on the `max-sm:hidden` links above.
+          */}
+          <nav aria-label={t("marketingPages.resourcesTitle")}>
+            <ul className="flex flex-wrap gap-x-4 gap-y-1">
+              {[
+                { href: "/resources", label: t("marketingPages.resourcesTitle") },
+                { href: "/blog", label: t("marketingPages.blogTitle") },
+                { href: "/about", label: t("marketingPages.aboutTitle") },
+                { href: "/contact", label: t("marketingPages.contactTitle") },
+              ].map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="text-xs text-muted-foreground transition hover:text-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
           <nav aria-label={t("legal.footerTitle")}>
             <ul className="flex flex-wrap gap-x-4 gap-y-1">
               {LEGAL_DOCUMENTS.map((doc) => (

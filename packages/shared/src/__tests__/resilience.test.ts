@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   checkRateLimit,
   memoryRateLimitStore,
+  redisRateLimitStore,
   rateLimitHeaders,
   rateLimitKey,
 } from "../rate-limit";
@@ -135,5 +136,73 @@ describe("circuit breaker", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("redisRateLimitStore", () => {
+  /** A fake with just the three commands the store uses. */
+  function fakeRedis() {
+    const values = new Map<string, number>();
+    const ttls = new Map<string, number>();
+    const expireCalls: string[] = [];
+    return {
+      expireCalls,
+      client: {
+        async incr(key: string) {
+          const next = (values.get(key) ?? 0) + 1;
+          values.set(key, next);
+          return next;
+        },
+        async expire(key: string, seconds: number) {
+          expireCalls.push(key);
+          ttls.set(key, seconds);
+          return 1;
+        },
+        async ttl(key: string) {
+          return ttls.get(key) ?? -1;
+        },
+      },
+    };
+  }
+
+  it("⚠️ SETS THE TTL ONLY ON THE FIRST INCREMENT", async () => {
+    /*
+     * Calling EXPIRE on every request slides the window forward with the
+     * traffic, so a client making one request per second never reaches the end
+     * of its window and is never reset — the limit becomes permanent rather
+     * than periodic.
+     */
+    const { client, expireCalls } = fakeRedis();
+    const store = redisRateLimitStore(client);
+
+    await store.increment("k", 60);
+    await store.increment("k", 60);
+    await store.increment("k", 60);
+
+    expect(expireCalls).toEqual(["k"]);
+  });
+
+  it("counts up across calls and reports the remaining TTL", async () => {
+    const { client } = fakeRedis();
+    const store = redisRateLimitStore(client);
+
+    expect((await store.increment("k", 60)).count).toBe(1);
+    const second = await store.increment("k", 60);
+    expect(second.count).toBe(2);
+    expect(second.ttlSeconds).toBe(60);
+  });
+
+  it("⚠️ REPAIRS A KEY LEFT WITHOUT A TTL rather than banning the caller forever", async () => {
+    // A process that died between INCR and EXPIRE would otherwise leave a
+    // counter with no expiry — one crash, one identifier locked out for the
+    // life of the Redis instance.
+    const { client, expireCalls } = fakeRedis();
+    const store = redisRateLimitStore(client);
+
+    await client.incr("orphan"); // count 1, no EXPIRE — simulating the crash
+    const result = await store.increment("orphan", 90);
+
+    expect(result.ttlSeconds).toBe(90);
+    expect(expireCalls).toEqual(["orphan"]);
   });
 });

@@ -430,6 +430,18 @@ model Scan {
   errorMessage String?
   errorPhase   String?
 
+  /// When retention stripped this scan's raw evidence (§5.8).
+  ///
+  /// ⚠️ IT IS A MARKER, NOT A TIMESTAMP ANYONE READS. Without it the nightly
+  /// sweep re-issues five DELETE statements against every scan past the evidence
+  /// horizon, every night, for the remaining years of that scan's history — the
+  /// deletes match nothing and the cost grows with the archive.
+  ///
+  /// ⚠️ IT ALSO TELLS THE UI WHY A SCAN HAS NO EVIDENCE. A two-year-old scan
+  /// with a score and an empty request list is indistinguishable from a broken
+  /// scan unless something records that the emptiness was deliberate.
+  evidencePrunedAt DateTime?
+
   createdAt DateTime @default(now())
 
   agency        Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
@@ -1310,6 +1322,18 @@ model Subscription {
   canceledAt         DateTime?
   endedAt            DateTime?
 
+  /// When the agency first went OVER a plan limit — §9.2's 14-day grace window.
+  ///
+  /// ⚠️ NULL MEANS "NOT OVER", NOT "NEVER WAS". The nightly sweep clears it the
+  /// moment the agency is back within its limit, so an agency that archives
+  /// down on day 13 and adds a site back a month later gets a fresh fourteen
+  /// days rather than the one that was left on a stale timer.
+  ///
+  /// ⚠️ IT LIVES ON THE SUBSCRIPTION, NOT ON THE AGENCY, because it is a
+  /// property of the plan relationship: cancel and re-subscribe and the whole
+  /// row goes, which is the correct behaviour for a grace clock.
+  graceStartedAt     DateTime?
+
   /// Admin-granted extras layered over plan defaults.
   entitlementOverrides Json?
 
@@ -1549,6 +1573,31 @@ model SystemLog {
   @@map("system_logs")
 }
 
+/// GLOBAL, pre-tenant. §3.2's free-scanner domain blocklist.
+///
+/// ⚠️ TWO SOURCES, ONE TABLE. §3.2 asks for an "admin-maintained domain
+/// blocklist" AND an "automatic block after 3 consecutive failures on a
+/// domain". Splitting them into two tables would mean two lookups on the
+/// hottest public endpoint and two places to check when a legitimate site
+/// complains it cannot be scanned; `addedByUserId` distinguishes them.
+///
+/// ⚠️ KEYED ON THE REGISTRABLE DOMAIN, NOT THE HOST. Blocking `www.example.com`
+/// while `example.com` sails through is not a blocklist.
+model FreeScanBlocklist {
+  id                String   @id @default(uuid())
+  registrableDomain String   @unique
+  reason            String
+  /// Null for an automatic block; set when a human added it.
+  addedByUserId     String?
+  /// Consecutive failures that triggered an automatic block.
+  failureCount      Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([createdAt(sort: Desc)])
+  @@map("free_scan_blocklist")
+}
+
 /// Pre-tenant: anonymous lead-generation scans. Purged after 7 days.
 model FreeScan {
   id                String     @id @default(uuid())
@@ -1561,6 +1610,16 @@ model FreeScan {
   resultSummary     Json?
   email             String?
   convertedAgencyId String?
+
+  /// §3.2's error states. Machine-readable; the page maps it to copy.
+  ///
+  /// ⚠️ THE SSRF CASE MAPS TO A DELIBERATELY VAGUE MESSAGE. Feature doc 18:
+  /// "The SSRF block message must stay vague. Every other error should be
+  /// specific and helpful." A precise SSRF error is a network-probing oracle.
+  errorCode         String?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+
   expiresAt         DateTime
   createdAt         DateTime   @default(now())
 

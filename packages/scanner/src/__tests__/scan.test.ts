@@ -3,7 +3,7 @@ import { BrowserPool } from "../browser/pool";
 import { GENERIC_ADAPTER } from "../consent/generic-adapter";
 import { runScan } from "../scan";
 import { startFixture, type FixtureServer } from "../testing/fixture-server";
-import type { NavigationBudget } from "../navigate";
+import { allowAnyUrl, type NavigationBudget } from "../navigate";
 import type { ScanInput } from "../types";
 
 /**
@@ -16,6 +16,12 @@ import type { ScanInput } from "../types";
  *
  * As in phase-runner.test.ts, these drive the browser layer directly: the
  * fixtures are on 127.0.0.1, which the SSRF guard blocks by design.
+ *
+ * ⚠️ `urlGuard: allowAnyUrl` IS THE ONLY REASON THESE RUN, and it exists in
+ * exactly one place — this parameter. Every production path omits it and gets
+ * `assertSafeUrl`, so the guard fails CLOSED when somebody forgets. The guard
+ * itself is tested against the full vector suite in `net/__tests__/guard.test.ts`
+ * and its enforcement at navigation in `ssrf-navigation.test.ts`.
  */
 
 const FAST = {
@@ -57,6 +63,7 @@ describe("runScan", () => {
     const server = await fixture("F08");
     const result = await runScan(input(server.origin), {
       pool,
+      urlGuard: allowAnyUrl,
       adapters: [GENERIC_ADAPTER],
       budget: FAST,
     });
@@ -90,7 +97,7 @@ describe("runScan", () => {
     const server = await fixture("X02");
     const result = await runScan(
       input(server.origin, { phases: ["NO_CONSENT", "REJECT_ALL"] }),
-      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
     );
 
     const reject = result.phases.find((p) => p.phase === "REJECT_ALL");
@@ -106,7 +113,7 @@ describe("runScan", () => {
     const server = await fixture("F07");
     const result = await runScan(
       input(server.origin, { phases: ["REJECT_ALL"] }),
-      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
     );
 
     const reject = result.phases[0];
@@ -126,7 +133,7 @@ describe("runScan", () => {
     const server = await fixture("F13");
     const result = await runScan(
       input(server.origin, { phases: ["REJECT_ALL"] }),
-      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
     );
 
     const reject = result.phases[0];
@@ -145,7 +152,7 @@ describe("runScan", () => {
     const server = await fixture("F14");
     const result = await runScan(
       input(server.origin, { phases: ["REJECT_ALL", "ACCEPT_ALL"] }),
-      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
     );
 
     const byPhase = new Map(result.phases.map((phase) => [phase.phase, phase]));
@@ -182,7 +189,7 @@ describe("runScan", () => {
     const runOnce = async () => {
       const result = await runScan(
         input(server.origin, { phases: ["NO_CONSENT"] }),
-        { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+        { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
       );
       const phase = result.phases[0];
       return {
@@ -209,7 +216,7 @@ describe("runScan", () => {
     const server = await fixture("F08");
     const result = await runScan(
       input(server.origin, { phases: ["NO_CONSENT"] }),
-      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
     );
 
     const phase = result.phases[0];
@@ -223,6 +230,7 @@ describe("runScan", () => {
     const server = await fixture("F24");
     const result = await runScan(input(server.origin), {
       pool,
+      urlGuard: allowAnyUrl,
       adapters: [GENERIC_ADAPTER],
       budget: FAST,
     });
@@ -238,7 +246,7 @@ describe("runScan", () => {
     const server = await fixture("F08");
     const result = await runScan(
       input(server.origin, { phases: ["REJECT_ALL"] }),
-      { pool, adapters: [GENERIC_ADAPTER], budget: FAST },
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
     );
 
     expect(result.cmp?.cmpId).toBe("generic");
