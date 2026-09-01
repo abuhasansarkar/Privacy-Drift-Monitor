@@ -1,11 +1,22 @@
 import { unsafeGlobalClient } from "@pdm/database";
 import { repositoriesFor } from "@pdm/database/repositories";
 import {
+  createEmailQueue,
+  createNotificationQueue,
   createScanQueue,
   enqueueScan,
   type ScanJobData,
 } from "@pdm/scanner/queue/queues";
 import { childLogger, logger } from "@pdm/shared/logger";
+import {
+  checkScanQuota,
+  consumeScheduledScan,
+  notifyQuotaExceeded,
+} from "./jobs/scan-quota";
+import { reconcileCounters } from "./jobs/reconcile-counters";
+import { sweepGrace } from "./jobs/grace";
+import { runRetention } from "./jobs/cleanup";
+import { reconcileStripe } from "./jobs/reconcile-stripe";
 import type IORedis from "ioredis";
 
 /**
@@ -54,6 +65,9 @@ const FREQUENCY_MS: Record<string, number> = {
  */
 export async function sweepDueWebsites(connection: IORedis): Promise<number> {
   const queue = createScanQueue(connection);
+  // The quota notice rides the notification queue the alert pipeline already
+  // owns (§6.6), so it inherits dedupe, quiet hours and channel routing.
+  const notificationQueue = createNotificationQueue(connection);
   const now = new Date();
 
   const due = await db.website.findMany({
@@ -86,6 +100,33 @@ export async function sweepDueWebsites(connection: IORedis): Promise<number> {
         continue;
       }
 
+      /*
+       * ⚠️ ENFORCEMENT POINT (§9.2): "Scheduled scan → consume(SCANS, 1) →
+       * scan skipped, site flagged `quota_exceeded`, one notification per
+       * period".
+       *
+       * ⚠️ CHECKED BEFORE `nextScanAt` IS ADVANCED, DELIBERATELY. Skipping
+       * WITHOUT advancing means the site stays due and is re-checked on the
+       * next sweep — so the moment the period rolls over, or the agency
+       * upgrades, monitoring resumes on its own with no intervention. Advancing
+       * first would silently push the site a whole cycle into the future as a
+       * side effect of a billing state, and an agency that upgraded at 09:00
+       * would wait until next week for a scan they have already paid for.
+       *
+       * ⚠️ IT DOES NOT THROW. There is nobody to show a 402 to at 3am, and an
+       * exception here would abort the batch — starving every other agency's
+       * due websites behind one agency's exhausted quota.
+       */
+      const quota = await checkScanQuota(website.agencyId);
+      if (!quota.allowed) {
+        log.info(
+          { used: quota.used, limit: quota.limit },
+          "skipping: scan quota exhausted for this period",
+        );
+        await notifyQuotaExceeded(website.agencyId, quota, notificationQueue);
+        continue;
+      }
+
       const interval = FREQUENCY_MS[website.scanFrequency];
       await db.website.update({
         where: { id: website.id },
@@ -114,6 +155,14 @@ export async function sweepDueWebsites(connection: IORedis): Promise<number> {
         trigger: "SCHEDULED",
       };
       await enqueueScan(queue, job);
+
+      /*
+       * ⚠️ CONSUMED AFTER THE SCAN EXISTS, not at the check above. A site
+       * skipped for any other reason — already in flight, MANUAL frequency, a
+       * failed enqueue — must not burn a scan from the allowance the customer
+       * bought.
+       */
+      await consumeScheduledScan(website.agencyId, quota);
       enqueued += 1;
     } catch (error) {
       // One bad site must not stop the sweep — the rest are still due.
@@ -121,7 +170,7 @@ export async function sweepDueWebsites(connection: IORedis): Promise<number> {
     }
   }
 
-  await queue.close();
+  await Promise.all([queue.close(), notificationQueue.close()]);
   return enqueued;
 }
 
@@ -151,9 +200,22 @@ export async function recoverStuckScans(): Promise<number> {
   return count;
 }
 
-/** Runs both sweeps on an interval. Started by the worker process. */
+/**
+ * §9.2's counter reconciliation runs on its own, much slower, cadence.
+ *
+ * ⚠️ NOT ON THE MINUTE TICK. It sweeps EVERY website on the platform with three
+ * counts each; at the scheduler's interval that is a continuous full-table scan
+ * competing with the queries that actually dispatch scans. Nightly is what §9.2
+ * and §12.3's "catches divergence within 24 h" ask for, and drift that has sat
+ * for an hour is no worse than drift that has sat for a minute — it is a bug
+ * report either way, not an outage.
+ */
+const RECONCILE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/** Runs the sweeps on an interval. Started by the worker process. */
 export function startScheduler(connection: IORedis, intervalMs = 60_000) {
   let running = false;
+  let lastReconcileAt = 0;
 
   const tick = async () => {
     // A sweep that overruns its interval must not overlap itself: two
@@ -164,6 +226,77 @@ export function startScheduler(connection: IORedis, intervalMs = 60_000) {
       await recoverStuckScans();
       const enqueued = await sweepDueWebsites(connection);
       if (enqueued > 0) logger.info({ enqueued }, "scheduled scans enqueued");
+
+      /*
+       * ⚠️ AFTER the scan sweep and inside the same `running` guard, so it can
+       * never run twice concurrently and never delays a due scan by more than
+       * its own duration. A failure here is caught by the outer handler and the
+       * next tick simply tries again — reconciliation is idempotent by
+       * construction (it compares and repairs; running it twice is a no-op the
+       * second time).
+       */
+      if (Date.now() - lastReconcileAt >= RECONCILE_INTERVAL_MS) {
+        lastReconcileAt = Date.now();
+        await reconcileCounters();
+        /*
+         * ⚠️ §9.1's daily Stripe reconciliation. It catches a MISSED WEBHOOK —
+         * the one billing failure that announces nothing: an agency that
+         * upgraded stays on the old plan and hits limits it has paid to clear,
+         * and one that cancelled keeps full service indefinitely. Both look
+         * normal from inside the product.
+         *
+         * It no-ops (and says so) when Stripe is unconfigured, so it is safe to
+         * run in every environment.
+         */
+        await reconcileStripe();
+
+        /*
+         * ⚠️ §9.2's GRACE SWEEP, ON THE SAME NIGHTLY CADENCE and deliberately
+         * AFTER the Stripe reconciliation. Grace is decided from the plan the
+         * agency is on; running it first would evaluate an agency that upgraded
+         * yesterday against the plan it had before the missed webhook was
+         * caught up — and pause sites it has already paid to keep.
+         *
+         * It is idempotent: the set of sites it can pause shrinks as it acts,
+         * and the email idempotency key is keyed on the day.
+         */
+        const emailQueue = createEmailQueue(connection);
+        try {
+          const grace = await sweepGrace(emailQueue);
+          if (grace.entered > 0 || grace.paused > 0 || grace.cleared > 0) {
+            logger.info(
+              {
+                entered: grace.entered,
+                cleared: grace.cleared,
+                paused: grace.paused,
+              },
+              "grace sweep acted",
+            );
+          }
+        } finally {
+          await emailQueue.close();
+        }
+
+        /*
+         * ⚠️ §5.8's RETENTION SWEEP RUNS LAST IN THE NIGHTLY BLOCK, AFTER
+         * GRACE. It deletes customer data permanently, and doing that before
+         * the reconciliations means deleting against a plan we had not yet
+         * corrected — an agency whose upgrade webhook was missed would have its
+         * evidence trimmed to the OLD plan's retention, and there is no undo.
+         *
+         * It is also the slowest job here by a wide margin (it is deliberately
+         * paced), so anything that must not wait behind it goes first.
+         */
+        const retention = await runRetention();
+        const removed =
+          retention.agencies.reduce(
+            (total, row) => total + row.scansStripped + row.scansDeleted,
+            0,
+          ) + retention.freeScansPurged;
+        if (removed > 0) {
+          logger.info({ removed }, "retention sweep removed data");
+        }
+      }
     } catch (error) {
       logger.error({ err: error }, "scheduler tick failed");
     } finally {

@@ -51,12 +51,18 @@ phase doc, pick a task, then open the feature doc it points to for the full spec
 
 ## Current status
 
-**Phases 0–4 are complete.** `npm run verify` — lint, typecheck, terminology
-(318 files), **452 tests**, `next build` — passes against the whole tree, and
-both processes have been started and exercised against the docker-compose stack.
+**Phases 0–5 are complete.** `npm run verify` — lint, typecheck, terminology
+(385 files), **715 tests**, coverage gate, `next build` — passes against the whole
+tree, and both processes have been started and exercised against the
+docker-compose stack. The AI layer has produced validated, grounded output from
+live OpenAI calls on both model tiers.
 
-The per-phase docs carry what is verified versus merely written. Phase 4's doc
-is the most precise about the difference and is the model to follow.
+> ⚠️ **THIS TABLE AND THE PHASE DOCS DRIFTED BADLY ONCE.** In August 2026 an audit
+> found this README claiming Phase 5 "not started" while it was complete and
+> live-verified, and `phase-0-foundation.md` claiming `/app` did not exist while
+> forty pages did. **Verify against the code, not against a checkbox.** The
+> per-phase docs now carry a "what is and is not verified" table; Phase 4 and
+> Phase 5 are the model to follow.
 
 > **Three things in this codebase are CONTRACTS, not labels.** Each was found
 > mis-numbered once, and each failure was silent:
@@ -69,10 +75,7 @@ is the most precise about the difference and is the model to follow.
 >
 > All three now have a test that fails the build if one goes missing.
 
-> ⚠️ The Phase 0 table below is the ORIGINAL foundation checklist and is now
-> largely historical. Where it says "unverified", the suites have since run.
-
-**Phase 0 detail (historical).** The repo layout is settled: the Next.js app stays at the root
+**Phase 0 detail.** Re-audited and corrected in August 2026. The repo layout is settled: the Next.js app stays at the root
 (`src/`), only `packages/*` are workspace members, no Turborepo — see PLAN.md §10.9.
 
 > This table is the single status source for Phase 0. `phases/phase-0-foundation.md`
@@ -80,25 +83,26 @@ is the most precise about the difference and is the model to follow.
 
 | Task | State | Note |
 |---|---|---|
-| 0.1 repo structure | ✅ | npm workspaces (`packages/*`), `.npmrc`. **No `apps/` move — decision reversed.** No `turbo.json`; a single package has nothing to orchestrate. `pnpm-workspace.yaml` is an inert tombstone still awaiting `rm` |
-| 0.2 `packages/*` scaffolding | 🟡 | `config`, `database`, `shared`, `schemas`, `scanner` exist. Remaining: `ai`, `billing`, `email`, `reports`, `storage`, `ui` |
-| 0.3 `packages/database` | 🟡 | Full `schema.prisma`, `client.ts`, `tenant.ts` (`forAgency`), `testing/factories.ts`, seed + ~250-vendor `trackers.json`, `__tests__/tenancy.test.ts`, `__tests__/enum-parity.test.ts`. A migration exists under `prisma/migrations/`. **Unverified:** the suites have never been run |
-| 0.4 `packages/shared` | 🟡 | `errors`, `logger`, `permissions`, `flags`, `url/normalize`, `copy/terminology`, `copy/en.ts` + `t()` + unit tests + `scripts/check-terminology.ts` written. Remaining: rate limiter, circuit breaker |
-| 0.5 `packages/schemas` | 🟡 | Enums (parity-tested against Prisma) + shared Zod primitives written |
+| 0.1 repo structure | ✅ | npm workspaces (`packages/*`, `worker`), `.npmrc`. **No `apps/` move — decision reversed.** No `turbo.json`. **`pnpm-workspace.yaml` and `pnpm-lock.yaml` are deleted** — they were not inert: the `shadcn` CLI found pnpm's lockfile and ran `pnpm install` against an npm workspace |
+| 0.2 `packages/*` scaffolding | 🟡 | `ai`, `analysis`, `config`, `database`, `email`, `notifications`, `reports`, `scanner`, `schemas`, `shared`, `storage` all exist. Remaining: `billing` (Phase 6). `ui` was **not** created — shadcn components live in `src/components/ui/` per the §10.9 single-app layout, and a package for them would be indirection with one consumer |
+| 0.3 `packages/database` | ✅ | Full `schema.prisma` (46 models), `tenant.ts` (`forAgency`), factories, seed, tenancy + enum-parity suites all **run and pass against real Postgres**. Migrations **verified against a fresh database** — 47 tables from an empty DB. `prisma/seed-demo.ts` seeds a demo agency with 12 weeks of history |
+| 0.4 `packages/shared` | ✅ | `errors`, `logger`, `permissions`, `flags`, `rate-limit`, `circuit-breaker`, `url/normalize`, `copy/*` — all present and tested |
+| 0.5 `packages/schemas` | ✅ | Enums parity-tested against Prisma (36 assertions, including `@pdm/ai`'s third copy of `AIFeature`) |
 | 0.6 Clerk integration | 🟡 | `proxy.ts`, `(auth)` catch-alls, `ClerkProvider`, `server/auth/context.ts` with `requireAgencyContext`/`requirePermission`/`requireWebsiteAccess` in place. `POST /api/webhooks/clerk` written (`verifyWebhook` from `@clerk/nextjs/webhooks` + Zod payload schemas in `@pdm/schemas/clerk`; env var is `CLERK_WEBHOOK_SIGNING_SECRET`) — **never exercised against a real Clerk event** |
 | 0.7 docker-compose | ✅ | postgres, redis, minio (+ bucket init), mailpit |
-| 0.8 design system | 🟡 | Tokens, `@custom-variant dark`, focus ring, reduced-motion and the type scale are in `globals.css`; Inter + JetBrains Mono wired via `next/font/google`; `ThemeProvider` (`src/components/theme-provider.tsx`, no next-themes) sets the `.dark` class pre-hydration and exposes `useTheme()`. Remaining: shadcn install, base components, and the `next/font/local` swap §11.2 specifies |
-| 0.9 CI | 🟡 | `.github/workflows/pr.yml` written, never executed |
+| 0.8 design system | ✅ | Tokens, `@custom-variant dark`, focus ring, reduced-motion, type scale; `ThemeProvider` sets `.dark` pre-hydration. **Fonts are now self-hosted** via `next/font/local` from vendored `.woff2` (§11.2's privacy requirement — no build-time network dependency). **shadcn/ui installed** with 20 §11.4 primitives, wired to our tokens via a `--destructive` → `--danger` alias; `globals.css` was NOT rewritten. ⚠️ Our hand-written `Button` is kept (23 call sites use `variant="primary"`); `alert-dialog` and `dialog` were adapted to it |
+| 0.9 CI | 🟡 | `.github/workflows/pr.yml` has all seven gates and now runs `test:coverage`, not `test` — the ≥85% `packages/scanner` gate was declared for four phases and executed by nothing. It **failed at 82.62%** the first time it ran; now 85.21–90.61% and passing. **Still never executed on GitHub** (no run observed) |
 | 0.10 observability | 🟡 | `src/instrumentation.ts` (`register` + `onRequestError`), `/api/health`, `/api/health/ready` written. Sentry deferred to Phase 7 — the DSN is empty until then |
-| 0.11 route groups | 🟡 | `SiteHeader` is out of the root layout, so marketing chrome no longer leaks into `/app`. **Remaining:** `git mv src/app/page.tsx src/app/(marketing)/page.tsx` plus a `(marketing)/layout.tsx`, and the `(app)`/`(admin)`/`(portal)` groups |
+| 0.11 route groups | ✅ | `(marketing)`, `(auth)`, `(app)`, `(onboarding)`, `(portal)` all exist with their own layouts. `(admin)` is Phase 6 and deliberately absent |
 
-> ⚠️ **Almost nothing in this phase has been verified.** `npm run verify` — lint,
-> typecheck, terminology, test, build — has never completed against this tree. Every 🟡
-> means "code written", not "code working". Treat the whole phase as unverified until the
-> commands in §"Verifying Phase 0" below have been run and pass.
+> ✅ **`npm run verify` passes against this tree**, including the coverage gate.
+> The remaining 🟡 rows are the honest ones: `packages/billing` is Phase 6, the
+> Clerk webhook has never seen a real Clerk event, and CI has never been observed
+> running on GitHub.
 
-**Immediate next:** run the verification commands and fix what they surface, then finish
-0.2 (remaining packages), 0.6 (Clerk webhook sync) and 0.11 (the file move).
+**Immediate next:** Phase 6, starting with **6.2 entitlements before 6.1 Stripe** —
+plan logic must live in one place, and `src/server/entitlements.ts` is currently a
+stub that returns `null` for every limit.
 
 ## Verifying Phase 0
 
@@ -127,13 +131,13 @@ to see which one fails first without the others masking it.
 
 | Phase | Goal | Status |
 |---|---|---|
-| [Phase 0](phases/phase-0-foundation.md) | Monorepo, schema, auth, design system, CI | 🟡 In progress |
+| [Phase 0](phases/phase-0-foundation.md) | Monorepo, schema, auth, design system, CI | 🟡 Closed out — 3 named gaps remain (Clerk webhook unexercised, CI never observed, `packages/billing` is Phase 6) |
 | [Phase 1](phases/phase-1-core-saas-shell.md) | Clients + websites, no scanning yet | ✅ Complete |
 | [Phase 2](phases/phase-2-scanner.md) | A real scan runs end to end | ✅ Complete |
 | [Phase 3](phases/phase-3-intelligence.md) | Evidence becomes findings, drift, score | ✅ Complete |
-| [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | 🟡 Built; two gaps need a live dependency — see the phase doc |
-| [Phase 5](phases/phase-5-ai.md) | Grounded explanation and recommendation | ⬜ Not started |
-| [Phase 6](phases/phase-6-commercial-admin.md) | Billing, free scanner, admin panel | ⬜ Not started |
+| [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | 🟡 Built; email proven live. One gap: the magic-link inbox→session round trip |
+| [Phase 5](phases/phase-5-ai.md) | Grounded explanation and recommendation | ✅ Complete — both tiers verified against live OpenAI |
+| [Phase 6](phases/phase-6-commercial-admin.md) | Billing, free scanner, admin panel | ⬜ **Next.** Start at 6.2 entitlements |
 | [Phase 7](phases/phase-7-hardening-launch.md) | Security, load, a11y, DR, launch | ⬜ Not started |
 
 Update the status column as phases complete. Keep it honest — a phase is done only when its

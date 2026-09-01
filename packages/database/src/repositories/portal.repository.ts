@@ -41,6 +41,18 @@ export function portalRepository(db: TenantClient, agencyId: string) {
       return db.portalUser.findUnique({ where: { id } });
     },
 
+    /**
+     * Portal users that occupy a seat, for §9.2's `maxPortalUsers` limit.
+     *
+     * ⚠️ REVOKED USERS DO NOT COUNT. Revoking is how an agency frees a seat;
+     * counting them would make the limit permanent and the only remedy a
+     * hard delete, which destroys the portal audit trail (§6.10 — a client
+     * opening their findings is the proof of work the portal exists for).
+     */
+    async countActive(): Promise<number> {
+      return db.portalUser.count({ where: { status: { not: "REVOKED" } } });
+    },
+
     async invite(params: {
       clientId: string;
       email: string;

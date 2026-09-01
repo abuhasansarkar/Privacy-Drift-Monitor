@@ -8,8 +8,11 @@ import { resolveBranding } from "@pdm/reports/branding";
 import { enqueueEmail } from "@pdm/scanner/queue/queues";
 import { portal as portalSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
-import { NotFoundError, ValidationError } from "@pdm/shared/errors";
+import { EntitlementExceededError, NotFoundError, ValidationError } from "@pdm/shared/errors";
 import { requirePermission } from "@/server/auth/context";
+import { getEntitlements } from "@/server/entitlements";
+import { requireFeature } from "@/server/services/entitlement-guard";
+import { checkLimit } from "@pdm/billing";
 import {
   clearPortalSession,
   hashToken,
@@ -64,6 +67,32 @@ export async function invitePortalUser(
       throw new ValidationError(t("portalAdmin.portalDisabled"), {
         reason: "PORTAL_DISABLED",
       });
+    }
+
+    /*
+     * ⚠️ ENFORCEMENT POINT (§9.2): "Enable client portal →
+     * `check('clientPortal')` + `maxPortalUsers` → Locked".
+     *
+     * Two checks, in this order, because they answer different questions and
+     * the first one's answer makes the second meaningless: an agency without
+     * the portal feature at all should be told THAT, not that it has used 0 of
+     * 0 seats.
+     *
+     * ⚠️ THE SEAT COUNT IS LIVE AND EXCLUDES REVOKED USERS. Revoking is how an
+     * agency frees a seat; a stored counter would make the limit permanent.
+     */
+    await requireFeature(ctx.agencyId, "clientPortal");
+
+    const entitlements = await getEntitlements(ctx.agencyId);
+    const portalUsers = await repos.portal.countActive();
+    const seats = checkLimit(portalUsers, entitlements.maxPortalUsers);
+    if (!seats.allowed) {
+      throw new EntitlementExceededError(
+        `${t("billing.limitReached")} ${seats.used}/${seats.limit} ${t("portalAdmin.title")}.`,
+        {
+          reason: `LIMIT:PORTAL_USERS:used=${seats.used}:limit=${seats.limit}:agency=${ctx.agencyId}`,
+        },
+      );
     }
 
     const token = newToken();

@@ -468,6 +468,573 @@ export const en = {
       "AI is used only to describe findings the scanner recorded. It never decides whether a request happened, whether a tracker fired, or whether a scan succeeded — those come from the browser recording alone. Every AI output links to the evidence it used, and one that references anything else is discarded before you see it.",
   },
 
+  /**
+   * §9.2, §9.3 — plans, limits and the 402 surface.
+   *
+   * ⚠️ A PLAN CEILING IS A SALES SURFACE, NOT AN ERROR. §9.2 asks for "402 +
+   * upgrade prompt naming the limit", so this copy says what was reached and
+   * what to do — never "something went wrong". The number itself is appended by
+   * `entitlement-guard.ts`, because it is data, not copy.
+   */
+  billing: {
+    title: "Billing",
+    limitReached: "You have reached your plan limit:",
+    featureNotOnPlan: "That feature is not included in your current plan.",
+    optionNotOnPlan: "That option is not available on your current plan.",
+    upgradePrompt: "Upgrade your plan to continue.",
+    viewPlans: "View plans",
+    /** §9.2's read-only state — rule 3: stop spending, never hide data. */
+    readOnlyTitle: "New scans are paused",
+    readOnlyBody:
+      "Your subscription needs attention, so new scans and AI generation are paused. Everything you have already recorded stays available.",
+    trialEndsIn: "days left in your trial",
+    trialEnded: "Your trial has ended.",
+    pastDue: "A payment did not go through.",
+    updatePayment: "Update payment method",
+    /** §9.2 grace on downgrade — never delete, pause the oldest. */
+    graceTitle: "You are over your new plan limit",
+    graceBody:
+      "Nothing has been removed. Archive the sites you no longer monitor, or move back up a plan, and monitoring continues as it is.",
+    graceDaysLeft:
+      "days before the oldest extra sites are paused — paused, not deleted, and reversible in one click.",
+    unavailable:
+      "Billing is temporarily unavailable. Your subscription and everything it includes are unaffected.",
+    noSubscription: "There is no subscription to manage yet.",
+    confirming: "Confirming your subscription…",
+    confirmingBody:
+      "Payment went through. We are waiting for confirmation from our payment provider — this usually takes a few seconds.",
+    confirmingSlow:
+      "Your payment went through. Confirmation is taking longer than usual — this page will update on its own, and nothing further is needed from you.",
+    checkoutCancelled: "Checkout was cancelled. Nothing has been charged.",
+    usageTitle: "Usage this period",
+    unlimited: "Unlimited",
+    ofLimit: "of",
+
+    /* §3.11 — the /app/billing page itself (task 6.3). */
+    subtitle: "Your plan, what you have used this period, and your invoices.",
+    currentPlan: "Current plan",
+    noPlanTitle: "No subscription yet",
+    noPlanBody:
+      "Pick a plan to start monitoring. You are on a small starting allowance until you do.",
+    perMonth: "per month",
+    perYear: "per year",
+    renewsOn: "Renews",
+    endsOn: "Access ends",
+    cancelScheduled: "Cancelling at the end of this period",
+    changePlan: "Change plan",
+    choosePlan: "Choose a plan",
+    manageBilling: "Manage billing",
+    manageBillingHelp:
+      "Payment method, invoices, tax details, downgrades and cancellation are handled by our payment provider.",
+    periodLabel: "Period",
+    invoicesTitle: "Invoices",
+    invoiceNumber: "Invoice",
+    invoiceDate: "Date",
+    invoiceAmount: "Amount",
+    invoiceStatus: "Status",
+    invoiceView: "View",
+    invoicesEmpty: "No invoices yet. The first one arrives after your trial ends.",
+    invoicesUnavailable:
+      "Invoices could not be loaded from our payment provider just now. Your subscription is unaffected.",
+    paymentMethodTitle: "Payment method",
+    cardEnding: "ending",
+    cardExpires: "Expires",
+    noPaymentMethod: "No card on file. One is added at checkout.",
+    billingEmail: "Billing email",
+    billingEmailNone: "Not set",
+    taxIdTitle: "VAT / Tax ID",
+    taxIdNone: "None recorded. Add one during checkout or in the billing portal.",
+    interval: "Billing interval",
+    monthly: "Monthly",
+    annual: "Annual",
+    annualSaving: "2 months free",
+    startPlan: "Start this plan",
+    switchToPlan: "Switch to this plan",
+    currentPlanBadge: "Your plan",
+    trialBadge: "14-day trial, no card",
+    downgradeViaPortal:
+      "Moving to a smaller plan is done in the billing portal so any refund is calculated correctly.",
+    checkoutFailed: "Checkout could not be opened. Try again in a moment.",
+    portalFailed: "The billing portal could not be opened. Try again in a moment.",
+    trialBannerTitle: "Trial",
+    metricWebsites: "Websites",
+    metricSeats: "Team members",
+    metricScans: "Scans this period",
+    metricAiCredits: "AI credits",
+    metricReports: "Reports this period",
+    metricStorage: "Evidence storage",
+    metricNotMetered: "Metered, not capped",
+    remaining: "remaining",
+  },
+
+  /**
+   * §9.1's `SubscriptionStatus` enum, in the customer's words.
+   *
+   * ⚠️ NOT THE STRIPE WORDS. "incomplete_expired" is accurate and means nothing
+   * to the person reading it; what they need to know is whether service is on.
+   */
+  subscriptionStatus: {
+    trialing: "Trial",
+    active: "Active",
+    pastDue: "Payment failed",
+    canceled: "Cancelled",
+    unpaid: "Unpaid",
+    incomplete: "Awaiting payment",
+    incompleteExpired: "Checkout expired",
+    paused: "Paused",
+  },
+
+  /**
+   * §3.2's remaining public pages — resources, blog, about, contact.
+   *
+   * ⚠️ THE CMP TABLE COPY SAYS WHAT WE CANNOT DO. §3.2 asks for the table to
+   * double as "honest limitation disclosure", and a support matrix that lists
+   * only the green rows is marketing rather than disclosure.
+   */
+  marketingPages: {
+    resourcesTitle: "Resources",
+    resourcesSubtitle:
+      "How the scanner works, what it can and cannot see, and how agencies use it.",
+    cmpTableTitle: "Consent platform support",
+    cmpTableSubtitle:
+      "Five platforms have a dedicated adapter. Everything else falls back to generic strategies, which usually work — and when they do not, the journey is reported as undetermined rather than as a pass.",
+    cmpPlatform: "Platform",
+    cmpDetection: "Detection",
+    cmpNotes: "Notes",
+    blogTitle: "Writing",
+    blogSubtitle:
+      "Notes on consent configuration, how monitoring differs from an audit, and the arithmetic agencies use.",
+
+    aboutTitle: "About",
+    aboutLead:
+      "We build one thing: a service that loads your clients' websites in a real browser and tells you when what they load changes.",
+    aboutWhyTitle: "Why we built it",
+    aboutWhyBody:
+      "Agencies inherit responsibility for websites they did not build and cannot watch every day. A consent setup that was correct at launch decays quietly — a pixel added from a marketing dashboard, a plugin update, a consent platform that ships a new category mapping. Nobody is told, because nothing looks different.",
+    aboutHowTitle: "How we think about it",
+    aboutHowBody:
+      "The scanner is the only thing allowed to decide what happened. Rules interpret the recording; AI explains it; neither can add a fact. That constraint is why a finding can always be traced back to a request with a timestamp and a consent state, and it is the reason the product is worth trusting at all.",
+    aboutBoundaryTitle: "What we are not",
+    aboutBoundaryBody:
+      "We are a technical monitoring service. We do not give legal advice, we do not assess anyone against a regulation, and we do not certify anything. Findings are described as potential issues and are a starting point for review — by you, and where it matters, by a qualified advisor.",
+    aboutContactTitle: "Talk to us",
+    aboutContactBody: "Questions about how it works, or whether it fits what you do.",
+
+    contactTitle: "Contact",
+    contactSubtitle:
+      "Tell us what you are trying to do and we will tell you honestly whether this helps.",
+    contactName: "Your name",
+    contactEmail: "Email",
+    contactAgency: "Agency",
+    contactSiteCount: "Roughly how many client sites?",
+    contactTopic: "What is this about?",
+    contactTopicSales: "Whether it fits what we do",
+    contactTopicSupport: "Help with an existing account",
+    contactTopicSecurity: "Security or privacy question",
+    contactTopicOther: "Something else",
+    contactMessage: "Message",
+    contactSubmit: "Send",
+    contactSending: "Sending…",
+    contactSuccess:
+      "Thanks — we have your message and will reply to the address you gave.",
+    contactError: "That did not send. Try again, or email us directly.",
+  },
+
+  /**
+   * §3.11 `/app/help` — in-app help (Phase 6).
+   *
+   * ⚠️ THE ARTICLES ANSWER THE QUESTIONS SUPPORT ACTUALLY GETS, not the ones a
+   * feature list suggests. "Why does my scan say partial" and "why did a
+   * tracker I removed still show up" are the two that arrive most, and both are
+   * cases where the product is behaving correctly and looks like it is not.
+   */
+  help: {
+    title: "Help",
+    subtitle: "How the product behaves, and what to do when it surprises you.",
+    searchLabel: "Search help",
+    searchPlaceholder: "Search…",
+    noResults: "Nothing matched that. Try a different word, or contact us.",
+    contactTitle: "Still stuck?",
+    contactBody:
+      "Tell us what you were doing and what you expected. We will reply to your account email.",
+    contactCta: "Contact support",
+    shortcutsTitle: "Keyboard shortcuts",
+    statusTitle: "System status",
+    statusBody: "Queue depth, scan failures and dependency health.",
+  },
+
+  /**
+   * §3.12 — the platform admin surface (task 6.6).
+   *
+   * ⚠️ THIS COPY IS FOR US, NOT FOR CUSTOMERS, and it is the one surface where
+   * internal identifiers are appropriate: an operator debugging a queue needs
+   * the job id and the rule id, not a friendly paraphrase. §1.12's approved
+   * terminology still applies — a phrase we use internally is the phrase that
+   * ends up in a support reply, and the check scans this file either way. (It
+   * scans comments too, which is how this note came to be phrased around the
+   * word rather than quoting it.)
+   */
+  admin: {
+    title: "Admin",
+    chip: "ADMIN",
+    signedInAs: "Signed in as",
+    backToApp: "Back to the app",
+    navOverview: "Overview",
+    navAgencies: "Agencies",
+    navUsers: "Users",
+    navWebsites: "Websites",
+    navScans: "Scans",
+    navQueue: "Queue",
+    navIssues: "Rule analytics",
+    navTrackers: "Trackers",
+    navAiUsage: "AI usage",
+    navBilling: "Billing",
+    navSystemHealth: "System health",
+    navLogs: "Logs",
+    navFlags: "Feature flags",
+    navSettings: "Platform settings",
+    forbiddenTitle: "Not available",
+    forbiddenBody: "This page is for platform operators.",
+    empty: "Nothing to show.",
+    searchPlaceholder: "Search…",
+    viewDetail: "Open",
+    refresh: "Refresh",
+
+    /* §3.12 `/admin` — the operator dashboard. */
+    overviewTitle: "Platform overview",
+    statAgencies: "Agencies",
+    statWebsites: "Active websites",
+    statScansToday: "Scans today",
+    statFailureRate: "Failed-scan rate",
+    statCriticalToday: "Critical issues today",
+    statAiSpendToday: "AI spend today",
+    statAiSpendMtd: "AI spend this month",
+    statMrr: "MRR",
+    statQueueDepth: "Queued jobs",
+    byPlan: "By plan",
+    succeeded: "succeeded",
+    partial: "partial",
+    failed: "failed",
+
+    /* Queue board. */
+    queueTitle: "Queues",
+    queueName: "Queue",
+    queueWaiting: "Waiting",
+    queueActive: "Active",
+    queueCompleted: "Completed",
+    queueFailed: "Failed",
+    queueDelayed: "Delayed",
+    queuePaused: "Paused",
+    queueRetryAll: "Retry all failed",
+    queueRetryJob: "Retry",
+    queueRemoveJob: "Remove",
+    queuePause: "Pause",
+    queueResume: "Resume",
+    queueDrain: "Drain",
+    queueDrainWarning:
+      "Draining discards every waiting job in this queue. Scans, emails and reports that have not started yet are lost and will not be retried.",
+    queueRetryAllWarning:
+      "This re-queues every failed job at once. On a large backlog that is a load spike, not a repair.",
+    queueJobInspector: "Job",
+    queueAttempts: "Attempts",
+    queueStack: "Stack trace",
+    queueNoJobs: "No jobs in this state.",
+
+    /* Rule analytics. */
+    rulesTitle: "Rule analytics",
+    rulesSubtitle:
+      "How often each rule fires and how often people say it was wrong. A rising false-positive rate is the signal to revise a rule before customers stop trusting the findings.",
+    ruleId: "Rule",
+    ruleFirings: "Issues raised",
+    ruleFeedback: "Feedback",
+    ruleFalsePositive: "Marked not an issue",
+    ruleFpRate: "False-positive rate",
+    ruleSeverity: "Severity",
+
+    /* Trackers. */
+    trackersTitle: "Tracker vendors",
+    trackersUnknownTitle: "Unidentified domains",
+    trackersUnknownSubtitle:
+      "Third-party domains observed across every tenant that match no vendor, most frequent first. Each one is a finding we could name and currently cannot.",
+    trackerName: "Vendor",
+    trackerCategory: "Category",
+    trackerRisk: "Risk",
+    trackerPatterns: "Domain patterns",
+    trackerSeenOn: "Seen on",
+    trackerOccurrences: "Occurrences",
+    trackerCreateFromDomain: "Create vendor",
+    trackerSave: "Save vendor",
+    trackerCreated: "Vendor saved. It takes effect on the next scan — no deploy needed.",
+
+    /* Agencies. */
+    agenciesTitle: "Agencies",
+    agencyPlan: "Plan",
+    agencyStatus: "Status",
+    agencyWebsites: "Websites",
+    agencyMembers: "Members",
+    agencySignedUp: "Signed up",
+    agencyUsage: "Usage against plan",
+    agencyActions: "Actions",
+    agencySuspend: "Suspend",
+    agencyReactivate: "Reactivate",
+    agencyExtendTrial: "Extend trial 14 days",
+    agencyGrantCredits: "Grant AI credits",
+    agencyImpersonate: "Impersonate",
+    agencyImpersonateReason: "Reason (required, recorded)",
+    agencyImpersonateWarning:
+      "Impersonation is time-limited, recorded against your name, and visible in the agency's own audit log. Use it only with a support reason you would be comfortable showing the customer.",
+
+    /* Websites and scans. */
+    websitesTitle: "Websites",
+    websitesProblem: "Problem sites",
+    websitesProblemSubtitle:
+      "Sites failing repeatedly. These are the ones a customer is about to complain about.",
+    websiteFailures: "Consecutive failures",
+    websiteLastScan: "Last scan",
+    websiteForceScan: "Force re-scan",
+    scansTitle: "Scans",
+    scanWorker: "Worker",
+    scanDuration: "Duration",
+    scanError: "Error",
+
+    /* Billing. */
+    billingTitle: "Billing",
+    billingMrr: "MRR",
+    billingArr: "ARR",
+    billingActive: "Active subscriptions",
+    billingTrials: "Trials ending in 7 days",
+    billingFailed: "Failed payments",
+    billingWebhooks: "Stripe webhook events",
+    billingReplay: "Replay",
+    billingReplayed: "Event re-queued for processing.",
+
+    /* System health. */
+    healthTitle: "System health",
+    healthDatabase: "Database",
+    healthRedis: "Redis",
+    healthStorage: "Object storage",
+    healthWorkers: "Workers",
+    healthExternal: "External services",
+    healthOk: "Reachable",
+    healthDown: "Not reachable",
+    healthUnconfigured: "Not configured",
+    healthLatency: "Latency",
+
+    /* Logs. */
+    logsTitle: "Logs",
+    logsAudit: "Audit log",
+    logsSystem: "System log",
+    logsActor: "Actor",
+    logsAction: "Action",
+    logsEntity: "Entity",
+    logsWhen: "When",
+    logsLevel: "Level",
+    logsService: "Service",
+    logsMessage: "Message",
+
+    /* Feature flags. */
+    flagsTitle: "Feature flags",
+    flagsSubtitle:
+      "Resolution order: agency override, then plan targeting, then percentage rollout, then the global default. A kill switch turned off stops the behaviour everywhere within the cache window.",
+    flagKey: "Flag",
+    flagGlobal: "Global default",
+    flagRollout: "Rollout %",
+    flagOverrides: "Agency overrides",
+    flagKillSwitch: "Kill switch",
+    flagOn: "On",
+    flagOff: "Off",
+    flagSaved: "Flag updated.",
+
+    /* Platform settings. */
+    settingsTitle: "Platform settings",
+    settingsPlans: "Plans",
+    settingsScanner: "Scanner defaults",
+    settingsAi: "AI models",
+    settingsMaintenance: "Maintenance mode",
+    settingsAnnouncement: "Announcement banner",
+    settingsReadOnlyNote:
+      "These values come from the deployed configuration and the plan catalogue. Changing them is a deploy, not a form — shown here so an operator can see what is live without reading the environment.",
+  },
+
+  /**
+   * §3.2 `/free-scanner` — the anonymous lead-generation scanner (task 6.5).
+   *
+   * ⚠️ EVERY ERROR HERE IS SPECIFIC AND HELPFUL EXCEPT ONE. Feature doc 18:
+   * "The SSRF block message must stay vague." A precise answer to "why can't
+   * you scan 10.0.0.5" is a network-probing oracle that anyone can query.
+   */
+  freeScanner: {
+    title: "Free privacy scan",
+    headline: "See what a website loads before anyone consents",
+    subheadline:
+      "Paste a URL. We load it in a real browser with no consent given, and show you what fired anyway. No account, no card, about a minute.",
+    urlLabel: "Website address",
+    urlPlaceholder: "example.com",
+    submit: "Scan this website",
+    submitting: "Starting…",
+    disclaimer:
+      "Only scan websites you own or have permission to scan. One scan per website per day.",
+
+    /* Running state. */
+    runningTitle: "Scanning",
+    runningBody: "This usually takes under a minute. The page updates on its own.",
+    stageQueued: "Waiting for a browser",
+    stageRunning: "Loading the site with no consent given",
+    stageAnalysing: "Working out what fired",
+    stageDone: "Done",
+
+    /* Result page. */
+    resultTitle: "What we detected",
+    resultFor: "Results for",
+    scoreLabel: "Health score",
+    partialNotice:
+      "This scan did not complete every step, so the picture below is incomplete. Nothing here is a clean verdict.",
+    bannerDetected: "Consent banner detected",
+    bannerNotDetected: "No consent banner detected",
+    bannerUnknown: "Consent platform not identified",
+    trackersBefore: "Trackers detected before consent",
+    cookiesBefore: "Cookies set before consent",
+    thirdPartyDomains: "Third-party domains contacted",
+    findingsFound: "Potential issues detected",
+    findingsShownNote: "Showing the three most severe. The rest come with monitoring.",
+    lockedTitle: "What monitoring adds",
+    lockedReject: "Reject All testing — does rejection actually stop the trackers?",
+    lockedWithdraw: "Withdrawal testing — what happens after someone changes their mind",
+    lockedDrift: "Privacy drift — an alert the day something changes",
+    lockedAlerts: "Alerts to your inbox when a critical issue appears",
+    lockedReports: "White-label reports you can send straight to the client",
+    lockedEvidence: "Full evidence — every request, cookie and storage write, timestamped",
+    cta: "Monitor this website — start free trial",
+    ctaNote: "14 days, no card. We will pre-fill this address for you.",
+    expiresNote: "This result is kept for 7 days and then deleted.",
+
+    /* Errors — five specific, one deliberately vague. */
+    errorUnreachable:
+      "We could not reach this website. Check the address and try again.",
+    errorTimeout:
+      "The scan took too long and was stopped. The site may be slow right now.",
+    errorBotChallenge:
+      "This site is protected by a bot challenge we cannot pass. Monitoring a site you control works around this.",
+    errorBlockedAddress: "We can't scan this address.",
+    errorDomainBlocked:
+      "This website is not available for free scanning. Get in touch if you own it.",
+    errorRateLimitedIp:
+      "Too many scans from your network. Try again a little later.",
+    errorRateLimitedDomain:
+      "This website was scanned recently. Free scans are limited to one per website per day.",
+    errorCapacity: "We're at capacity right now. Try again in a few minutes.",
+    errorChallenge: "The security check did not pass. Reload the page and try again.",
+    errorInvalidUrl: "That does not look like a website address.",
+    errorGeneric: "Something went wrong running this scan.",
+    errorNotFound: "This result has expired or never existed.",
+    tryAgain: "Try another website",
+  },
+
+  /**
+   * §3.2 `/pricing` — the public plan page (task 6.4).
+   *
+   * ⚠️ DISPLAY CURRENCY ONLY. §9.3 bills in USD and offers GBP/EUR as localized
+   * Stripe Prices where they exist; the toggle here changes what a visitor
+   * reads, and the checkout resolves the real Price server-side.
+   */
+  pricing: {
+    title: "Pricing",
+    headline: "Monitoring you can resell",
+    subheadline:
+      "Every plan includes the full scanner, all four consent journeys, drift detection and evidence. Plans differ by how many sites you monitor and how often.",
+    intervalMonthly: "Monthly",
+    intervalAnnual: "Annual",
+    annualNote: "2 months free",
+    currencyLabel: "Currency",
+    currencyNote: "Prices are shown in your chosen currency. Billing is in USD.",
+    mostPopular: "Most popular",
+    startTrial: "Start free trial",
+    talkToUs: "Talk to us",
+    perMonth: "/month",
+    perMonthAnnual: "/month, billed annually",
+    saveAmount: "Save",
+    compareTitle: "Compare plans",
+    compareNote: "Scroll sideways to see every plan.",
+    usageTitle: "What counts as a scan?",
+    usageBody:
+      "One scan is one run of a website through all four consent journeys, however many pages that plan allows. A re-scan you trigger by hand counts the same as a scheduled one. A scan that could not complete is not counted.",
+    whiteLabelTitle: "White-label from Growth up",
+    whiteLabelBody:
+      "Your logo, your colours and your company name on every client report and in the client portal. Nothing in a client-facing document mentions us.",
+    faqTitle: "Questions",
+    ctaTitle: "Start monitoring this week",
+    ctaBody: "14 days, no card. Add a site and the first scan runs immediately.",
+
+    /* Comparison-table row labels — one per entitlement dimension of §9.2. */
+    rowWebsites: "Websites",
+    rowFrequency: "Scan frequency",
+    rowScans: "Scans per month",
+    rowPages: "Pages per scan",
+    rowConcurrent: "Concurrent scans",
+    rowTeam: "Team members",
+    rowClients: "Clients",
+    rowAiCredits: "AI credits per month",
+    rowAiAdvanced: "Advanced AI tier",
+    rowWhiteLabel: "White-label reports",
+    rowPortal: "Client portal",
+    rowReportTypes: "Report types",
+    rowReports: "Reports per month",
+    rowEvidence: "Evidence retention",
+    rowHistory: "Scan history",
+    rowIntegrations: "Slack and webhooks",
+    rowApi: "API",
+    rowSupport: "Support",
+    supportEmail: "Email",
+    supportPriority: "Priority",
+    reportTypesTwo: "Scan, Website health",
+    reportTypesAll: "All five",
+    included: "Included",
+    notIncluded: "Not included",
+    portalUsers: "users",
+    compareFeature: "Feature",
+    cardWebsites: "websites",
+    cardScans: "scans per month",
+    cardCredits: "AI credits per month",
+    days: "days",
+    months: "months",
+
+    /*
+     * §3.2 asks for ten FAQ items. Several of them exist to set the product
+     * boundary §1.11 draws — this is technical monitoring, and a pricing page
+     * is exactly where a buyer forms the opposite impression if nobody says so.
+     */
+    faq1Q: "What counts as one scan?",
+    faq1A:
+      "One run of one website through all four consent journeys — no consent, Reject All, Accept All, and withdraw — across as many pages as your plan allows. A scan that could not complete is not counted against you.",
+    faq2Q: "Is this a legal assessment of my client's site?",
+    faq2A:
+      "No. We are a technical monitoring service. We record what a browser observed on a site and show you the evidence; deciding what that means for a particular business is work for that business and its privacy advisor.",
+    faq3Q: "Can I put my own branding on the reports?",
+    faq3A:
+      "Yes, from Growth up. Your logo, colours and company name appear on every client report and in the client portal, and nothing client-facing mentions us.",
+    faq4Q: "What happens when my trial ends?",
+    faq4A:
+      "Nothing is deleted. Scanning pauses and everything already recorded stays visible until you pick a plan.",
+    faq5Q: "What if I go over a limit?",
+    faq5A:
+      "Adding a website beyond your plan is blocked with a prompt naming the limit. If a downgrade puts you over one, you get 14 days to archive down or move back up — we never delete a site, and after that window the oldest extra sites are paused, not removed.",
+    faq6Q: "Do you need access to my client's website?",
+    faq6A:
+      "No. We load the public site the same way a visitor's browser does. No plugin, no tag, no credentials.",
+    faq7Q: "How often do you scan?",
+    faq7A:
+      "Weekly or monthly on Starter, and daily from Growth up. You can also run a scan by hand at any time.",
+    faq8Q: "Can I cancel whenever I want?",
+    faq8A:
+      "Yes, from the billing portal. Your plan runs to the end of the period you have paid for, and you keep access to your data throughout.",
+    faq9Q: "Which currency am I charged in?",
+    faq9A:
+      "Billing is in USD. Where we have a local price for your currency, checkout uses it; otherwise the USD price applies.",
+    faq10Q: "Is the AI deciding what is wrong with my site?",
+    faq10A:
+      "No. Every detection comes from the browser instrumentation and a fixed set of rules. AI only writes explanations of evidence that was already recorded, and every finding renders whether AI is on or off.",
+  },
+
   /** §3.11, §8.9 — Settings → AI. */
   aiSettings: {
     title: "AI",
@@ -500,6 +1067,13 @@ export const en = {
     creditCapPlaceholder: "No limit",
     creditCapHelp:
       "Leave empty for no limit. Set 0 to stop all AI spend. We notify at 80% and block new calls at 100%.",
+    unavailable:
+      "Billing is temporarily unavailable. Your subscription and everything it includes are unaffected.",
+    noSubscription: "There is no subscription to manage yet.",
+    confirming: "Confirming your subscription…",
+    confirmingBody:
+      "Payment went through. We are waiting for confirmation from our payment provider — this usually takes a few seconds.",
+    checkoutCancelled: "Checkout was cancelled. Nothing has been charged.",
     usageTitle: "Usage this period",
     creditsUsed: "Credits used",
     ofCap: "of",

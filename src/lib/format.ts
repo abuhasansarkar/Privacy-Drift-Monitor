@@ -86,3 +86,33 @@ export function formatBytes(bytes: number): string {
   }
   return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
 }
+
+/**
+ * Minor units → "$49.00" / "£39.00" / "€45.00".
+ *
+ * ⚠️ MINOR UNITS IN, NEVER A FLOAT. Stripe and `Plan.priceMonthlyCents` both
+ * store integers for the reason every currency library exists: 14900/100 is
+ * exact, but 149.00 accumulated from floats is not, and a pricing page that
+ * renders "$148.99" costs more trust than it saves code.
+ *
+ * The currency is a Stripe-style lower-case ISO code; `Intl` wants upper-case.
+ */
+export function formatMoney(minorUnits: number, currency: string): string {
+  const code = currency.toUpperCase();
+  return new Intl.NumberFormat(LOCALE, {
+    style: "currency",
+    currency: code,
+    /*
+     * ⚠️ `narrowSymbol`, OR en-GB PRINTS "US$49" FOR USD. The default
+     * disambiguates USD from CAD and AUD, which is right in a table of
+     * currencies and wrong on a pricing page where the currency is stated
+     * beside the selector — "US$49" reads as a typo next to "£39".
+     */
+    currencyDisplay: "narrowSymbol",
+    // Whole-dollar plan prices read better without ".00", but an invoice for
+    // $16.47 must keep its cents — so trailing zeros are dropped only when the
+    // amount is exact.
+    minimumFractionDigits: minorUnits % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(minorUnits / 100);
+}

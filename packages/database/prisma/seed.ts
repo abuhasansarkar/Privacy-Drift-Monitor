@@ -12,6 +12,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { PLAN_CATALOGUE } from "@pdm/billing";
 
 const prisma = new PrismaClient();
 
@@ -51,146 +52,40 @@ async function seedTrackerVendors() {
 }
 
 /**
- * Plans. Prices are USD minor units (PLAN.md §9.3). Stripe price ids are filled
- * in during Phase 6 — until then checkout is unavailable, which is correct.
+ * Plans. §9.3's table lives in `@pdm/billing`'s catalogue — see the note there
+ * about the three copies this replaced. The seed's job is to project that
+ * catalogue into the `Plan` table, not to restate it.
+ *
+ * ⚠️ THE SEED WRITES USD INTO `priceMonthlyCents`, and the localized amounts
+ * reach Stripe (not this table) through `stripe-provision.ts`. §9.1 stores only
+ * the USD figures on the row; `currencyPrices` holds Stripe PRICE IDS, not
+ * amounts, and is written by the provisioner.
  */
-const PLANS = [
-  {
-    key: "starter",
-    name: "Starter",
-    description: "For agencies getting started with privacy monitoring.",
-    sortOrder: 1,
-    priceMonthlyCents: 4900,
-    priceAnnualCents: 49000,
-    entitlements: {
-      maxWebsites: 10,
-      maxTeamMembers: 2,
-      maxClients: 10,
-      scanFrequencies: ["WEEKLY", "MONTHLY", "MANUAL"],
-      maxScansPerMonth: 60,
-      maxPagesPerScan: 1,
-      maxConcurrentScans: 1,
-      scanPriority: "NORMAL",
-      aiCreditsPerMonth: 50,
-      aiAdvancedTier: false,
-      whiteLabel: false,
-      clientPortal: false,
-      maxPortalUsers: 0,
-      reportTypes: ["SCAN", "WEBSITE_HEALTH"],
-      maxReportsPerMonth: 10,
-      evidenceRetentionDays: 30,
-      scanHistoryRetentionDays: 365,
-      slackIntegration: false,
-      webhooks: false,
-      apiAccess: false,
-      prioritySupport: false,
-    },
-  },
-  {
-    key: "growth",
-    name: "Growth",
-    description: "Daily scanning and white-label reports. The one most agencies pick.",
-    sortOrder: 2,
-    priceMonthlyCents: 14900,
-    priceAnnualCents: 149000,
-    entitlements: {
-      maxWebsites: 40,
-      maxTeamMembers: 6,
-      maxClients: 40,
-      scanFrequencies: ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"],
-      maxScansPerMonth: 400,
-      maxPagesPerScan: 3,
-      maxConcurrentScans: 2,
-      scanPriority: "NORMAL",
-      aiCreditsPerMonth: 300,
-      aiAdvancedTier: false,
-      whiteLabel: true,
-      clientPortal: true,
-      maxPortalUsers: 10,
-      reportTypes: ["SCAN", "ISSUE", "MONTHLY_MONITORING", "WEBSITE_HEALTH", "PRIVACY_DRIFT"],
-      maxReportsPerMonth: 50,
-      evidenceRetentionDays: 90,
-      scanHistoryRetentionDays: 730,
-      slackIntegration: false,
-      webhooks: false,
-      apiAccess: false,
-      prioritySupport: false,
-    },
-  },
-  {
-    key: "agency",
-    name: "Agency",
-    description: "Larger portfolios, advanced AI, priority support.",
-    sortOrder: 3,
-    priceMonthlyCents: 34900,
-    priceAnnualCents: 349000,
-    entitlements: {
-      maxWebsites: 120,
-      maxTeamMembers: 15,
-      maxClients: 120,
-      scanFrequencies: ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"],
-      maxScansPerMonth: 1500,
-      maxPagesPerScan: 5,
-      maxConcurrentScans: 4,
-      scanPriority: "HIGH",
-      aiCreditsPerMonth: 1000,
-      aiAdvancedTier: true,
-      whiteLabel: true,
-      clientPortal: true,
-      maxPortalUsers: 50,
-      reportTypes: ["SCAN", "ISSUE", "MONTHLY_MONITORING", "WEBSITE_HEALTH", "PRIVACY_DRIFT"],
-      maxReportsPerMonth: 200,
-      evidenceRetentionDays: 180,
-      scanHistoryRetentionDays: 1095,
-      slackIntegration: true,
-      webhooks: true,
-      apiAccess: true,
-      prioritySupport: true,
-    },
-  },
-  {
-    key: "scale",
-    name: "Scale",
-    description: "For agencies managing hundreds of client websites.",
-    sortOrder: 4,
-    priceMonthlyCents: 79900,
-    priceAnnualCents: 799000,
-    entitlements: {
-      maxWebsites: 400,
-      maxTeamMembers: -1,
-      maxClients: -1,
-      scanFrequencies: ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"],
-      maxScansPerMonth: 6000,
-      maxPagesPerScan: 10,
-      maxConcurrentScans: 8,
-      scanPriority: "HIGH",
-      aiCreditsPerMonth: 4000,
-      aiAdvancedTier: true,
-      whiteLabel: true,
-      clientPortal: true,
-      maxPortalUsers: -1,
-      reportTypes: ["SCAN", "ISSUE", "MONTHLY_MONITORING", "WEBSITE_HEALTH", "PRIVACY_DRIFT"],
-      maxReportsPerMonth: -1,
-      evidenceRetentionDays: 365,
-      scanHistoryRetentionDays: 1095,
-      slackIntegration: true,
-      webhooks: true,
-      apiAccess: true,
-      prioritySupport: true,
-    },
-  },
-] as const;
-
 async function seedPlans() {
-  for (const plan of PLANS) {
-    const { entitlements, ...rest } = plan;
+  for (const plan of PLAN_CATALOGUE) {
+    const row = {
+      key: plan.key,
+      name: plan.name,
+      description: plan.description,
+      sortOrder: plan.sortOrder,
+      priceMonthlyCents: plan.prices.usd.monthly,
+      priceAnnualCents: plan.prices.usd.annual,
+      entitlements: plan.entitlements as unknown as Prisma.InputJsonValue,
+    };
     await prisma.plan.upsert({
       where: { key: plan.key },
-      create: { ...rest, currency: "usd", isPublic: true, entitlements },
-      update: { ...rest, entitlements },
+      /*
+       * ⚠️ `update` DOES NOT TOUCH THE STRIPE ID COLUMNS. Re-running the seed
+       * after provisioning must not blank `stripeProductId` / `currencyPrices`
+       * — that would silently make checkout unavailable for every plan, and the
+       * only symptom would be "billing temporarily unavailable" on a page that
+       * looks otherwise healthy.
+       */
+      create: { ...row, currency: "usd", isPublic: true },
+      update: row,
     });
   }
-  console.log(`  ✓ ${PLANS.length} plans`);
+  console.log(`  ✓ ${PLAN_CATALOGUE.length} plans`);
 }
 
 /**

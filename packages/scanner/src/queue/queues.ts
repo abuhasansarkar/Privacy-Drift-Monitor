@@ -25,6 +25,21 @@ export const QUEUE_NAMES = {
   digest: "pdm-digest",
   ai: "pdm-ai",
   cleanup: "pdm-cleanup",
+  /*
+   * ⚠️ §7.2 CALLS THIS QUEUE `scan:free`. IT CANNOT BE. A colon in a BullMQ
+   * queue name collides with BullMQ's own Redis key separator — the trap this
+   * file already documents for job ids, and the one AGENTS.md records as a
+   * production defect. The plan's name is the concept; `pdm-scan-free` is the
+   * spelling.
+   *
+   * ⚠️ IT IS A SEPARATE QUEUE, NOT A PRIORITY ON `scan`. §3.2's control is
+   * "cannot starve paying customers", and a shared queue cannot give that
+   * guarantee: BullMQ priorities are advisory within one queue, and a thousand
+   * anonymous submissions still occupy the same worker concurrency. Two queues
+   * with separately-capped concurrency is the only arrangement where a flood of
+   * free scans is physically incapable of taking a paid browser slot.
+   */
+  freeScan: "pdm-scan-free",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -107,6 +122,70 @@ export async function enqueueScan(
   data: ScanJobData,
 ): Promise<void> {
   await queue.add("scan", data, { jobId: data.scanId });
+}
+
+/**
+ * One anonymous scan. PLAN.md §3.2, Phase 6 task 6.5.
+ *
+ * ⚠️ IT CARRIES NO `agencyId`, BECAUSE THERE IS NO TENANT. `FreeScan` is
+ * pre-tenant by design (§5.9) and the result never touches a tenant table — a
+ * free scan that wrote into `Scan` would put an anonymous submitter's data
+ * inside somebody's agency, which is the one thing multi-tenancy must never do.
+ */
+export interface FreeScanJobData {
+  freeScanId: string;
+  url: string;
+  registrableDomain: string;
+}
+
+/**
+ * ⚠️ THE FREE QUEUE'S RETRY POLICY IS ONE ATTEMPT, DELIBERATELY. A paid scan is
+ * worth three browser slots because a customer is waiting on a promise we sold
+ * them. An anonymous scan of an unreachable site is worth one: retrying it
+ * spends the scarcest resource in the system on a lead that may not exist, and
+ * the result page's "try again" button is a cheaper, human-gated retry.
+ */
+export const FREE_SCAN_JOB_OPTIONS: JobsOptions = {
+  attempts: 1,
+  removeOnComplete: { age: 3600, count: 200 },
+  removeOnFail: { age: 24 * 3600, count: 200 },
+};
+
+export function createFreeScanQueue(
+  connection: ConnectionOptions,
+): Queue<FreeScanJobData> {
+  return new Queue<FreeScanJobData>(QUEUE_NAMES.freeScan, {
+    connection,
+    defaultJobOptions: FREE_SCAN_JOB_OPTIONS,
+  });
+}
+
+export async function enqueueFreeScan(
+  queue: Queue<FreeScanJobData>,
+  data: FreeScanJobData,
+): Promise<void> {
+  await queue.add("free-scan", data, { jobId: toJobId(data.freeScanId) });
+}
+
+/**
+ * §3.2's circuit breaker: "If the free-scan queue exceeds 200 waiting jobs, new
+ * submissions get 'high demand, try later'."
+ *
+ * ⚠️ IT COUNTS WAITING JOBS, NOT ACTIVE ONES. Active jobs are bounded by worker
+ * concurrency and always will be; the backlog is the thing that grows without
+ * limit and the thing a submitter's wait time is actually made of. Accepting a
+ * 201st job is not a capacity failure — it is a promise of a result that will
+ * arrive an hour later, to somebody evaluating whether to buy.
+ */
+export const FREE_SCAN_QUEUE_CEILING = Number(
+  process.env.FREE_SCAN_QUEUE_CEILING ?? 200,
+);
+
+export async function freeScanQueueAtCapacity(
+  queue: Queue<FreeScanJobData>,
+): Promise<boolean> {
+  const waiting = await queue.getWaitingCount();
+  return waiting >= FREE_SCAN_QUEUE_CEILING;
 }
 
 /* ───────────────────────── Phase 4 queues (§7.2) ─────────────────────────

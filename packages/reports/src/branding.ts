@@ -1,5 +1,9 @@
 import { repositoriesFor } from "@pdm/database/repositories";
 import {
+  resolveEntitlements,
+  type SubscriptionStatusName,
+} from "@pdm/billing";
+import {
   DEFAULT_ACCENT_COLOR,
   DEFAULT_PRIMARY_COLOR,
   platformBranding,
@@ -61,22 +65,45 @@ const cache = new Map<string, CacheEntry>();
  * mistake with extra steps: seven places to forget, and no way to tell from a
  * call site whether the literal was a decision or a placeholder.
  *
- * ⚠️ NO SUBSCRIPTION MEANS NO ENTITLEMENT. Until billing lands (Phase 6) no
- * agency has a subscription row, so every agency currently renders with OUR
- * brand. That is the correct default in both directions: it is what an
- * unpaid-for feature should do, and it is what §9.3 sells — white-label starts
- * at Growth.
+ * ⚠️ NO SUBSCRIPTION MEANS NO ENTITLEMENT. An agency with no subscription row
+ * renders with OUR brand, which is the correct default in both directions: it
+ * is what an unpaid-for feature should do, and it is what §9.3 sells —
+ * white-label starts at Growth.
+ *
+ * ⚠️ IT RESOLVES THROUGH `@pdm/billing`, IT DOES NOT READ THE PLAN JSON. It
+ * used to do the latter — `subscription.plan.entitlements.whiteLabel === true`
+ * — and that was a second interpretation of plan logic living outside the one
+ * service §9.2 requires. Concretely it IGNORED `entitlementOverrides`, so a
+ * white-label grant made by support ("we promised them branding for the
+ * pilot") was honoured everywhere in the app EXCEPT on the reports and emails
+ * that are the entire point of the feature. Routing through
+ * `resolveEntitlements` fixes that and cannot drift again.
+ *
+ * ⚠️ THE STATUS FILTER IS GONE, DELIBERATELY, AND IT IS NOT A LOOSENING. The
+ * old query only matched ACTIVE/TRIALING; the resolver now reads whatever
+ * status the row has and applies §9.2's modifier itself — and that modifier
+ * leaves `whiteLabel` alone on purpose (feature doc 17, rule 3: a payment
+ * problem stops new spending, it does not strip a feature from reports the
+ * agency already generated and sent to their client).
  */
 export async function whiteLabelEntitlement(agencyId: string): Promise<boolean> {
   const repos = repositoriesFor(agencyId);
   const subscription = await repos.db.subscription.findFirst({
-    where: { status: { in: ["ACTIVE", "TRIALING"] } },
-    select: { plan: { select: { entitlements: true } } },
+    select: {
+      status: true,
+      trialEndsAt: true,
+      entitlementOverrides: true,
+      plan: { select: { entitlements: true } },
+    },
   });
+  if (!subscription) return false;
 
-  const entitlements = subscription?.plan?.entitlements;
-  if (!entitlements || typeof entitlements !== "object") return false;
-  return (entitlements as Record<string, unknown>).whiteLabel === true;
+  return resolveEntitlements({
+    planEntitlements: subscription.plan.entitlements,
+    overrides: subscription.entitlementOverrides,
+    status: subscription.status as SubscriptionStatusName,
+    trialEndsAt: subscription.trialEndsAt,
+  }).whiteLabel;
 }
 
 export interface ResolveOptions {

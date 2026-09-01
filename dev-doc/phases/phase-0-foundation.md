@@ -1,7 +1,7 @@
 # Phase 0 — Foundation
 
 > **Goal:** a monorepo where every subsequent phase can be built and shipped safely.
-> **Dependencies:** none · **Status:** 🟡 In progress
+> **Dependencies:** none · **Status:** 🟡 Closed out — three named gaps remain
 > **Plan ref:** Part XII §12.3 (Phase 0), §12.1 (repo structure), Part V (schema), Part XI (tokens)
 >
 > ⚠️ **Per-task status lives in [`../README.md`](../README.md), not here.** This file is the
@@ -45,16 +45,22 @@ Status column deliberately omitted — see [`../README.md`](../README.md).
 > └── package.json      one package
 > ```
 
-- [x] **npm workspaces** — `"workspaces": ["packages/*"]` in the root `package.json`.
-      **Not pnpm.** `pnpm-workspace.yaml` is an inert tombstone; delete it and
-      `pnpm-lock.yaml`.
+- [x] **npm workspaces** — `"workspaces": ["packages/*", "worker"]` in the root
+      `package.json`. **Not pnpm.**
+- [x] `pnpm-workspace.yaml` and `pnpm-lock.yaml` **deleted**. They were described as
+      "inert tombstones" and were not: the `shadcn` CLI picks a package manager by
+      looking for a lockfile, found pnpm's, and ran `pnpm install` against an npm
+      workspace — rewriting the pnpm lockfile and installing into `node_modules/.pnpm`
+      where npm could not see it. Do not reintroduce either file.
 - [x] `packages/config`, `packages/database`, `packages/shared`, `packages/schemas`,
       `packages/scanner` (SSRF guard only — pulled forward from Phase 1 task 1.7)
-- [ ] Remaining packages: `ai`, `billing`, `email`, `reports`, `storage`, `ui`
+- [x] Remaining packages: `ai`, `email`, `reports`, `storage`, `analysis`, `notifications`.
+      `billing` is Phase 6. **`ui` was deliberately not created** — shadcn components
+      live in `src/components/ui/`, and a package with one consumer is indirection
 - [x] `packages/config` holds the shared tsconfig presets; every other package extends
       them. `strict: true` everywhere, no exceptions.
-- [ ] `worker/` bootstrap — deferred to Phase 2, not needed yet
-- [ ] No Turborepo — a single app has nothing to orchestrate. Root scripts call
+- [x] `worker/` bootstrap — landed in Phase 2 as a sibling of `src/`
+- [x] No Turborepo — a single app has nothing to orchestrate. Root scripts call
       `npm run <script> -w @pdm/<pkg>` directly.
 
 > npm resolves the local workspace for `"@pdm/x": "*"`. The pnpm-only
@@ -70,20 +76,29 @@ Status column deliberately omitted — see [`../README.md`](../README.md).
 - [x] All indexes from Part V §5.3 — they are designed up front deliberately, because the
       database is a named bottleneck risk (§12.7)
 - [x] First migration generated under `prisma/migrations/`
-- [ ] **Verify it applies cleanly to a fresh database** — `npm run db:deploy` has not been run
+- [x] **Verified against a fresh database** — `prisma migrate deploy` on an empty DB
+      produces 47 tables (46 models + `_prisma_migrations`)
 - [x] `client.ts` — single Prisma instance, pooling, query timing
 - [x] `tenant.ts` — `forAgency(agencyId)`; this is the enforcement point for tenant isolation
 - [x] `testing/factories.ts` — `makeAgency`, `makeWebsite`, `makeScanWithEvidence`
 - [x] Seed script + `prisma/seed/trackers.json` (~250 vendors)
-- [ ] Seed the **demo agency** with realistic multi-month history — only the three global
-      tables (vendors, plans, flags) are seeded today
+- [x] `prisma/seed-demo.ts` (`npm run db:seed:demo`) — 4 clients, 5 websites,
+      **12 weeks of weekly scans** incl. one `PARTIAL`, issues with `IssueEvidence`
+      attached, **12 drift events (8 inside the 30-day feed window)**, and health
+      scores that move. Deterministic and idempotent; refuses to run off localhost.
+      `-- --agency <slug>` attaches it to an existing agency — without that, tenant
+      isolation correctly hides it from your own account and every page looks empty
+- [x] **Tests get their own database.** `test/global-setup.ts` creates and migrates
+      `<db>_test`; `vitest.config.ts` overrides `DATABASE_URL` for the workers.
+      Previously `resetDatabase()`'s `TRUNCATE … CASCADE` ran against the dev
+      database, so `npm test` silently destroyed seeded demo data
 
 ### 3. Shared foundations (0.4, 0.5)
 
 - [x] `shared/errors.ts` — `AppError` subclasses with **stable machine-readable codes**, plus
       a log-only `reason` option so internal identifiers never reach an exposed message
 - [x] `shared/logger.ts` — Pino, structured, redaction paths
-- [ ] `shared/rate-limit.ts`, `shared/circuit-breaker.ts`
+- [x] `shared/rate-limit.ts`, `shared/circuit-breaker.ts`
 - [x] `shared/permissions.ts` — the RBAC matrix, shared by UI and server, `can(role, permission)`
 - [x] `shared/copy/terminology.ts` — approved phrases + the forbidden list (Part I §1.12)
 - [x] `shared/copy/en.ts` + `t()` — §11.11, no user-facing string literals in JSX
@@ -101,20 +116,20 @@ Status column deliberately omitted — see [`../README.md`](../README.md).
 - [x] Clerk `<SignIn/>` / `<SignUp/>` at catch-all routes `(auth)/login/[[...rest]]` and
       `(auth)/signup/[[...rest]]`
 - [ ] Style them via the `appearance` object to match our tokens — still Clerk defaults
-- [ ] Clerk Organizations ↔ `Agency` mapping; **`POST /api/webhooks/clerk` does not exist yet**
+- [x] `POST /api/webhooks/clerk` exists (`verifyWebhook` + Zod payload schemas).
+      ⚠️ **Never exercised against a real Clerk event** — the org↔Agency sync is unproven
 - [x] `server/auth/context.ts` — `requireAgencyContext`, `requirePermission`,
       `requireWebsiteAccess`
-- [ ] **Re-check authorization inside every Server Action** — the proxy does not reliably
-      cover them. No Server Action exists yet; the rule applies from the first one
+- [x] **Every Server Action re-checks authorization.** 18 action files, each opening with
+      `requirePermission()`. Phase 5's AI actions additionally assert §6.2 website scope
 
 > ⚠️ **Clerk v7 is Core 3.** `<SignedIn>` / `<SignedOut>` were removed and throw at render
 > time. Use `<Show when="signed-in" | "signed-out">`. See the Clerk section in `AGENTS.md`.
 
 ### 5. Design system (0.8)
 
-- [ ] Replace the fonts with self-hosted Inter Variable + JetBrains Mono via
-      `next/font/local` — currently `next/font/google`, which self-hosts the files at build
-      time but keeps a build-time network dependency §11.2 does not want
+- [x] Self-hosted Inter Variable + JetBrains Mono via `next/font/local`, from `.woff2`
+      files vendored in `src/app/fonts/`. No build-time network dependency
 - [x] **Deleted `font-family: Arial, Helvetica, sans-serif` from `globals.css`**
 - [x] All colour tokens from Part XI §11.3 as CSS custom properties + `@theme inline`,
       plus `--canvas` for the app shell
@@ -122,8 +137,10 @@ Status column deliberately omitted — see [`../README.md`](../README.md).
 - [x] Full dark-mode remapping of every token
 - [x] `@custom-variant dark (&:where(.dark, .dark *))` — without it Tailwind v4's `dark:`
       variant follows the OS and ignores the `.dark` class entirely
-- [ ] shadcn/ui install + the base component set from §11.4
-- [ ] Theme provider (nothing sets the `.dark` class yet), `EmptyState`, `Skeleton` conventions
+- [x] shadcn/ui installed (20 §11.4 primitives) against our token system.
+      ⚠️ `components.json` was hand-written rather than running `init`, which
+      rewrites `globals.css` — the file holding the whole §11.3 token set
+- [x] `ThemeProvider` sets `.dark` pre-hydration; `EmptyState` and `Skeleton` exist
 - [x] `<Can>` permission gate
 
 ### 6. Infrastructure (0.7, 0.9, 0.10)
@@ -141,45 +158,39 @@ Status column deliberately omitted — see [`../README.md`](../README.md).
 
 From §12.3, adjusted for the §10.9 structure decision. All must pass before Phase 1 starts.
 
-- [ ] `npm install && npm run dev` boots the web app
-      *(amended: "web + worker" no longer applies — `worker/` is deferred to Phase 2)*
-- [ ] A user can sign up and reach an empty `/app` — **`/app` does not exist yet**, so the
-      "Dashboard" link in `SiteHeader` currently 404s for a signed-in user. This is the
-      single acceptance criterion furthest from met
-- [ ] `npm run verify` passes in CI (lint, typecheck, terminology, test, build)
-- [ ] Migrations apply cleanly to a fresh database
-- [ ] The tenant-isolation test suite **runs and passes against real Postgres**
-      *(amended: the schema is no longer empty, so this is a real assertion, not a trivial one)*
-- [ ] Health endpoints report dependency status (M1)
+- [x] ✅ `npm install && npm run dev` boots the web app; `npm run worker` boots the worker
+- [x] ✅ A user can sign up and reach `/app` — the whole `(app)` route group exists
+- [x] ✅ `npm run verify` passes (lint, typecheck, terminology, test **+ coverage**, build).
+      ⚠️ Passes **locally**; no CI run has been observed on GitHub
+- [x] ✅ Migrations apply cleanly to a fresh database — verified, 47 tables from empty
+- [x] ✅ The tenant-isolation suite runs and passes against real Postgres
+- [x] ✅ Health endpoints report dependency status (M1)
 
-### 0.11 — Route groups 🟡 half done
+### 0.11 — Route groups ✅
 
-`SiteHeader` no longer sits in the root layout — the root layout is now minimal and the
-public homepage renders its own chrome, so marketing header/footer no longer appear on
-`/app`, `/admin` and `/portal`. That was the actual §3.1 breach.
-
-**Remaining, and it needs a file move:**
-
-```bash
-mkdir -p "src/app/(marketing)"
-git mv src/app/page.tsx "src/app/(marketing)/page.tsx"
-# then lift SiteHeader + footer out of the page and into (marketing)/layout.tsx
-```
-
-The move cannot be done by creating the new file first: two files both resolving to `/`
-is a duplicate-route build error.
+All five groups exist with their own layouts and auth postures:
 
 ```
 src/app/
-├── (marketing)/  layout.tsx (SiteHeader + footer), page.tsx, pricing/, legal/…
-├── (auth)/       login/, signup/            ← already exists
+├── (marketing)/  layout.tsx (SiteHeader + footer), page.tsx, features/, legal/…
+├── (auth)/       login/, signup/
 ├── (app)/        layout.tsx (AppShell + AgencyContext), app/…
-├── (admin)/      layout.tsx (SUPER_ADMIN gate)
+├── (onboarding)/ layout.tsx (no shell — the wizard owns the screen)
 └── (portal)/     layout.tsx (magic-link session, no ClerkProvider)
 ```
 
-Do this **before** any `/app` page is written — retrofitting layouts under 20 existing pages
-is materially harder.
+`(admin)` is Phase 6 and deliberately absent — a route group whose only job is a
+`SUPER_ADMIN` gate is worse than nothing if the gate is not yet written.
+
+## What is still open after the close-out
+
+Three items, each blocked on something outside the code:
+
+| # | Item | Blocked on |
+|---|---|---|
+| 0.6 | Clerk webhook has never seen a real event; the org↔`Agency` sync is unproven | A configured Clerk webhook endpoint pointing at a reachable URL |
+| 0.6 | Clerk `<SignIn/>`/`<SignUp/>` still render Clerk defaults, not our tokens | Nothing — a small `appearance` object, deferred as cosmetic |
+| 0.9 | CI has never been observed running | A PR against the GitHub remote |
 
 ## Traps specific to this phase
 

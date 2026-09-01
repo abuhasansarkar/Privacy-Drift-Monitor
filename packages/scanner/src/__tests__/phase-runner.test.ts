@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { BrowserPool } from "../browser/pool";
 import { runPhase } from "../phase-runner";
 import { startFixture, type FixtureServer } from "../testing/fixture-server";
-import type { NavigationBudget } from "../navigate";
+import { allowAnyUrl, type NavigationBudget } from "../navigate";
 
 /**
  * PHASE RUNNER against the fixture server — real Chromium, real HTTP.
@@ -47,6 +47,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -64,6 +65,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -86,6 +88,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -103,6 +106,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -127,6 +131,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -142,6 +147,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -158,6 +164,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: FAST,
     });
 
@@ -173,6 +180,7 @@ describe("runPhase — recording", () => {
       phase: "NO_CONSENT",
       url: server.origin,
       registrableDomain: "127.0.0.1",
+      urlGuard: allowAnyUrl,
       budget: { ...FAST, settleMaxMs: 1_000 },
     });
 

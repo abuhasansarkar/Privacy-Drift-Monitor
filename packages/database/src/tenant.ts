@@ -91,6 +91,13 @@ export const GLOBAL_MODELS = [
   /** Carries a nullable `agencyId` for platform-level diagnostics — never scoped. */
   "systemLog",
   "freeScan",
+  /**
+   * §3.2's free-scanner blocklist. Global for the same reason `freeScan` is:
+   * the surface is PRE-TENANT, and the domain rate limit and blocklist are
+   * deliberately platform-wide — one agency's block protects every submitter,
+   * and a per-tenant blocklist would let a distributed abuser walk around it.
+   */
+  "freeScanBlocklist",
 ] as const;
 
 const TENANT_MODEL_SET: ReadonlySet<string> = new Set(

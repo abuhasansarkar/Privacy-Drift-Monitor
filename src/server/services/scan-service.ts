@@ -7,6 +7,8 @@ import {
   type ScanJobData,
 } from "@pdm/scanner/queue/queues";
 import { childLogger } from "@pdm/shared/logger";
+import { releaseMetric } from "@/server/entitlements";
+import { requireAndConsume } from "@/server/services/entitlement-guard";
 import { ConflictError } from "@pdm/shared/errors";
 import { t } from "@pdm/shared/copy";
 
@@ -84,13 +86,50 @@ export async function triggerScan(input: TriggerScanInput): Promise<{ scanId: st
     });
   }
 
-  const scan = await repos.scans.enqueue({
-    websiteId: input.websiteId,
-    trigger: input.trigger,
-    triggeredById: input.userId ?? null,
-    scannerVersion: SCANNER_VERSION,
-  });
+  /*
+   * ⚠️ ENFORCEMENT POINT (§9.2): "Manual scan → consume(SCANS, 1) → 402".
+   *
+   * ⚠️ AFTER the in-flight check and BEFORE the row is written. Order matters
+   * in both directions:
+   *
+   *   - After in-flight, because a duplicate click that is going to be rejected
+   *     as already-running must not burn a scan from the customer's allowance.
+   *   - Before `enqueue`, because a scan row created and then refused leaves a
+   *     QUEUED scan nothing will ever consume, which the stuck-scan recovery
+   *     sweep then has to reap.
+   *
+   * ⚠️ A `VERIFICATION` SCAN IS EXEMPT. §6.5 re-scans automatically when a user
+   * marks an issue RESOLVED — that scan is OUR verification of THEIR claim, not
+   * work they asked for, and charging for it would mean an agency at its limit
+   * can never prove a fix. `emitScanAlerts` and the issue action both depend on
+   * that re-scan running.
+   */
+  if (input.trigger !== "VERIFICATION") {
+    await requireAndConsume(input.agencyId, "SCANS", 1);
+  }
 
+  let scan;
+  try {
+    scan = await repos.scans.enqueue({
+      websiteId: input.websiteId,
+      trigger: input.trigger,
+      triggeredById: input.userId ?? null,
+      scannerVersion: SCANNER_VERSION,
+    });
+  } catch (error) {
+    // ⚠️ Give the credit back. The customer asked for a scan they did not get.
+    if (input.trigger !== "VERIFICATION") {
+      await releaseMetric(input.agencyId, "SCANS", 1).catch(() => {});
+    }
+    throw error;
+  }
+
+  /*
+   * ⚠️ NOT WRAPPED IN THE SAME REFUND. If the row is written and the ENQUEUE
+   * fails, the scan exists and the stuck-scan recovery sweep (§7.4) will either
+   * run it or fail it — so the customer may still get what they paid for.
+   * Refunding here would hand back a credit for work that then happens.
+   */
   await enqueueScan(scanQueue(), {
     scanId: scan.id,
     websiteId: website.id,

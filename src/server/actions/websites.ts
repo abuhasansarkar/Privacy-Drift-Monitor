@@ -7,6 +7,7 @@ import { website as websiteSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ConflictError, ValidationError } from "@pdm/shared/errors";
 import { requirePermission, requireWebsiteAccess } from "@/server/auth/context";
+import { requireAllowedValue } from "@/server/services/entitlement-guard";
 import { validateWebsiteUrl } from "@/server/services/website-validation";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
@@ -63,6 +64,27 @@ export async function createWebsite(
 
     const { normalized } = outcome;
     const repos = repositoriesFor(ctx.agencyId);
+
+    /*
+     * ⚠️ ENFORCEMENT POINT (§9.2): "Select daily frequency →
+     * `scanFrequencies.includes('DAILY')` → Option disabled with a plan
+     * tooltip".
+     *
+     * The UI disables the option, so reaching this guard means a stale form or
+     * a crafted request. It refuses rather than silently substituting WEEKLY:
+     * a customer who asked for daily monitoring and quietly got weekly would
+     * believe they were covered every day, and the gap only surfaces as a
+     * finding nobody was told about for six days.
+     *
+     * ⚠️ Daily starts at Growth (§9.3) precisely because it is a 7× cost
+     * multiplier and the single most compelling upgrade trigger — so this guard
+     * is a revenue surface, not just a limit.
+     */
+    await requireAllowedValue(
+      ctx.agencyId,
+      "scanFrequencies",
+      parsed.data.scanFrequency,
+    );
 
     const created = await repos.websites.create(
       {

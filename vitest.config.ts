@@ -1,5 +1,26 @@
+import { config as loadEnv } from "dotenv";
 import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { testDatabaseUrl } from "./test/global-setup";
+
+/*
+ * ⚠️ THE TEST SUITE GETS ITS OWN DATABASE, AND THIS IS THE LINE THAT ENFORCES IT.
+ *
+ * `resetDatabase()` TRUNCATEs every non-reference table. Pointed at the dev
+ * database — which it was, for five phases — that means `npm test` silently
+ * destroys whatever `npm run db:seed:demo` just created, and every page then
+ * renders a correct-looking empty state. It cost a debugging session to work
+ * out that an empty `/app/drift` was an empty table, not a broken query.
+ *
+ * `.env` is loaded here explicitly because vitest does not put it on
+ * `process.env` — only Prisma does, lazily, when the client is constructed. So
+ * without this the derivation below has nothing to derive from.
+ *
+ * ⚠️ AND IT MUST BE SET IN `test.env` BELOW, not in `globalSetup`. globalSetup
+ * runs in its own process and its `process.env` writes never reach the workers.
+ */
+loadEnv({ quiet: true });
+const DEV_DATABASE_URL = process.env.DATABASE_URL;
 
 /**
  * Test configuration — PLAN.md Part XII §12.2.
@@ -31,8 +52,28 @@ export default defineConfig({
   test: {
     globals: false,
     environment: "node",
+    /*
+     * Creates and migrates the test database before anything runs, and seeds
+     * the three reference tables `resetDatabase()` deliberately preserves (and
+     * therefore never repopulates).
+     */
+    globalSetup: ["./test/global-setup.ts"],
+    /*
+     * ⚠️ Prisma loads `.env` itself when the client is constructed, but dotenv
+     * does NOT overwrite a variable that is already set — so putting the test
+     * URL here wins, and `drift_monitor` is never opened by a test.
+     */
+    env: DEV_DATABASE_URL
+      ? { DATABASE_URL: testDatabaseUrl(DEV_DATABASE_URL) }
+      : {},
     include: [
-      "src/**/*.{test,spec}.ts",
+      /*
+       * ⚠️ `.tsx` TOO, so a COMPONENT can be smoke-rendered. AGENTS.md defect 3
+       * is the reason: esbuild transformed the report templates with the classic
+       * JSX runtime and threw "React is not defined" at render time — on files
+       * `tsc` was perfectly happy with. A type-check is not a render.
+       */
+      "src/**/*.{test,spec}.{ts,tsx}",
       "packages/*/src/**/*.{test,spec}.ts",
       // The worker holds the jobs, and a job is where two correct packages get
       // wired together wrongly — which is exactly the seam the branding
@@ -56,6 +97,24 @@ export default defineConfig({
       // add its threshold in the same PR that creates the package.
       thresholds: {
         "packages/scanner/src/**": {
+          statements: 85,
+          branches: 85,
+          functions: 85,
+          lines: 85,
+        },
+        /*
+         * Added in the PR that created `packages/billing`, exactly as
+         * `00-development-workflow.md` requires — a threshold whose glob
+         * matches no file makes vitest fail the run, so it could not be added
+         * before the package existed.
+         *
+         * ⚠️ §12.2 names these two packages together because they share a
+         * failure shape: both produce a WRONG ANSWER rather than an error. The
+         * scanner emits a false finding; billing charges the wrong customer the
+         * wrong amount, or blocks an agency at 39 of the 40 websites it was
+         * sold. Neither throws, and neither is visible without a test.
+         */
+        "packages/billing/src/**": {
           statements: 85,
           branches: 85,
           functions: 85,

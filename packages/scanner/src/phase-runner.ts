@@ -9,11 +9,13 @@ import {
 } from "./record/recorders";
 import {
   DEFAULT_BUDGET,
-  installMediaBlocking,
+  installRouteGuard,
   navigate,
   observe,
   type NavigationBudget,
+  type UrlGuard,
 } from "./navigate";
+import { assertSafeUrl } from "./net/guard";
 import { capture, type ScreenshotPolicy } from "./record/screenshots";
 import type {
   ConsentMethod,
@@ -74,6 +76,13 @@ export interface PhaseRunInput {
   /** §4.5. ON_CHANGE by default; NEVER in tests, where images cost time. */
   screenshotPolicy?: ScreenshotPolicy;
   screenshotChanged?: boolean;
+  /**
+   * ⚠️ THE SSRF GUARD, INJECTABLE FOR FIXTURES ONLY. Every §4.15 fixture is
+   * served from `127.0.0.1`, which the guard blocks by design and must keep
+   * blocking. Omitting this uses the real guard, so a production path that
+   * forgets it fails CLOSED rather than open.
+   */
+  urlGuard?: UrlGuard;
 }
 
 export async function runPhase(
@@ -109,9 +118,26 @@ export async function runPhase(
     let errorMessage: string | null = null;
 
     try {
-      if (input.blockMedia !== false) await installMediaBlocking(page);
+      /*
+       * ⚠️ ONE ROUTE HANDLER DOES BOTH JOBS (§10.3 R4/R5 and §4.4's media
+       * blocking). Playwright dispatches to the most recently registered
+       * matching handler and does not chain, so registering two
+       * `page.route("**​/*")` handlers means one of them silently never runs —
+       * and the one that would have been dropped here is the security control.
+       */
+      let blockedUrl: string | null = null;
+      await installRouteGuard(page, {
+        blockMedia: input.blockMedia !== false,
+        guard: input.urlGuard ?? assertSafeUrl,
+        onBlocked: (url, reason) => {
+          blockedUrl = `${reason}:${url}`;
+        },
+      });
 
-      const outcome = await navigate(page, input.url, budget);
+      const outcome = await navigate(page, input.url, budget, {
+        guard: input.urlGuard ?? assertSafeUrl,
+        blocked: () => blockedUrl,
+      });
       if (!outcome.ok) {
         // Navigation failure is a SCAN-level fact, not a consent one. The phase
         // reports FAILED and the orchestrator maps the reason to a ScanErrorCode

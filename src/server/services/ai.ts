@@ -21,6 +21,7 @@ import {
 import { repositoriesFor } from "@pdm/database/repositories";
 import { logger } from "@pdm/shared/logger";
 import type { AgencyContext } from "@/server/auth/context";
+import { getEntitlements } from "@/server/entitlements";
 
 /**
  * AI SERVICE — PLAN.md Part VIII §8.2, Phase 5 task 5.6.
@@ -94,13 +95,38 @@ function makePorts(agencyId: string, userId: string | null): AIRunPorts {
         repos.ai.settings(),
         repos.ai.creditsUsedSince(currentPeriodStart()),
       ]);
+      /*
+       * ⚠️ ENFORCEMENT POINT (§9.2): "AI call → consume(AI_CREDITS, cost) →
+       * 402, feature shows quota state".
+       *
+       * TWO CAPS EXIST AND THE EFFECTIVE ONE IS THE SMALLER:
+       *
+       *   plan `aiCreditsPerMonth`            — what they BOUGHT. The ceiling.
+       *   `AgencyAiSettings.monthlyCreditCap` — what they CHOSE. A self-imposed
+       *                                         budget on the AI settings page.
+       *
+       * The agency's own setting alone would let anyone raise their limit past
+       * the plan by editing a form — a free upgrade. The plan alone would
+       * silently ignore a customer who deliberately capped their own spend,
+       * which is the whole reason that control exists.
+       *
+       * ⚠️ THE PLAN LIMIT CARRIES §9.2's READ-ONLY MODIFIER, which zeroes
+       * `aiCreditsPerMonth` for a PAST_DUE agency. So a billing failure stops
+       * AI spend here without `packages/ai` knowing anything about billing —
+       * exactly the separation §8.9 wants: the AI layer sees a number, not a
+       * subscription.
+       */
+      const ownCap = settings?.monthlyCreditCap ?? null;
+
+      const planCap = (await getEntitlements(agencyId)).aiCreditsPerMonth;
+
       return {
         // ⚠️ NO ROW MEANS DEFAULTS, and the default for `aiEnabled` is ON — the
         // schema says so and an agency that never opened the settings page
         // should still see explanations. `autoExplainCritical` is the opposite
         // (see `shouldAutoExplain`), because that one spends money unprompted.
         aiEnabled: settings?.aiEnabled ?? true,
-        monthlyCreditCap: settings?.monthlyCreditCap ?? null,
+        monthlyCreditCap: ownCap === null ? planCap : Math.min(ownCap, planCap),
         creditsUsedThisPeriod: creditsUsed,
       };
     },

@@ -108,6 +108,17 @@ export type EmailMessage =
       template: "usage-warning";
       data: { metric: string; used: string; limit: string; percent: number };
     }
+  /**
+   * ⚠️ TWO TEMPLATES §9.5's TABLE DOES NOT LIST, added for §9.2's grace rule,
+   * which requires "an email listing exactly which ones and how to restore
+   * them". The precedent is `report-failed`, which is also ours rather than
+   * the table's. Both are billing mail, so neither carries an unsubscribe.
+   */
+  | { template: "grace-started"; data: { excess: number; days: number } }
+  | {
+      template: "grace-paused";
+      data: { limit: number; count: number; siteLabels: string[] };
+    }
   | { template: "ai-quota-warning"; data: { percent: number } }
   | { template: "support-received"; data: { message: string } };
 
@@ -445,6 +456,35 @@ export function renderMessage(
         heading: c.heading,
         body: p(fill(c.intro, values)),
         cta: { label: c.cta, url: absolute(app, "/app/billing") },
+      });
+    }
+
+    case "grace-started": {
+      const c = emailCopy.graceStarted;
+      const values = { excess: message.data.excess, days: message.data.days };
+      return finish(c.subject, {
+        ...shared,
+        preview: fill(c.intro, values),
+        heading: fill(c.heading, values),
+        body: p(fill(c.intro, values)),
+        cta: { label: c.cta, url: absolute(app, "/app/billing") },
+      });
+    }
+
+    case "grace-paused": {
+      const c = emailCopy.gracePaused;
+      const values = { count: message.data.count, limit: message.data.limit };
+      return finish(fill(c.subject, values), {
+        ...shared,
+        preview: fill(c.intro, values),
+        heading: c.heading,
+        /*
+         * ⚠️ THE LIST IS THE POINT OF THIS EMAIL. §9.2 asks for one "listing
+         * exactly which ones"; a message that says "some sites were paused"
+         * makes the recipient go and diff their portfolio by hand.
+         */
+        body: html`${p(fill(c.intro, values))}${list(message.data.siteLabels)}`,
+        cta: { label: c.cta, url: absolute(app, "/app/websites") },
       });
     }
 

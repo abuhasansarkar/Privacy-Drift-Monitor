@@ -87,6 +87,20 @@ export const getCurrentUser = cache(async () => currentUser());
  *   NOT_A_MEMBER     → 403
  */
 export const requireAgencyContext = cache(async (): Promise<AgencyContext> => {
+  /*
+   * ⚠️ AN ACTIVE SUPPORT SESSION RESOLVES TO THE CUSTOMER'S AGENCY (§3.12's
+   * impersonation). It is checked FIRST, before the operator's own membership,
+   * because the whole point is to see what they see — resolving our own agency
+   * and then swapping would leave a window in which a page rendered the wrong
+   * tenant's data.
+   *
+   * The ticket is signed, expires in 30 minutes, re-verifies `SUPER_ADMIN` on
+   * every read, and grants READ ONLY — `requirePermission` refuses every
+   * mutating permission while it is active. See `server/admin/impersonation.ts`.
+   */
+  const impersonated = await resolveImpersonatedContext();
+  if (impersonated) return impersonated;
+
   const { clerkUserId, clerkOrgId } = await requireUser();
   if (!clerkOrgId) {
     throw new NoAgencyError("Set up your agency to continue.", {
@@ -154,6 +168,26 @@ export async function requirePermission(
   permission: Permission,
 ): Promise<AgencyContext> {
   const ctx = await requireAgencyContext();
+
+  /*
+   * ⚠️ IMPERSONATION IS READ-ONLY, ENFORCED HERE RATHER THAN BY CONVENTION.
+   * §3.12 exists so support can SEE what a customer sees; nothing in it asks
+   * for the ability to change their data. Without this gate, every Server
+   * Action in the product would run as the customer with no way to tell it was
+   * an operator — and the resulting audit row would name the customer.
+   *
+   * The check is on the permission VERB, not on a list of actions, so a new
+   * mutating permission is refused the day it is added rather than the day
+   * somebody remembers to add it to a list.
+   */
+  const { isImpersonating } = await import("@/server/admin/impersonation");
+  if (isMutatingPermission(permission) && (await isImpersonating())) {
+    throw new AuthorizationError(
+      "Support sessions are read-only.",
+      { reason: `IMPERSONATION_READ_ONLY:${permission}` },
+    );
+  }
+
   if (!can(ctx.role, permission)) {
     // The permission name goes to the log, not to the caller — it is our
     // internal vocabulary and it maps out the RBAC matrix for free.
@@ -185,6 +219,56 @@ export async function requireWebsiteAccess(
     });
   }
   return ctx;
+}
+
+/**
+ * Everything that is not a read.
+ *
+ * ⚠️ AN ALLOWLIST OF READS, NOT A BLOCKLIST OF WRITES. A permission the product
+ * gains tomorrow is refused during a support session by default; a blocklist
+ * would let it through until somebody noticed.
+ */
+function isMutatingPermission(permission: Permission): boolean {
+  return !permission.endsWith(":read");
+}
+
+/**
+ * The impersonated context, or null.
+ *
+ * ⚠️ IMPORTED LAZILY TO BREAK A CYCLE. `admin/impersonation.ts` imports
+ * `admin/context.ts`, which imports this module for `requireUser`. A top-level
+ * import here closes the loop and, under Node's ESM loader, produces an
+ * undefined binding at call time rather than a build error — the same class of
+ * failure AGENTS.md records for barrel re-exports.
+ */
+async function resolveImpersonatedContext(): Promise<AgencyContext | null> {
+  const { currentImpersonation } = await import("@/server/admin/impersonation");
+  const ticket = await currentImpersonation();
+  if (!ticket) return null;
+
+  const agency = await prisma.agency.findUnique({
+    where: { id: ticket.agencyId },
+    select: { id: true, name: true, timezone: true },
+  });
+  if (!agency) return null;
+
+  return {
+    // The OPERATOR's user id, never the customer's. An audit row written during
+    // a support session must name the person who was actually there.
+    userId: ticket.adminUserId,
+    clerkUserId: "",
+    agencyId: agency.id,
+    agencyName: agency.name,
+    /*
+     * ⚠️ OWNER, BECAUSE THE POINT IS TO SEE EVERYTHING THE CUSTOMER SEES — and
+     * it is safe only because every mutating permission is refused above. If
+     * that gate is ever removed, this line becomes full write access to an
+     * arbitrary tenant.
+     */
+    role: "OWNER",
+    websiteScope: [],
+    timezone: agency.timezone,
+  };
 }
 
 /** Non-throwing variant for layouts that need to redirect rather than error. */

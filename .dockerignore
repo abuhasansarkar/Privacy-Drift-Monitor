@@ -1,0 +1,25 @@
+# Everything the image must not carry. `.env` above all — a secret baked into a
+# layer is a secret in every registry the image reaches, and deleting it in a
+# later layer does not remove it.
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+.git
+.github
+coverage
+test-results
+playwright-report
+e2e/.auth
+backups
+*.log
+*.tsbuildinfo
+
+# Documentation and plans — 400 KB of PLAN.md in the build context slows every
+# build and ships nothing useful.
+PLAN.md
+UI_DESIGN_PROMPTS.md
+dev-doc
+load

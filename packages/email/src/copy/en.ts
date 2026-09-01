@@ -169,6 +169,31 @@ export const emailCopy = {
     cta: "See your usage",
   },
 
+  /**
+   * §9.2's grace emails. TWO of them, because the two moments need opposite
+   * things from the reader: the first asks for action while action still
+   * changes the outcome, the second reports what happened and how to undo it.
+   *
+   * ⚠️ NEITHER MAY MENTION DELETION, because nothing is deleted. §9.2:
+   * "auto-paused (never deleted)". An email that says "sites will be removed"
+   * is factually wrong AND is the sentence that makes somebody cancel.
+   */
+  graceStarted: {
+    subject: "You're over your plan's website limit",
+    heading: "{excess} more websites than your plan includes",
+    intro:
+      "Nothing has changed and nothing has been removed — every site is still being monitored. You have {days} days to archive the sites you no longer need, or move up a plan. After that, the oldest extra sites are paused until you make room; pausing keeps all their history and is undone in one click.",
+    cta: "See your plan",
+  },
+
+  gracePaused: {
+    subject: "{count} websites have been paused",
+    heading: "We paused your oldest extra websites",
+    intro:
+      "Your plan includes {limit} websites and you had {count} more than that, so the oldest ones are now paused. Nothing has been deleted — every scan, finding and piece of evidence is intact. Archive a site you no longer need, or move up a plan, then set any of these back to active.",
+    cta: "Manage your websites",
+  },
+
   aiQuotaWarning: {
     subject: "You've used most of this period's AI credits",
     heading: "AI credits are running low",

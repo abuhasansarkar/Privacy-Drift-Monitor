@@ -16,7 +16,9 @@
     "./url/normalize": "./src/url/normalize.ts",
     "./copy": "./src/copy/t.ts",
     "./copy/labels": "./src/copy/labels.ts",
-    "./copy/terminology": "./src/copy/terminology.ts"
+    "./copy/terminology": "./src/copy/terminology.ts",
+    "./turnstile": "./src/turnstile.ts",
+    "./analytics": "./src/analytics.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

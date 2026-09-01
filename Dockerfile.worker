@@ -1,0 +1,68 @@
+# syntax=docker/dockerfile:1
+#
+# THE WORKER IMAGE — PLAN.md Part X §10.9, Part VII §7.2, Phase 7 task 7.8.
+#
+# ⚠️ THE PLAYWRIGHT BASE IMAGE, NOT `node` PLUS `npx playwright install`. The
+# official image ships Chromium AND the several dozen system libraries it needs,
+# patched together and version-matched to the Playwright release. Installing the
+# browser into a slim base produces an image that works on the build machine and
+# fails at runtime on a missing `libnss3`, which is the worst possible place to
+# find out.
+#
+# ⚠️ THE VERSION IS PINNED TO THE PLAYWRIGHT IN `package-lock.json`. A mismatch
+# between the library and the browser it drives is a class of failure that
+# presents as flaky scans.
+#
+# ⚠️ RUN IT WITH `--shm-size=1g`. Chromium's default 64 MB of `/dev/shm` in
+# Docker causes renderer crashes on real pages, and the crash surfaces as
+# `BROWSER_CRASHED` on scans of large sites — intermittently, and only in
+# production.
+FROM mcr.microsoft.com/playwright:v1.62.1-noble AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json package-lock.json ./
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/analysis/package.json ./packages/analysis/
+COPY packages/billing/package.json ./packages/billing/
+COPY packages/config/package.json ./packages/config/
+COPY packages/database/package.json ./packages/database/
+COPY packages/email/package.json ./packages/email/
+COPY packages/notifications/package.json ./packages/notifications/
+COPY packages/reports/package.json ./packages/reports/
+COPY packages/scanner/package.json ./packages/scanner/
+COPY packages/schemas/package.json ./packages/schemas/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/storage/package.json ./packages/storage/
+COPY worker/package.json ./worker/
+RUN npm ci --ignore-scripts
+
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY packages ./packages
+COPY worker ./worker
+COPY package.json ./
+
+RUN npx prisma generate --schema packages/database/prisma/schema.prisma
+
+# ⚠️ NON-ROOT, AND THE PLAYWRIGHT IMAGE ALREADY PROVIDES `pwuser` WITH THE
+# BROWSER'S PERMISSIONS SET UP. Running as root would also disable Chromium's
+# own sandbox, and §10.4 is explicit that the sandbox stays ENABLED — it is the
+# last line between a hostile page and our infrastructure.
+RUN chown -R pwuser:pwuser /app
+USER pwuser
+
+# ⚠️ WHICH QUEUES THIS REPLICA CONSUMES (§7.2). The default runs everything,
+# which is right for one box; production splits `scan` from `report` because
+# both own a Chromium and a report backlog eats the memory a scan needs.
+ENV WORKER_ROLES=scan,scheduler,notification,email,report,digest,ai,free-scan
+
+# ⚠️ LIVENESS IS "CAN IT REACH REDIS", not "is the process up". A worker whose
+# Redis connection has died keeps running and consumes nothing — the failure
+# this product's own runbook calls the most dangerous one in the system.
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+  CMD node -e "const u=new URL(process.env.REDIS_URL||'redis://localhost:6379');require('net').createConnection(u.port||6379,u.hostname).on('connect',function(){this.end();process.exit(0)}).on('error',()=>process.exit(1))"
+
+CMD ["npx", "tsx", "worker/src/index.ts"]

@@ -68,6 +68,8 @@ export interface LogContext {
   userId?: string;
   websiteId?: string;
   scanId?: string;
+  /** The anonymous free scanner (§3.2). Pre-tenant: it has no `agencyId`. */
+  freeScanId?: string;
 }
 
 /**

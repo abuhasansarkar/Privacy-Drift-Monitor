@@ -5,6 +5,7 @@ import {
   type AiJobData,
   type DigestJobData,
   type EmailJobData,
+  type FreeScanJobData,
   type NotificationJobData,
   type ReportJobData,
   type ScanJobData,
@@ -31,6 +32,32 @@ export function createScanWorker<TResult>(
   options: ScanWorkerOptions,
 ): Worker<ScanJobData, TResult> {
   return new Worker<ScanJobData, TResult>(QUEUE_NAMES.scan, processor, {
+    connection: options.connection,
+    concurrency: options.concurrency,
+  });
+}
+
+/**
+ * THE FREE-SCAN WORKER — §3.2, §7.2, Phase 6 task 6.5.
+ *
+ * ⚠️ ITS OWN WORKER ON ITS OWN QUEUE, AND THE CONCURRENCY IS THE CONTROL. §3.2
+ * requires that free scans "cannot starve paying customers", and a BullMQ
+ * priority within a shared queue does not give that: priorities decide ORDER,
+ * not capacity, so a thousand queued free scans still occupy every browser slot
+ * the worker has. Two queues with separate concurrency caps mean the paid pool
+ * is physically unreachable from the free one.
+ *
+ * ⚠️ THE DEFAULT IS 1, AND IT IS A FLOOR, NOT A TARGET. One anonymous scan at a
+ * time is slow for the submitter and completely safe for the business; raising
+ * it is a deliberate capacity decision made with the paid concurrency in view,
+ * which is why it is an environment variable read at the call site rather than
+ * a constant here.
+ */
+export function createFreeScanWorker<TResult>(
+  processor: Processor<FreeScanJobData, TResult>,
+  options: QueueWorkerOptions,
+): Worker<FreeScanJobData, TResult> {
+  return new Worker<FreeScanJobData, TResult>(QUEUE_NAMES.freeScan, processor, {
     connection: options.connection,
     concurrency: options.concurrency,
   });

@@ -11,16 +11,19 @@ import {
 /**
  * FEATURE FLAG RESOLUTION — PLAN.md Part XI §11.13, Phase 5 task 5.7.
  *
- * ⚠️ PARTIAL, DELIBERATELY, AND THE GAP IS STATED RATHER THAN HIDDEN. §11.13's
- * order is:
+ * §11.13's resolution order, complete as of Phase 6 task 6.7:
  *
  *     agency override → plan targeting → percentage rollout → global default
  *
- * Steps 1, 3 and 4 work here. **Plan targeting does not**, because there is no
- * plan: `Subscription` is unpopulated until billing lands in Phase 6. A flag
- * that claims to target a plan it cannot read would silently resolve every
- * agency the same way, which is worse than a documented hole — so the step is
- * absent and named, and Phase 6 fills in one function.
+ * ⚠️ STEP 2 WAS ABSENT UNTIL BILLING EXISTED, and it was absent rather than
+ * stubbed: a flag that claims to target a plan it cannot read resolves every
+ * agency identically while looking like it works, which is worse than a
+ * documented hole. `Subscription` is now populated, so the step is real.
+ *
+ * ⚠️ THE ORDER IS NOT INTERCHANGEABLE. Each step is MORE specific than the one
+ * after it, and each returns outright rather than falling through. Checking the
+ * rollout before the plan would give a Scale customer a feature we sold them
+ * only if their agency id happened to hash into the bucket.
  *
  * ⚠️ THE KILL SWITCHES RESOLVE THROUGH HERE TOO. `AI_AUTO_EXPLAIN` off must
  * "stop all automatic AI spend instantly" (§11.13, feature doc 16), which is
@@ -65,7 +68,27 @@ export const isFlagEnabled = cache(
       const override = record.overrides[0];
       if (override) return override.enabled;
 
-      // 2. Plan targeting — NOT IMPLEMENTED. See the header note.
+      /*
+       * 2. Plan targeting. An empty `planKeys` means "not targeted at a plan"
+       *    and falls through — it does NOT mean "no plan qualifies", which is
+       *    the reading that would switch every flag off for everybody.
+       *
+       * ⚠️ A NON-EMPTY LIST IS AUTHORITATIVE IN BOTH DIRECTIONS. An agency on a
+       * listed plan gets the feature regardless of the rollout percentage
+       * (they were sold it); an agency on any other plan does NOT get it, even
+       * at 100% rollout. A flag that says "Agency and Scale only" and then
+       * leaks to Starter through a rollout dial is a paid feature given away.
+       */
+      if (record.planKeys.length > 0) {
+        const subscription = await db.subscription.findFirst({
+          where: { agencyId },
+          select: { plan: { select: { key: true } } },
+        });
+        // No subscription is not a plan, so it cannot match a targeted flag.
+        return subscription
+          ? record.planKeys.includes(subscription.plan.key)
+          : false;
+      }
 
       // 3. Percentage rollout, bucketed on a stable hash of `agencyId` so an
       //    agency never sees the feature flicker between requests.

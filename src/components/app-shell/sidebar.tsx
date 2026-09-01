@@ -10,6 +10,7 @@ import {
   ActivityIcon,
   AlertCircleIcon,
   BellIcon,
+  CardIcon,
   DocIcon,
   GlobeIcon,
   GridIcon,
@@ -40,6 +41,7 @@ const ICONS: Record<NavItem["icon"], typeof GridIcon> = {
   settings: SlidersIcon,
   bell: BellIcon,
   sparkle: SparkleIcon,
+  card: CardIcon,
 };
 
 export function Sidebar({

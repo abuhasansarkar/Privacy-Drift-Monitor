@@ -308,3 +308,14 @@ export function CopyIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Billing. A card, not a currency symbol — the product bills in three. */
+export function CardIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" />
+      <path d="M1.5 6.5h13" />
+      <path d="M4 10h3" />
+    </Icon>
+  );
+}
