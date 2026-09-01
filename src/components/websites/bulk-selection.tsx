@@ -307,6 +307,12 @@ export function BulkSelection({
           {error}
         </p>
       ) : null}
+
+      {children({
+        selected,
+        onToggle: toggle,
+        label: t("bulk.selectRow"),
+      })}
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { t } from "@pdm/shared/copy";
 import { can } from "@pdm/shared/permissions";
 import { Can } from "@/components/can";
-import { BulkSelection } from "@/components/websites/bulk-selection";
+import { WebsitesTable } from "@/components/websites/websites-table";
 import { ViewToggle, WebsiteGrid } from "@/components/websites/website-grid";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DataList, type Column, type Row } from "@/components/ui/data-list";
+import type { Column, Row } from "@/components/ui/data-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   FilterForm,
@@ -260,37 +260,24 @@ export default async function WebsitesPage({
             }
           />
         ) : (
-          /*
-           * Selection lives in the client wrapper and is handed to the table as
-           * a render prop — the table stays a pure renderer, and the decision
-           * about what may be done with a selection (which carries permissions)
-           * stays with the component that also draws the bulk bar.
-           */
-          <BulkSelection
+          <WebsitesTable
+            columns={columns}
+            rows={rows}
             ids={rows.map((row) => row.id)}
             canUpdate={can(ctx.role, "website:update")}
             canArchive={can(ctx.role, "website:delete")}
             canScan={can(ctx.role, "scan:trigger")}
             clients={clients}
             groups={groups}
-          >
-            {(selection) => (
-              <DataList
-                caption={t("websites.title")}
-                columns={columns}
-                rows={rows}
-                selection={selection}
-                footer={
-                  <Pagination
-                    page={query.page}
-                    perPage={query.perPage}
-                    total={page.total}
-                    params={raw}
-                  />
-                }
+            footer={
+              <Pagination
+                page={query.page}
+                perPage={query.perPage}
+                total={page.total}
+                params={raw}
               />
-            )}
-          </BulkSelection>
+            }
+          />
         )}
       </Card>
     </div>

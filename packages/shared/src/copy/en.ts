@@ -1417,6 +1417,7 @@ export const en = {
 
   bulk: {
     selectPage: "Select all on this page",
+    selectRow: "Select row",
     selected: "selected",
     updated: "updated",
     /** Surfaced, never swallowed — see the note in bulk-selection.tsx. */
