@@ -1,21 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { t } from "@pdm/shared/copy";
-import { buttonClasses } from "@/components/ui/button";
+import { buttonClasses, Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { HealthScore } from "@/components/ui/health-score";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertTriangleIcon,
   ArrowDownIcon,
   CalendarIcon,
   CheckIcon,
   ClockIcon,
+  DocIcon,
   FlagIcon,
   GlobeIcon,
   LinkIcon,
+  RadarIcon,
   ShieldIcon,
+  SparkleIcon,
   XIcon,
 } from "@/components/ui/icons";
 import { formatNumber } from "@/lib/format";
@@ -23,7 +33,7 @@ import { trackClient } from "@/lib/analytics-client";
 
 /**
  * THE FREE RESULT — PLAN.md §3.2's result-page specification, Phase 6 task 6.5.
- * Redesigned to match the reference layout in Image 1.
+ * Redesigned with professional animated scan screen and post-scan email report modal.
  *
  * ⚠️ IT POLLS RATHER THAN STREAMS. A free scan takes up to 45 seconds and the
  * submitter is a stranger who may close the tab; a websocket per anonymous
@@ -78,6 +88,11 @@ export function FreeScanResult({ token }: { token: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [isEmailPending, startEmailTransition] = useTransition();
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +108,18 @@ export function FreeScanResult({ token }: { token: string }) {
 
       const data = (await response.json()) as Payload;
       setPayload(data);
-      // Stop as soon as the row reaches a terminal state.
+
+      // When newly completed, prompt the email report modal
+      if (data.status === "COMPLETED") {
+        const key = `pdm_free_email_shown_${token}`;
+        if (typeof window !== "undefined" && !sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, "true");
+          // Slight delay so the user sees the completed result screen before the modal pops
+          setTimeout(() => setEmailModalOpen(true), 1200);
+        }
+      }
+
+      // Stop polling once in a terminal state
       return data.status !== "QUEUED" && data.status !== "RUNNING";
     }
 
@@ -118,12 +144,38 @@ export function FreeScanResult({ token }: { token: string }) {
     }
   }
 
+  function handleSendEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !email.includes("@")) {
+      setEmailError(t("freeScanner.emailInvalid"));
+      return;
+    }
+
+    startEmailTransition(async () => {
+      setEmailError(null);
+      const res = await fetch(`/api/public/free-scan/${token}/email`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        setEmailError(t("freeScanner.emailGenericError"));
+        return;
+      }
+
+      setEmailSent(true);
+      trackClient("free_scan_email_submitted");
+      setTimeout(() => setEmailModalOpen(false), 2800);
+    });
+  }
+
   if (notFound) {
     return <Notice tone="warning" title={t("freeScanner.errorNotFound")} />;
   }
 
   if (!payload || payload.status === "QUEUED" || payload.status === "RUNNING") {
-    return <Running status={payload?.status ?? "QUEUED"} />;
+    return <Running status={payload?.status ?? "QUEUED"} targetUrl={payload?.url} />;
   }
 
   if (payload.status === "FAILED" || !payload.summary) {
@@ -175,13 +227,26 @@ export function FreeScanResult({ token }: { token: string }) {
   return (
     <div className="flex flex-col gap-8">
       {/* 1. TOP BANNER — Blue / Primary accent bar (Image 1 reference) */}
-      <div className="rounded-xl border border-primary/25 bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 px-6 py-5 text-center shadow-xs">
-        <p className="text-caption font-medium uppercase tracking-wider text-primary">
-          {t("freeScanner.scanResultsBanner")}
-        </p>
-        <h1 className="mt-1 text-h2 font-bold tracking-tight text-foreground break-all">
-          {displayHost}
-        </h1>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/25 bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 px-6 py-5 shadow-xs">
+        <div className="text-center sm:text-left">
+          <p className="text-caption font-medium uppercase tracking-wider text-primary">
+            {t("freeScanner.scanResultsBanner")}
+          </p>
+          <h1 className="mt-1 text-h2 font-bold tracking-tight text-foreground break-all">
+            {displayHost}
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setEmailModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3.5 py-2 text-small font-semibold text-primary transition hover:bg-primary/20"
+          >
+            <DocIcon className="size-4" />
+            <span>{t("freeScanner.emailReportAction")}</span>
+          </button>
+        </div>
       </div>
 
       {summary.partial ? (
@@ -552,35 +617,216 @@ export function FreeScanResult({ token }: { token: string }) {
       </Card>
 
       <p className="text-caption text-muted-foreground text-center">{t("freeScanner.expiresNote")}</p>
+
+      {/* 6. EMAIL REPORT MODAL / POPUP */}
+      <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <DocIcon className="size-6" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+              {t("freeScanner.emailReportTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-center text-small text-muted-foreground">
+              {t("freeScanner.emailReportSubtitle")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {emailSent ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-success-muted text-success">
+                <CheckIcon className="size-6" />
+              </div>
+              <p className="text-body font-semibold text-foreground">
+                {t("freeScanner.emailSentSuccess")}
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSendEmail} className="flex flex-col gap-4 mt-2">
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-caption text-muted-foreground font-mono truncate">
+                <GlobeIcon className="size-3.5 shrink-0 text-primary" />
+                <span className="truncate">{displayHost}</span>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="report-email-input" className="text-small font-medium text-foreground">
+                  Email address
+                </label>
+                <input
+                  id="report-email-input"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("freeScanner.emailPlaceholder")}
+                  className="h-11 w-full rounded-md border border-border bg-background px-3 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              </div>
+
+              {emailError ? (
+                <p className="text-caption text-danger flex items-center gap-1.5">
+                  <AlertTriangleIcon className="size-3.5" />
+                  {emailError}
+                </p>
+              ) : null}
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                disabled={isEmailPending || email.length < 5}
+                className="h-11 w-full font-medium"
+              >
+                {isEmailPending ? t("freeScanner.emailSending") : t("freeScanner.emailButton")}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function Running({ status }: { status: string }) {
+/**
+ * ENHANCED ANIMATED SCAN SCREEN
+ * Features a high-tech animated radar scanner, live simulated network inspection
+ * activity, and visual progress steppers.
+ */
+function Running({ status, targetUrl }: { status: string; targetUrl?: string }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed((prev) => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const stages = [
-    { key: "QUEUED", label: t("freeScanner.stageQueued") },
-    { key: "RUNNING", label: t("freeScanner.stageRunning") },
+    { key: "stage1", label: t("freeScanner.stageBrowser"), minSec: 0 },
+    { key: "stage2", label: t("freeScanner.stageNavigate"), minSec: 4 },
+    { key: "stage3", label: t("freeScanner.stageNetwork"), minSec: 9 },
+    { key: "stage4", label: t("freeScanner.stageStorage"), minSec: 15 },
+    { key: "stage5", label: t("freeScanner.stageRules"), minSec: 22 },
   ];
+
+  const terminalLogs = [
+    "[Chromium] Launched isolated headless browser session",
+    "[Network] Intercepting HTTP request stream",
+    "[Consent] Simulating zero-consent user journey",
+    "[Storage] Inspecting document.cookie & storage writes",
+    "[Classifier] Evaluating tracker vendor signatures",
+    "[Rules] Computing privacy risk posture score",
+  ];
+
+  const currentLogIndex = Math.min(
+    terminalLogs.length - 1,
+    Math.floor(elapsed / 3.5),
+  );
+
+  const displayHost = targetUrl ? targetUrl.replace(/^https?:\/\//i, "").replace(/\/$/, "") : null;
+
   return (
-    <Card className="mx-auto flex max-w-lg flex-col gap-4 p-6 shadow-md">
-      <p className="flex items-center gap-2 text-base font-semibold text-foreground">
-        <ClockIcon className="size-5 text-info animate-spin" />
-        <span>{t("freeScanner.runningTitle")}</span>
-      </p>
-      <ul className="flex flex-col gap-2 text-small text-muted-foreground">
-        {stages.map((stage) => (
-          <li key={stage.key} className="flex items-center gap-2.5">
-            {status === stage.key ? (
-              <ClockIcon className="size-4 text-info" />
-            ) : (
-              <CheckIcon className="size-4 text-success" />
-            )}
-            <span>{stage.label}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="text-caption text-muted-foreground">{t("freeScanner.runningBody")}</p>
-    </Card>
+    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 py-10">
+      {/* 1. Animated Radar & Beam Visual */}
+      <div className="relative flex size-36 items-center justify-center">
+        {/* Concentric expanding ripples */}
+        <div className="absolute inset-0 rounded-full border border-primary/20 bg-primary/5 animate-ping opacity-40" />
+        <div className="absolute inset-3 rounded-full border border-primary/30 bg-primary/10 animate-pulse" />
+        <div className="absolute inset-6 rounded-full border border-border bg-card shadow-inner" />
+
+        {/* Rotating Radar Sweep Line */}
+        <div className="absolute inset-0 flex items-center justify-center animate-spin [animation-duration:3s]">
+          <div className="h-full w-0.5 bg-gradient-to-t from-transparent via-primary/50 to-primary" />
+        </div>
+
+        {/* Central Glowing Icon */}
+        <div className="relative flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30">
+          <RadarIcon className="size-7 animate-pulse" />
+        </div>
+      </div>
+
+      {/* 2. Scan Header & Target Domain */}
+      <div className="flex flex-col items-center text-center gap-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-caption font-semibold uppercase tracking-wider text-primary">
+          <span className="size-2 rounded-full bg-primary animate-pulse" />
+          <span>{status === "QUEUED" ? t("freeScanner.stageQueued") : t("freeScanner.runningTitle")}</span>
+        </div>
+
+        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
+          {displayHost ? `Scanning ${displayHost}` : "Running automated privacy scan…"}
+        </h2>
+
+        <p className="max-w-lg text-small text-muted-foreground">
+          {t("freeScanner.runningBody")}
+        </p>
+      </div>
+
+      {/* 3. Progress Card with Stage Checklist & Animated Indicators */}
+      <Card className="w-full overflow-hidden p-6 shadow-md">
+        <div className="flex items-center justify-between border-b border-border pb-3 text-caption font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <SparkleIcon className="size-3.5 text-primary" />
+            Inspection Steps
+          </span>
+          <span className="font-mono text-foreground/80">{elapsed}s elapsed</span>
+        </div>
+
+        <ul className="mt-4 flex flex-col gap-3">
+          {stages.map((stage) => {
+            const isDone = elapsed > stage.minSec + 4;
+            const isActive = elapsed >= stage.minSec && !isDone;
+            return (
+              <li
+                key={stage.key}
+                className={`flex items-center gap-3 rounded-lg border p-3 text-small transition-all ${
+                  isActive
+                    ? "border-primary/40 bg-primary/5 font-medium text-foreground shadow-xs"
+                    : isDone
+                      ? "border-border/60 bg-muted/20 text-muted-foreground"
+                      : "border-border/40 text-muted-foreground/60 opacity-60"
+                }`}
+              >
+                {isDone ? (
+                  <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-success-foreground">
+                    <CheckIcon className="size-3" />
+                  </div>
+                ) : isActive ? (
+                  <div className="flex size-5 shrink-0 items-center justify-center">
+                    <ClockIcon className="size-4 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="size-2.5 mx-1 rounded-full bg-muted-foreground/30" />
+                )}
+                <span className="flex-1 text-left">{stage.label}</span>
+                {isActive && (
+                  <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    Active
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Live Technical Feed Ticker */}
+        <div className="mt-5 rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs text-muted-foreground text-left">
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-1.5 rounded-full bg-success animate-ping" />
+            <span className="text-foreground/90 font-medium">
+              {terminalLogs[currentLogIndex]}
+            </span>
+          </div>
+        </div>
+
+        {/* Shimmering Progress Bar */}
+        <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full bg-gradient-to-r from-primary/60 via-primary to-info transition-all duration-1000 ease-out"
+            style={{ width: `${Math.min(95, 15 + elapsed * 3.5)}%` }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }
 

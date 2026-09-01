@@ -903,13 +903,31 @@ export const en = {
     disclaimer:
       "Only scan websites you own or have permission to scan. One scan per website per day.",
 
-    /* Running state. */
-    runningTitle: "Scanning",
-    runningBody: "This usually takes under a minute. The page updates on its own.",
-    stageQueued: "Waiting for a browser",
+    /* Running state — professional animated scan screen. */
+    runningTitle: "Privacy scan in progress",
+    runningBody:
+      "Our automated Chromium browser is loading the website and recording all pre-consent network requests and cookies.",
+    stageQueued: "Waiting for an available browser worker",
     stageRunning: "Loading the site with no consent given",
-    stageAnalysing: "Working out what fired",
-    stageDone: "Done",
+    stageAnalysing: "Analyzing network traffic and storage",
+    stageDone: "Scan complete",
+    stageBrowser: "Starting isolated Chromium browser session",
+    stageNavigate: "Navigating to target URL with zero consent",
+    stageNetwork: "Capturing network requests, beacons & tracking scripts",
+    stageStorage: "Inspecting cookies, localStorage & storage writes",
+    stageRules: "Evaluating technical evidence & computing risk posture",
+
+    /* Email Report Modal */
+    emailReportTitle: "Receive this scan report in your email",
+    emailReportSubtitle:
+      "Get a breakdown of all detected trackers, pre-consent cookies, and a direct link to this report sent to your inbox.",
+    emailPlaceholder: "you@company.com",
+    emailButton: "Send my report",
+    emailSending: "Sending…",
+    emailSentSuccess: "Report sent! Check your inbox for the summary.",
+    emailReportAction: "Email report",
+    emailInvalid: "Please enter a valid email address.",
+    emailGenericError: "Could not send report. Please try again.",
 
     /* Result page — Image 1 reference layout. */
     resultTitle: "What we detected",

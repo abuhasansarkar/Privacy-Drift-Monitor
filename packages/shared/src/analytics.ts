@@ -65,6 +65,7 @@ export const ANALYTICS_EVENTS = [
   "free_scan_completed",
   "free_scan_result_viewed",
   "free_scan_signup_clicked",
+  "free_scan_email_submitted",
   "integration_interest_registered",
   /* §3.2's pricing-page events. */
   "pricing_viewed",
