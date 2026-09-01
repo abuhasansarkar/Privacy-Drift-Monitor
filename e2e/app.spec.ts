@@ -59,6 +59,7 @@ test.describe("the app shell", () => {
       "/app/team",
       "/app/billing",
       "/app/help",
+      "/app/changelog",
       "/app/settings",
     ];
 

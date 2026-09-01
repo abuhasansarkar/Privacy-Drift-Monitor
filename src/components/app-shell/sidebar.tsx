@@ -14,6 +14,7 @@ import {
   DocIcon,
   GlobeIcon,
   GridIcon,
+  HelpCircleIcon,
   ShieldIcon,
   SlidersIcon,
   SparkleIcon,
@@ -42,6 +43,7 @@ const ICONS: Record<NavItem["icon"], typeof GridIcon> = {
   bell: BellIcon,
   sparkle: SparkleIcon,
   card: CardIcon,
+  help: HelpCircleIcon,
 };
 
 export function Sidebar({
@@ -73,10 +75,14 @@ export function Sidebar({
       (!item.flag || (enabledFlags?.includes(item.flag) ?? false)),
   );
 
+  const mainItems = visible.filter((item) => item.section !== "bottom");
+  const bottomItems = visible.filter((item) => item.section === "bottom");
+
   return (
-    <div className="flex h-full flex-col gap-4 bg-background p-3">
-      <div className="flex items-center gap-2.5 px-2 pt-1">
-        <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
+    <div className="flex h-full flex-col bg-background p-3">
+      {/* Agency Header */}
+      <div className="flex items-center gap-2.5 px-2 pt-1 pb-3">
+        <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground shadow-sm">
           <ShieldIcon />
         </span>
         <span className="min-w-0 truncate font-semibold tracking-tight">
@@ -84,8 +90,9 @@ export function Sidebar({
         </span>
       </div>
 
-      <nav aria-label={t("a11y.mainNavigation")} className="flex flex-col gap-0.5">
-        {visible.map((item) => {
+      {/* Main Top Navigation */}
+      <nav aria-label={t("a11y.mainNavigation")} className="flex flex-col gap-0.5 overflow-y-auto">
+        {mainItems.map((item) => {
           const Glyph = ICONS[item.icon];
           const active = isActive(item, pathname);
           return (
@@ -108,31 +115,60 @@ export function Sidebar({
         })}
       </nav>
 
-      {websiteLimit !== null ? (
-        <div className="mt-auto border-t border-border px-2.5 pb-1 pt-3">
-          <p className="mb-1.5 text-caption text-muted-foreground">
-            <span className="font-semibold text-foreground">
-              {formatNumber(websitesUsed)} / {formatNumber(websiteLimit)}
-            </span>{" "}
-            {t("shell.websitesUsed")}
-          </p>
-          <div
-            className="h-1 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-valuenow={websitesUsed}
-            aria-valuemin={0}
-            aria-valuemax={websiteLimit}
-            aria-label={t("shell.websitesUsed")}
-          >
+      {/* Bottom Pinned Navigation & Usage Meter */}
+      <div className="mt-auto flex flex-col gap-2 pt-3">
+        {bottomItems.length > 0 ? (
+          <nav aria-label="Secondary navigation" className="flex flex-col gap-0.5 border-t border-border/80 pt-2.5">
+            {bottomItems.map((item) => {
+              const Glyph = ICONS[item.icon];
+              const active = isActive(item, pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-small font-medium transition-colors max-sm:py-2.5",
+                    active
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Glyph />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
+
+        {websiteLimit !== null ? (
+          <div className="border-t border-border/80 px-2.5 pt-3 pb-1">
+            <p className="mb-1.5 text-caption text-muted-foreground">
+              <span className="font-semibold text-foreground">
+                {formatNumber(websitesUsed)} / {formatNumber(websiteLimit)}
+              </span>{" "}
+              {t("shell.websitesUsed")}
+            </p>
             <div
-              className="h-full rounded-full bg-primary"
-              style={{
-                width: `${Math.min(100, (websitesUsed / Math.max(1, websiteLimit)) * 100)}%`,
-              }}
-            />
+              className="h-1 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={websitesUsed}
+              aria-valuemin={0}
+              aria-valuemax={websiteLimit}
+              aria-label={t("shell.websitesUsed")}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{
+                  width: `${Math.min(100, (websitesUsed / Math.max(1, websiteLimit)) * 100)}%`,
+                }}
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

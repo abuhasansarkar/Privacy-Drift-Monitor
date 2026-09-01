@@ -27,7 +27,8 @@ export interface NavItem {
     | "settings"
     | "bell"
     | "sparkle"
-    | "card";
+    | "card"
+    | "help";
   permission: Permission;
   /** Marks the entry active for `/app/websites/new` as well as the list. */
   matchPrefix?: boolean;
@@ -44,6 +45,8 @@ export interface NavItem {
    * table.
    */
   flag?: FlagKey;
+  /** Grouping in the sidebar: main top section or pinned bottom section. */
+  section?: "main" | "bottom";
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -52,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: t("navApp.dashboard"),
     icon: "grid",
     permission: "website:read",
+    section: "main",
   },
   {
     href: "/app/clients",
@@ -59,6 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "users",
     permission: "client:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     href: "/app/websites",
@@ -66,6 +71,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "globe",
     permission: "website:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     href: "/app/issues",
@@ -73,6 +79,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "alert",
     permission: "issue:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     // Directly after Issues: the two are read together — an issue says what is
@@ -82,6 +89,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "drift",
     permission: "issue:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     // Between the work queues and the artefacts: it acts ON findings, so it
@@ -92,6 +100,7 @@ export const NAV_ITEMS: NavItem[] = [
     permission: "ai:generate",
     flag: FLAGS.AI_ASSISTANT_PAGE,
     matchPrefix: true,
+    section: "main",
   },
   {
     href: "/app/trackers",
@@ -99,6 +108,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "globe",
     permission: "website:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     href: "/app/reports",
@@ -106,6 +116,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "doc",
     permission: "report:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     // Directly before Team: alert rules are configuration, not a work queue,
@@ -115,6 +126,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "bell",
     permission: "alert:read",
     matchPrefix: true,
+    section: "main",
   },
   {
     href: "/app/team",
@@ -122,24 +134,24 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "team",
     permission: "team:read",
     matchPrefix: true,
+    section: "main",
   },
   {
-    // Below Team and above Settings: billing is an owner-level concern, and
-    // §6.2 gives only Owner/Admin `billing:read`, so most sessions never see it.
+    // Bottom group: billing, help, and settings pinned to the lower rail.
     href: "/app/billing",
     label: t("billing.title"),
     icon: "card",
     permission: "billing:read",
     matchPrefix: true,
+    section: "bottom",
   },
   {
-    // Last, below Settings: help is a destination you go to when something is
-    // wrong, not one you navigate to as part of the work.
     href: "/app/help",
     label: t("help.title"),
-    icon: "doc",
+    icon: "help",
     permission: "website:read",
     matchPrefix: true,
+    section: "bottom",
   },
   {
     href: "/app/settings",
@@ -147,6 +159,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "settings",
     permission: "settings:read",
     matchPrefix: true,
+    section: "bottom",
   },
 ];
 

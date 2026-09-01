@@ -93,6 +93,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               {[
                 { href: "/resources", label: t("marketingPages.resourcesTitle") },
                 { href: "/blog", label: t("marketingPages.blogTitle") },
+                { href: "/changelog", label: t("marketingPages.changelogTitle") },
                 { href: "/about", label: t("marketingPages.aboutTitle") },
                 { href: "/contact", label: t("marketingPages.contactTitle") },
               ].map((item) => (

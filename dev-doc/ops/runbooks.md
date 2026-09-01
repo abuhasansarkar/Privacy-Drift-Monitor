@@ -116,16 +116,28 @@ If the probe says everything is reachable and the app is still 503, it is the ap
 
 ---
 
-## Alerting — NOT YET CONFIGURED
+## Alerting Configuration & Rules
 
-§10.8 asks for dashboards and alert routing. What exists is the data behind them:
-`/admin/system-health`, `/admin` and `SystemLog`. Sentry is wired (`instrumentation.ts`,
-`onRequestError`) and inert until `SENTRY_DSN` is set.
+§10.8 asks for dashboards and alert routing. What exists is the data layer:
+`/admin/system-health`, `/admin`, `SystemLog`, and Sentry integration (`instrumentation.ts`,
+`onRequestError`, `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`).
 
-- [ ] `SENTRY_DSN` set in production
-- [ ] Alert on failed-scan rate > 15% for 15 minutes
-- [ ] Alert on any queue's waiting count > 500 for 10 minutes
-- [ ] Alert on a worker with zero completions and non-zero running for 30 minutes
-- [ ] Alert on the counter reconciliation finding non-zero drift (feature doc 17 asks for this
-      specifically)
-- [ ] Alert routing to a person, not a channel nobody reads
+### Production Alert Rules & Thresholds
+
+| Alert Rule | Condition | Window | Severity | Action & Escalation |
+|---|---|---|---|---|
+| **High Scan Failure Rate** | Failed scan rate > 15% (excluding `PARTIAL`) | 15 min | P1 (Urgent) | Check `/admin/scans?status=FAILED` for worker clustering vs DNS/WAF errors |
+| **Queue Backlog** | Any queue waiting count > 500 | 10 min | P2 (High) | Check worker scaling, queue pausing (`/admin/queue`), and external provider limits |
+| **Dead/Wedged Worker** | Worker with 0 completions & >0 `RUNNING` scans | 30 min | P1 (Urgent) | Restart worker process; `recoverStuckScans()` will reclaim orphaned scans |
+| **Counter Drift Detected** | Counter reconciliation finds drift != 0 | Immediate | P2 (High) | Run reconciliation job; check for concurrent race conditions in billing/usage |
+| **High Unhandled Error Rate** | Sentry unhandled exception rate > 1% of reqs | 5 min | P1 (Urgent) | Inspect Sentry release issues; trigger rollback drill if recent deploy |
+| **Database Connection Saturation** | Pool utilization > 85% | 5 min | P2 (High) | Check slow queries, connection leaks, or increase pool capacity |
+
+### Setup Checklist for Production Environment
+
+- [ ] Set `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_DSN` in production environment
+- [ ] Configure Sentry Alert Rules matching the table above
+- [ ] Connect Sentry Alert Routing to on-call channel (PagerDuty / Opsgenie / Slack webhook)
+- [ ] Verify Sentry test event triggers alerting pipeline
+- [ ] Alert routing directed to a responsible on-call person, not an unmonitored channel
+

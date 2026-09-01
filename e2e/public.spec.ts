@@ -53,8 +53,8 @@ test.describe("marketing", () => {
     await expect(alert).not.toContainText(/127\.0\.0\.1|private|loopback/i);
   });
 
-  test("legal, resources, blog and contact all render", async ({ page }) => {
-    for (const path of ["/legal/disclaimer", "/resources", "/blog", "/about", "/contact"]) {
+  test("legal, resources, blog, changelog and contact all render", async ({ page }) => {
+    for (const path of ["/legal/disclaimer", "/resources", "/blog", "/changelog", "/about", "/contact"]) {
       const response = await page.goto(path);
       expect(response?.status(), `${path} responded`).toBe(200);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

@@ -138,7 +138,7 @@ to see which one fails first without the others masking it.
 | [Phase 4](phases/phase-4-agency-workflow.md) | Alerts, reports, client portal | 🟡 Built; email proven live. One gap: the magic-link inbox→session round trip |
 | [Phase 5](phases/phase-5-ai.md) | Grounded explanation and recommendation | ✅ Complete — both tiers verified against live OpenAI |
 | [Phase 6](phases/phase-6-commercial-admin.md) | Billing, free scanner, admin panel | ⬜ **Next.** Start at 6.2 entitlements |
-| [Phase 7](phases/phase-7-hardening-launch.md) | Security, load, a11y, DR, launch | ⬜ Not started |
+| [Phase 7](phases/phase-7-hardening-launch.md) | Security, load, a11y, DR, launch | 🟡 Hardening, DR, deploy pipeline, E2E & changelog built; operational launch steps documented |
 
 Update the status column as phases complete. Keep it honest — a phase is done only when its
 acceptance criteria all pass, not when the code is written.

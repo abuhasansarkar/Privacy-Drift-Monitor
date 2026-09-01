@@ -76,6 +76,8 @@ export default async function setup(): Promise<void> {
   adminUrl.search = "";
   await ensureDatabase(adminUrl.toString(), name);
 
+  const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+
   /*
    * `migrate deploy`, not `db push`. The migrations are the schema of record
    * (AGENTS.md), and a test database built by `db push` would drift from the
@@ -83,9 +85,9 @@ export default async function setup(): Promise<void> {
    * on deploy, which is the one thing the migration check exists to catch.
    */
   execFileSync(
-    "npx",
+    npx,
     ["prisma", "migrate", "deploy", "--schema", "packages/database/prisma/schema.prisma"],
-    { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" },
+    { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe", shell: process.platform === "win32" },
   );
 
   /*
@@ -96,9 +98,10 @@ export default async function setup(): Promise<void> {
    * every third party reads "unknown" and the assertions fail for a reason that
    * looks nothing like a missing seed.
    */
-  execFileSync("npx", ["tsx", "packages/database/prisma/seed.ts"], {
+  execFileSync(npx, ["tsx", "packages/database/prisma/seed.ts"], {
     env: { ...process.env, DATABASE_URL: url },
     stdio: "pipe",
+    shell: process.platform === "win32",
   });
 
   console.log(`[test] using ${name} (dev data in ${new URL(devUrl).pathname.slice(1)} is untouched)`);

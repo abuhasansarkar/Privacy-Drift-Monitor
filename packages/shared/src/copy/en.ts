@@ -638,7 +638,27 @@ export const en = {
     contactSuccess:
       "Thanks — we have your message and will reply to the address you gave.",
     contactError: "That did not send. Try again, or email us directly.",
+    changelogTitle: "Changelog",
+    changelogSubtitle:
+      "New features, improvements, and updates to the Privacy Drift Monitor platform.",
   },
+
+  /**
+   * §3.2 & §3.11 — product changelog (Phase 7 task 7.10).
+   */
+  changelog: {
+    title: "Changelog",
+    subtitle: "Product updates, new features, and technical improvements.",
+    latestRelease: "Latest release",
+    allReleases: "All releases",
+    categoryFeature: "Feature",
+    categoryImprovement: "Improvement",
+    categoryFix: "Fix",
+    categorySecurity: "Security",
+    subscribeTitle: "Stay updated",
+    subscribeSubtitle: "Major updates are also summarised in our agency digest emails.",
+  },
+
 
   /**
    * §3.11 `/app/help` — in-app help (Phase 6).

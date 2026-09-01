@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 /**
@@ -87,4 +88,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "abu-hasan-sarkar",
+  project: "privacy-drift-monitor",
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+});

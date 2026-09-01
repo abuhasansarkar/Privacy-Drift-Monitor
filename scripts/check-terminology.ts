@@ -91,7 +91,7 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 function scan(file: string): Violation[] {
-  const rel = relative(ROOT, file);
+  const rel = relative(ROOT, file).replace(/\\/g, "/");
   if (SKIP_FILES.some((s) => rel === s)) return [];
   if (SPEC_FILE.test(rel)) return [];
 

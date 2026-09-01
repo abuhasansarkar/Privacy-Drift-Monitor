@@ -127,6 +127,16 @@ export function DocIcon(props: IconProps) {
   );
 }
 
+export function HelpCircleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="6.2" />
+      <path d="M6.3 6.2a1.8 1.8 0 0 1 3.2.9c0 1.2-1.5 1.5-1.5 2.5" />
+      <circle cx="8" cy="11.6" r=".4" fill="currentColor" />
+    </Icon>
+  );
+}
+
 export function SlidersIcon(props: IconProps) {
   return (
     <Icon {...props}>
