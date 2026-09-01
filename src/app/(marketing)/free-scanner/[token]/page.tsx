@@ -27,7 +27,7 @@ export default async function FreeScanResultPage({
   const { token } = await params;
 
   return (
-    <section className="mx-auto w-full max-w-2xl px-4 py-16">
+    <section className="mx-auto w-full max-w-5xl px-4 py-12 md:py-16">
       <FreeScanResult token={token} />
     </section>
   );

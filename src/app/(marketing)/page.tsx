@@ -1,19 +1,22 @@
 import Link from "next/link";
 import { t } from "@pdm/shared/copy";
+import { FreeScanForm } from "@/components/free-scanner/scan-form";
+import {
+  ActivityIcon,
+  CalendarIcon,
+  CheckIcon,
+  GlobeIcon,
+  ShieldIcon,
+  SparkleIcon,
+} from "@/components/ui/icons";
 
 /**
- * PUBLIC HOMEPAGE — §3.2.
- *
- * This replaces the create-next-app template. It is deliberately a skeleton:
- * the full page (hero screenshot, problem cards, benefits, social proof,
- * pricing teaser) is Phase 1 task 1.13.
+ * PUBLIC HOMEPAGE — §3.2, Phase 1 task 1.13.
  *
  * Chrome (skip link, header, footer, the §1.11 boundary statement) lives in
  * `(marketing)/layout.tsx`; this file is content only. The page is STATICALLY
  * PRERENDERED — it calls no `cookies()` / `headers()`, and the header's auth
- * controls are a client island (`MarketingAuthLinks`) precisely so they do not
- * drag the route into dynamic rendering, which is what Clerk's server-resolved
- * `<Show>` used to do.
+ * controls are a client island (`MarketingAuthLinks`).
  */
 export default function Home() {
   const steps = [
@@ -23,45 +26,176 @@ export default function Home() {
     t("marketing.step4"),
   ];
 
+  const cmps = [
+    "Google Consent Mode v2",
+    "Cookiebot",
+    "OneTrust",
+    "Usercentrics",
+    "Klaro",
+    "Termly",
+    "Didomi",
+  ];
+
   return (
     <>
-      <section className="mx-auto w-full max-w-3xl px-4 py-24">
-        <h1 className="max-w-2xl text-3xl font-semibold leading-10 tracking-tight">
-          {t("marketing.heroTitle")}
-        </h1>
-        <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground">
-          {t("marketing.heroSubtitle")}
-        </p>
+      {/*
+        HERO SECTION — Inspired by the high-impact Cookiebot reference (Image 2)
+        using our dark/light tokens, primary blue, and refined typography.
+      */}
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/5 via-background to-background py-16 md:py-24">
+        {/* Subtle background glow */}
+        <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-96 w-full max-w-5xl -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
 
-        {/*
-          Only the trial CTA for now. §3.2 also specifies a "Scan a website
-          free" secondary CTA, but `/free-scanner` is Phase 6 — shipping a
-          button to a 404 is worse than shipping one button.
-        */}
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/signup"
-            className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            {t("marketing.primaryCta")}
-          </Link>
+        <div className="mx-auto w-full max-w-5xl px-4 text-center">
+          {/* Eyebrow Badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-caption font-semibold uppercase tracking-wider text-primary">
+            <SparkleIcon className="size-3.5" />
+            {t("marketing.heroEyebrow")}
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-balance">
+            {t("marketing.heroTitle")}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mx-auto mt-5 max-w-3xl text-body-lg text-muted-foreground sm:text-lg text-balance">
+            {t("marketing.heroSubtitle")}
+          </p>
+
+          {/* Interactive URL Scanner Form + Quick Actions */}
+          <div className="mx-auto mt-10 max-w-2xl">
+            <FreeScanForm
+              variant="hero"
+              placeholder="Enter client website URL (e.g. acme-agency.com)"
+              buttonText="Scan website"
+              hideDisclaimer
+            />
+            <p className="mt-2 text-caption text-muted-foreground">
+              {t("freeScanner.disclaimer")}
+            </p>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-caption font-medium text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <CalendarIcon className="size-4 text-primary" />
+              {t("marketing.badgeTrial")}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckIcon className="size-4 text-success" />
+              {t("marketing.badgeCancel")}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <ActivityIcon className="size-4 text-primary" />
+              {t("marketing.badgeMonitoring")}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <ShieldIcon className="size-4 text-info" />
+              {t("marketing.badgeNoCard")}
+            </span>
+          </div>
+
+          {/* CMP & Tag Manager Support Badges */}
+          <div className="mt-12 pt-8 border-t border-border/60">
+            <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+              {t("marketing.trustedCmpTitle")}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+              {cmps.map((cmp) => (
+                <span
+                  key={cmp}
+                  className="inline-flex items-center rounded-md border border-border bg-card/60 px-2.5 py-1 text-caption font-medium text-foreground/80 shadow-xs"
+                >
+                  {cmp}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive Browser Mockup Container */}
+        <div className="mx-auto mt-14 w-full max-w-4xl px-4">
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+            {/* Mockup Browser Chrome */}
+            <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <div className="size-3 rounded-full bg-red-400/80" />
+                <div className="size-3 rounded-full bg-amber-400/80" />
+                <div className="size-3 rounded-full bg-green-400/80" />
+              </div>
+              <div className="flex max-w-md flex-1 items-center justify-center px-4">
+                <div className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
+                  <GlobeIcon className="size-3.5 text-primary" />
+                  <span>https://client-store.com/checkout</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                <span className="inline-block size-2 rounded-full bg-success animate-pulse" />
+                <span>Automated scan</span>
+              </div>
+            </div>
+
+            {/* Mockup Viewport Body */}
+            <div className="grid gap-6 p-6 sm:grid-cols-3 bg-card">
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-caption font-medium text-muted-foreground">
+                  NO CONSENT JOURNEY
+                </p>
+                <div className="mt-2 flex items-center gap-1.5 text-small font-semibold text-success">
+                  <CheckIcon className="size-4" />
+                  <span>0 trackers before consent</span>
+                </div>
+                <p className="mt-1 text-caption text-muted-foreground">
+                  Scripts blocked until user choice
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-caption font-medium text-muted-foreground">
+                  REJECT ALL JOURNEY
+                </p>
+                <div className="mt-2 flex items-center gap-1.5 text-small font-semibold text-success">
+                  <CheckIcon className="size-4" />
+                  <span>Reject signal respected</span>
+                </div>
+                <p className="mt-1 text-caption text-muted-foreground">
+                  No marketing cookies written
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-caption font-medium text-muted-foreground">
+                  DRIFT DETECTION
+                </p>
+                <div className="mt-2 flex items-center gap-1.5 text-small font-semibold text-warning">
+                  <ActivityIcon className="size-4" />
+                  <span>+1 new tag this morning</span>
+                </div>
+                <p className="mt-1 text-caption text-muted-foreground">
+                  Alert sent to agency Slack
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-4 pb-24">
-        <h2 className="text-xl font-semibold tracking-tight">
+      {/* How it works steps */}
+      <section className="mx-auto w-full max-w-4xl px-4 py-20">
+        <h2 className="text-center text-h2 tracking-tight">
           {t("marketing.stepsTitle")}
         </h2>
-        <ol className="mt-6 grid gap-4 sm:grid-cols-2">
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           {steps.map((step, index) => (
             <li
               key={step}
-              className="rounded-lg border border-border bg-card p-4"
+              className="rounded-lg border border-border bg-card p-5"
             >
-              <span className="font-mono text-xs text-muted-foreground">
+              <span className="font-mono text-caption font-semibold text-primary">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <p className="mt-1 font-medium">{step}</p>
+              <p className="mt-2 font-medium text-body">{step}</p>
             </li>
           ))}
         </ol>

@@ -47,12 +47,20 @@ export const en = {
 
   /** §3.2 — the public homepage. The full page is Phase 1 task 1.13. */
   marketing: {
+    heroEyebrow: "Continuous privacy & consent drift monitoring",
     heroTitle:
       "Detect privacy and consent changes across every client website — automatically.",
     heroSubtitle:
       "Privacy Drift Monitor watches your clients' sites in a real browser, tests what happens before consent, after Reject All, and after withdrawal — and tells you the moment something changes.",
     primaryCta: "Start free trial",
     secondaryCta: "Scan a website free",
+    heroCtaTrial: "Start 14-day free trial",
+    heroCtaScan: "Scan website",
+    badgeTrial: "14-day free trial",
+    badgeCancel: "Cancel any time",
+    badgeMonitoring: "Automated drift detection",
+    badgeNoCard: "No credit card required",
+    trustedCmpTitle: "Compatible with modern consent platforms & tag managers",
     step1: "Add your client sites",
     step2: "We scan them in a real browser",
     step3: "We compare against last time",
@@ -903,9 +911,42 @@ export const en = {
     stageAnalysing: "Working out what fired",
     stageDone: "Done",
 
-    /* Result page. */
+    /* Result page — Image 1 reference layout. */
     resultTitle: "What we detected",
     resultFor: "Results for",
+    scanResultsBanner: "Privacy and drift scan results for",
+    postureTitle: "Your website privacy posture",
+    postureSubtitle:
+      "Based on observed requests and cookies before consent, here is what our automated browser detected on initial load.",
+    showScanResults: "Show scan findings",
+    statusLowRisk: "Low risk",
+    statusMediumRisk: "Action recommended",
+    statusHighRisk: "Elevated risk",
+    statusUnknown: "Could not be determined",
+    kpiStatus: "Risk posture",
+    kpiScanDate: "Scan date",
+    kpiRegulations: "Monitored scope",
+    kpiRegulationsValue: "ePrivacy · GDPR · CCPA",
+    kpiTrackers: "Total number of trackers",
+    copyLink: "Copy link",
+    linkCopied: "Link copied to clipboard",
+    trackersDetectedTitle: "Trackers detected",
+    trackerDetailsTitle: "Tracker details",
+    catNecessary: "Necessary",
+    catPreferences: "Preferences",
+    catStatistics: "Statistics",
+    catMarketing: "Marketing",
+    catUnclassified: "Unclassified",
+    colName: "Name",
+    colProvider: "Provider",
+    colCategory: "Category",
+    colDataSentTo: "Data is sent to",
+    colStatus: "Observed state",
+    noTrackersDetected: "No trackers detected before consent.",
+    fullScanCtaTitle: "Get the full overview of all trackers on your website",
+    fullScanCtaBody:
+      "We will scan your whole website across all consent journeys (No Consent, Reject All, Accept All, and Withdrawal) after you have created your account.",
+    fullScanCtaButton: "Start free trial",
     scoreLabel: "Health score",
     partialNotice:
       "This scan did not complete every step, so the picture below is incomplete. Nothing here is a clean verdict.",

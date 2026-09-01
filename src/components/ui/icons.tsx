@@ -329,3 +329,47 @@ export function CardIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function LinkIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6.5 9.5a3.5 3.5 0 0 0 5 0l2-2a3.5 3.5 0 0 0-5-5l-1 1" />
+      <path d="M9.5 6.5a3.5 3.5 0 0 0-5 0l-2 2a3.5 3.5 0 0 0 5 5l1-1" />
+    </Icon>
+  );
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="2" y="3" width="12" height="11" rx="1.5" />
+      <path d="M2 6.5h12M5 1.5v3M11 1.5v3" />
+    </Icon>
+  );
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 2.5v11M3.5 9l4.5 4.5 4.5-4.5" />
+    </Icon>
+  );
+}
+
+export function ExternalLinkIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 9v4.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 2 13.5v-7A1.5 1.5 0 0 1 3.5 5H8" />
+      <path d="M9.5 2h4.5v4.5M6.5 9.5 14 2" />
+    </Icon>
+  );
+}
+
+export function FlagIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 14.5V2.5m0 1h9.5l-2 3.5 2 3.5H3" />
+    </Icon>
+  );
+}
+

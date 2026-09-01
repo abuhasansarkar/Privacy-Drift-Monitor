@@ -5,7 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@pdm/shared/copy";
 import { Button } from "@/components/ui/button";
-import { AlertTriangleIcon } from "@/components/ui/icons";
+import { AlertTriangleIcon, GlobeIcon, SearchIcon } from "@/components/ui/icons";
 
 /**
  * THE FREE-SCAN FORM — PLAN.md §3.2, Phase 6 task 6.5.
@@ -44,7 +44,21 @@ declare global {
   }
 }
 
-export function FreeScanForm() {
+export interface FreeScanFormProps {
+  variant?: "default" | "hero";
+  placeholder?: string;
+  buttonText?: string;
+  className?: string;
+  hideDisclaimer?: boolean;
+}
+
+export function FreeScanForm({
+  variant = "default",
+  placeholder,
+  buttonText,
+  className,
+  hideDisclaimer = false,
+}: FreeScanFormProps) {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -105,8 +119,10 @@ export function FreeScanForm() {
     });
   }
 
+  const isHero = variant === "hero";
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col gap-3 ${className ?? ""}`}>
       {SITE_KEY ? (
         <Script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
@@ -115,7 +131,11 @@ export function FreeScanForm() {
       ) : null}
 
       <form
-        className="flex flex-col gap-2 sm:flex-row"
+        className={
+          isHero
+            ? "flex w-full flex-col gap-2 rounded-xl border border-border bg-card/90 p-2 shadow-lg backdrop-blur-md sm:flex-row sm:items-center"
+            : "flex flex-col gap-2 sm:flex-row"
+        }
         onSubmit={(event) => {
           event.preventDefault();
           submit();
@@ -124,20 +144,40 @@ export function FreeScanForm() {
         <label className="sr-only" htmlFor="free-scan-url">
           {t("freeScanner.urlLabel")}
         </label>
-        <input
-          id="free-scan-url"
-          name="url"
-          type="text"
-          inputMode="url"
-          autoComplete="url"
-          required
-          value={url}
-          onChange={(event) => setUrl(event.target.value)}
-          placeholder={t("freeScanner.urlPlaceholder")}
-          className="h-11 flex-1 rounded-md border border-border bg-background px-3 text-body"
-        />
-        <Button type="submit" variant="primary" disabled={pending || url.length < 4}>
-          {pending ? t("freeScanner.submitting") : t("freeScanner.submit")}
+        <div className="relative flex flex-1 items-center">
+          <GlobeIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
+          <input
+            id="free-scan-url"
+            name="url"
+            type="text"
+            inputMode="url"
+            autoComplete="url"
+            required
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder={placeholder ?? t("freeScanner.urlPlaceholder")}
+            className={
+              isHero
+                ? "h-12 w-full rounded-lg border-0 bg-transparent pl-10 pr-3 text-body-lg text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:outline-none"
+                : "h-11 flex-1 rounded-md border border-border bg-background pl-10 pr-3 text-body"
+            }
+          />
+        </div>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          disabled={pending || url.length < 4}
+          className={isHero ? "h-12 px-6 font-medium shadow-sm transition hover:opacity-95" : ""}
+        >
+          {pending ? (
+            t("freeScanner.submitting")
+          ) : (
+            <>
+              <SearchIcon className="mr-1.5 size-4" />
+              {buttonText ?? t("freeScanner.submit")}
+            </>
+          )}
         </Button>
       </form>
 
@@ -150,9 +190,12 @@ export function FreeScanForm() {
         </p>
       ) : null}
 
-      <p className="text-caption text-muted-foreground">
-        {t("freeScanner.disclaimer")}
-      </p>
+      {!hideDisclaimer ? (
+        <p className="text-caption text-muted-foreground">
+          {t("freeScanner.disclaimer")}
+        </p>
+      ) : null}
     </div>
   );
 }
+

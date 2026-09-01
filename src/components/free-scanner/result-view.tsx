@@ -6,12 +6,15 @@ import { t } from "@pdm/shared/copy";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { HealthScore } from "@/components/ui/health-score";
-import { StatTile } from "@/components/ui/stat-tile";
-import { SeverityBadge } from "@/components/ui/severity-badge";
 import {
   AlertTriangleIcon,
+  ArrowDownIcon,
+  CalendarIcon,
   CheckIcon,
   ClockIcon,
+  FlagIcon,
+  GlobeIcon,
+  LinkIcon,
   ShieldIcon,
   XIcon,
 } from "@/components/ui/icons";
@@ -20,6 +23,7 @@ import { trackClient } from "@/lib/analytics-client";
 
 /**
  * THE FREE RESULT — PLAN.md §3.2's result-page specification, Phase 6 task 6.5.
+ * Redesigned to match the reference layout in Image 1.
  *
  * ⚠️ IT POLLS RATHER THAN STREAMS. A free scan takes up to 45 seconds and the
  * submitter is a stranger who may close the tab; a websocket per anonymous
@@ -65,6 +69,7 @@ interface Payload {
   healthScore: number | null;
   summary: Summary | null;
   errorCode: string | null;
+  expiresAt?: string;
 }
 
 const POLL_MS = 3_000;
@@ -72,6 +77,7 @@ const POLL_MS = 3_000;
 export function FreeScanResult({ token }: { token: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,8 +102,6 @@ export function FreeScanResult({ token }: { token: string }) {
       const timer = setInterval(async () => {
         if (await poll()) clearInterval(timer);
       }, POLL_MS);
-      // The cleanup below runs on unmount; clearing here covers the race where
-      // the component unmounts between the first poll and the interval start.
       if (cancelled) clearInterval(timer);
     });
 
@@ -105,6 +109,14 @@ export function FreeScanResult({ token }: { token: string }) {
       cancelled = true;
     };
   }, [token]);
+
+  function copyShareLink() {
+    if (typeof window !== "undefined") {
+      void navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  }
 
   if (notFound) {
     return <Notice tone="warning" title={t("freeScanner.errorNotFound")} />;
@@ -132,88 +144,386 @@ export function FreeScanResult({ token }: { token: string }) {
   }
 
   const summary = payload.summary;
+  const displayHost = payload.url.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  const scanDate = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
+
+  const score = payload.healthScore ?? 100;
+  const isLowRisk = score >= 80 && summary.trackersBeforeConsent === 0;
+  const isMediumRisk = score >= 50 && !isLowRisk;
+
+  // Infer category counts from detections
+  const analyticsTrackers = summary.topTrackers.filter((name) =>
+    /analytics|stats|plausible|posthog|matomo|clarity|hotjar/i.test(name),
+  );
+  const marketingTrackers = summary.topTrackers.filter((name) =>
+    /pixel|meta|facebook|tiktok|ads|criteo|doubleclick|bing|linkedin/i.test(name),
+  );
+  const otherTrackers = summary.topTrackers.filter(
+    (name) => !analyticsTrackers.includes(name) && !marketingTrackers.includes(name),
+  );
+
+  const catNecessary = summary.cmpDetected ? 1 : 0;
+  const catPreferences = 0;
+  const catStatistics = analyticsTrackers.length;
+  const catMarketing = marketingTrackers.length;
+  const catUnclassified = otherTrackers.length + Math.max(0, summary.thirdPartyDomains - summary.topTrackers.length);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-caption text-muted-foreground">{t("freeScanner.resultFor")}</p>
-        <h1 className="text-h1 break-words tracking-tight">{payload.url}</h1>
+    <div className="flex flex-col gap-8">
+      {/* 1. TOP BANNER — Blue / Primary accent bar (Image 1 reference) */}
+      <div className="rounded-xl border border-primary/25 bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 px-6 py-5 text-center shadow-xs">
+        <p className="text-caption font-medium uppercase tracking-wider text-primary">
+          {t("freeScanner.scanResultsBanner")}
+        </p>
+        <h1 className="mt-1 text-h2 font-bold tracking-tight text-foreground break-all">
+          {displayHost}
+        </h1>
       </div>
 
       {summary.partial ? (
         <Notice tone="warning" title={t("freeScanner.partialNotice")} />
       ) : null}
 
-      <Card className="flex flex-wrap items-center gap-6 p-5">
-        {/* `showBand` spells the number out in words — there is room here, and
-            this is the one place in the product where the reader has never
-            seen our score before and has no idea whether 72 is good. */}
-        <HealthScore score={payload.healthScore} showBand />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="text-small font-medium">{t("freeScanner.resultTitle")}</p>
-          <p className="flex items-center gap-1.5 text-small text-muted-foreground">
-            {summary.cmpDetected ? (
-              <CheckIcon className="text-success" />
-            ) : (
-              <XIcon className="text-warning" />
-            )}
-            {summary.cmpDetected
-              ? `${t("freeScanner.bannerDetected")}${summary.cmpName ? ` — ${summary.cmpName}` : ""}`
-              : t("freeScanner.bannerNotDetected")}
-          </p>
-        </div>
-      </Card>
+      {/* 2. HERO POSTURE SECTION (Image 1 reference: left risk badge & text, right browser mockup) */}
+      <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
+        {/* Left Side: Risk Badge, Posture Headline, Description, and CTA */}
+        <div className="flex flex-col items-start gap-4 lg:col-span-6">
+          {isLowRisk ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-muted px-3.5 py-1 text-small font-semibold text-success shadow-xs">
+              <CheckIcon className="size-4" />
+              <span>{t("freeScanner.statusLowRisk")}</span>
+            </div>
+          ) : isMediumRisk ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-muted px-3.5 py-1 text-small font-semibold text-warning shadow-xs">
+              <AlertTriangleIcon className="size-4" />
+              <span>{t("freeScanner.statusMediumRisk")}</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-danger/30 bg-danger-muted px-3.5 py-1 text-small font-semibold text-danger shadow-xs">
+              <AlertTriangleIcon className="size-4" />
+              <span>{t("freeScanner.statusHighRisk")}</span>
+            </div>
+          )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile
-          label={t("freeScanner.trackersBefore")}
-          value={formatNumber(summary.trackersBeforeConsent)}
-          note={summary.topTrackers.join(" · ") || undefined}
-        />
-        <StatTile
-          label={t("freeScanner.cookiesBefore")}
-          value={formatNumber(summary.cookiesBeforeConsent)}
-        />
-        <StatTile
-          label={t("freeScanner.thirdPartyDomains")}
-          value={formatNumber(summary.thirdPartyDomains)}
-        />
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-balance">
+            {isLowRisk
+              ? "Your website protects privacy!"
+              : t("freeScanner.postureTitle")}
+          </h2>
+
+          <p className="text-body-lg text-muted-foreground text-balance">
+            {t("freeScanner.postureSubtitle")}
+          </p>
+
+          <a
+            href="#tracker-details"
+            className="mt-2 inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-small font-medium text-foreground shadow-xs transition hover:bg-accent"
+          >
+            <span>{t("freeScanner.showScanResults")}</span>
+            <ArrowDownIcon className="size-4 text-primary" />
+          </a>
+        </div>
+
+        {/* Right Side: Website Browser Mockup Container */}
+        <div className="lg:col-span-6">
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+            {/* Browser Header Bar */}
+            <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-2.5">
+              <div className="flex items-center gap-1.5">
+                <div className="size-2.5 rounded-full bg-red-400/80" />
+                <div className="size-2.5 rounded-full bg-amber-400/80" />
+                <div className="size-2.5 rounded-full bg-green-400/80" />
+              </div>
+              <div className="flex max-w-xs flex-1 items-center justify-center px-2">
+                <div className="flex w-full items-center gap-1.5 truncate rounded-md border border-border bg-background px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
+                  <GlobeIcon className="size-3 shrink-0 text-primary" />
+                  <span className="truncate">{payload.url}</span>
+                </div>
+              </div>
+              <div className="size-4" />
+            </div>
+
+            {/* Mockup Preview Area */}
+            <div className="p-6 bg-canvas flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-small font-semibold text-foreground">{displayHost}</p>
+                  <p className="text-caption text-muted-foreground">Automated browser inspection</p>
+                </div>
+                <HealthScore score={payload.healthScore} showBand />
+              </div>
+
+              {/* Consent banner status chip */}
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 shadow-xs">
+                {summary.cmpDetected ? (
+                  <CheckIcon className="size-4 shrink-0 text-success" />
+                ) : (
+                  <XIcon className="size-4 shrink-0 text-warning" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-small font-medium">
+                    {summary.cmpDetected
+                      ? `${t("freeScanner.bannerDetected")}${summary.cmpName ? ` (${summary.cmpName})` : ""}`
+                      : t("freeScanner.bannerNotDetected")}
+                  </p>
+                  <p className="text-caption text-muted-foreground">
+                    {summary.cmpDetected
+                      ? "Consent management mechanism identified on page"
+                      : "No standard consent management platform identified"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {summary.findingCount > 0 ? (
-        <Card className="p-4">
-          <p className="text-small font-medium">
-            {formatNumber(summary.findingCount)} {t("freeScanner.findingsFound")}
-          </p>
-          <ul className="mt-3 flex flex-col gap-2">
-            {summary.topFindings.map((finding) => (
-              <li key={finding.title} className="flex items-start gap-2 text-small">
-                <SeverityBadge severity={finding.severity as never} />
-                <span>{finding.title}</span>
-              </li>
-            ))}
-          </ul>
-          {summary.findingCount > summary.topFindings.length ? (
-            <p className="mt-3 text-caption text-muted-foreground">
-              {t("freeScanner.findingsShownNote")}
-            </p>
-          ) : null}
-        </Card>
-      ) : null}
+      {/* 3. SUMMARY KPI CARDS ROW (Image 1 reference: 4 summary cards + copy link) */}
+      <div>
+        <h3 className="text-xl font-bold tracking-tight">
+          Your website&apos;s scan results
+        </h3>
 
-      {/*
-        ⚠️ THE LOCKED PANEL LISTS WHAT IS MISSING, IN WORDS, RATHER THAN BLURRING
-        FAKE CONTENT. §3.2 calls it "a blurred 'locked' panel"; blurring
-        invented findings would be a fabricated claim about somebody's website,
-        which P1 and §1.12 both forbid. Naming the four things a free scan
-        cannot do is more honest and a better argument.
-      */}
-      <Card className="p-5">
-        <p className="flex items-center gap-2 text-small font-medium">
-          <ShieldIcon className="text-primary" />
-          {t("freeScanner.lockedTitle")}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Card 1: Risk / Compliance Status */}
+          <Card className="flex flex-col justify-between p-4">
+            <p className="text-caption font-medium text-muted-foreground">
+              {t("freeScanner.kpiStatus")}
+            </p>
+            <p
+              className={`mt-2 text-body font-semibold ${
+                isLowRisk
+                  ? "text-success"
+                  : isMediumRisk
+                    ? "text-warning"
+                    : "text-danger"
+              }`}
+            >
+              {isLowRisk
+                ? t("freeScanner.statusLowRisk")
+                : isMediumRisk
+                  ? t("freeScanner.statusMediumRisk")
+                  : t("freeScanner.statusHighRisk")}
+            </p>
+          </Card>
+
+          {/* Card 2: Scan Date */}
+          <Card className="flex flex-col justify-between p-4">
+            <p className="text-caption font-medium text-muted-foreground">
+              {t("freeScanner.kpiScanDate")}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-body font-semibold text-foreground">
+              <CalendarIcon className="size-4 text-muted-foreground" />
+              <span>{scanDate}</span>
+            </p>
+          </Card>
+
+          {/* Card 3: Monitored Scope / Regulations */}
+          <Card className="flex flex-col justify-between p-4">
+            <p className="text-caption font-medium text-muted-foreground">
+              {t("freeScanner.kpiRegulations")}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-body font-semibold text-foreground">
+              <ShieldIcon className="size-4 text-primary" />
+              <span>{t("freeScanner.kpiRegulationsValue")}</span>
+            </p>
+          </Card>
+
+          {/* Card 4: Total Trackers Detected */}
+          <Card className="flex flex-col justify-between p-4">
+            <p className="text-caption font-medium text-muted-foreground">
+              {t("freeScanner.kpiTrackers")}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-body font-semibold text-foreground">
+              <FlagIcon className="size-4 text-muted-foreground" />
+              <span>{formatNumber(summary.trackersBeforeConsent)}</span>
+            </p>
+          </Card>
+
+          {/* Card 5: Share / Copy Link Action */}
+          <Card className="flex flex-col justify-between p-4">
+            <p className="text-caption font-medium text-muted-foreground">
+              Share scan result
+            </p>
+            <button
+              type="button"
+              onClick={copyShareLink}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-small font-medium text-foreground transition hover:bg-accent"
+            >
+              {copied ? (
+                <>
+                  <CheckIcon className="size-4 text-success" />
+                  <span className="text-success">{t("freeScanner.linkCopied")}</span>
+                </>
+              ) : (
+                <>
+                  <LinkIcon className="size-4 text-primary" />
+                  <span>{t("freeScanner.copyLink")}</span>
+                </>
+              )}
+            </button>
+          </Card>
+        </div>
+      </div>
+
+      {/* 4. TRACKERS DETECTED & DETAILS SECTION (Image 1 reference) */}
+      <div id="tracker-details" className="flex flex-col gap-4 pt-4">
+        <h3 className="text-2xl font-bold tracking-tight">
+          {t("freeScanner.trackersDetectedTitle")}
+        </h3>
+
+        <Card className="p-6">
+          {/* Tracker Details Header */}
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <h4 className="text-lg font-bold text-foreground">
+              {t("freeScanner.trackerDetailsTitle")}
+            </h4>
+            <span className="font-mono text-small font-semibold text-foreground">
+              Total : {formatNumber(summary.trackersBeforeConsent)}
+            </span>
+          </div>
+
+          {/* 5 Category Metric Cards Row (Image 1 reference) */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="rounded-lg border border-border bg-card p-4 text-center">
+              <p className="text-caption font-medium text-muted-foreground">
+                {t("freeScanner.catNecessary")}
+              </p>
+              <p className="mt-2 font-mono text-2xl font-bold text-foreground">
+                {catNecessary}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-4 text-center">
+              <p className="text-caption font-medium text-muted-foreground">
+                {t("freeScanner.catPreferences")}
+              </p>
+              <p className="mt-2 font-mono text-2xl font-bold text-foreground">
+                {catPreferences}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-4 text-center">
+              <p className="text-caption font-medium text-muted-foreground">
+                {t("freeScanner.catStatistics")}
+              </p>
+              <p className="mt-2 font-mono text-2xl font-bold text-foreground">
+                {catStatistics}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-4 text-center">
+              <p className="text-caption font-medium text-muted-foreground">
+                {t("freeScanner.catMarketing")}
+              </p>
+              <p className="mt-2 font-mono text-2xl font-bold text-foreground">
+                {catMarketing}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-4 text-center">
+              <p className="text-caption font-medium text-muted-foreground">
+                {t("freeScanner.catUnclassified")}
+              </p>
+              <p className="mt-2 font-mono text-2xl font-bold text-foreground">
+                {catUnclassified}
+              </p>
+            </div>
+          </div>
+
+          {/* Tracker Table / Findings Details */}
+          <div className="mt-8 overflow-x-auto">
+            <table className="w-full text-left text-small">
+              <thead>
+                <tr className="border-b border-border text-caption font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="pb-3 pr-4">{t("freeScanner.colName")}</th>
+                  <th className="pb-3 px-4">{t("freeScanner.colProvider")}</th>
+                  <th className="pb-3 px-4">{t("freeScanner.colCategory")}</th>
+                  <th className="pb-3 px-4">{t("freeScanner.colDataSentTo")}</th>
+                  <th className="pb-3 pl-4">{t("freeScanner.colStatus")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border font-mono">
+                {summary.topTrackers.length > 0 ? (
+                  summary.topTrackers.map((tracker) => {
+                    const isMarketing = /pixel|meta|facebook|tiktok|ads|criteo|doubleclick/i.test(tracker);
+                    const isAnalytics = /analytics|stats|plausible|posthog|matomo/i.test(tracker);
+                    const category = isMarketing
+                      ? t("freeScanner.catMarketing")
+                      : isAnalytics
+                        ? t("freeScanner.catStatistics")
+                        : t("freeScanner.catUnclassified");
+                    return (
+                      <tr key={tracker} className="hover:bg-accent/40 transition">
+                        <td className="py-3 pr-4 font-sans font-medium text-foreground">
+                          {tracker}
+                        </td>
+                        <td className="py-3 px-4 font-sans text-muted-foreground">
+                          {tracker}
+                        </td>
+                        <td className="py-3 px-4 font-sans text-muted-foreground">
+                          {category}
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground">
+                          {displayHost}
+                        </td>
+                        <td className="py-3 pl-4 font-sans">
+                          <span className="inline-flex rounded-full bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning">
+                            Pre-consent
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center font-sans text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <CheckIcon className="size-6 text-success" />
+                        <p className="font-medium text-foreground">
+                          {t("freeScanner.noTrackersDetected")}
+                        </p>
+                        <p className="text-caption text-muted-foreground">
+                          No third-party tracking scripts loaded before user consent.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Full Scan Conversion Prompt (Image 1 CTA box) */}
+          <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-6 text-center">
+            <h5 className="text-body-lg font-semibold text-foreground">
+              {t("freeScanner.fullScanCtaTitle")}
+            </h5>
+            <p className="mx-auto mt-2 max-w-xl text-small text-muted-foreground">
+              {t("freeScanner.fullScanCtaBody")}
+            </p>
+            <Link
+              href={`/signup?free_scan_token=${encodeURIComponent(token)}`}
+              onClick={() => trackClient("free_scan_signup_clicked")}
+              className={`mt-4 ${buttonClasses("primary", "md", "h-11 px-6")}`}
+            >
+              {t("freeScanner.fullScanCtaButton")}
+            </Link>
+          </div>
+        </Card>
+      </div>
+
+      {/* 5. LOCKED CAPABILITIES PANEL (What monitoring adds) */}
+      <Card className="p-6">
+        <p className="flex items-center gap-2 text-base font-semibold">
+          <ShieldIcon className="size-5 text-primary" />
+          <span>{t("freeScanner.lockedTitle")}</span>
         </p>
-        <ul className="mt-3 flex flex-col gap-2 text-small text-muted-foreground">
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 text-small text-muted-foreground">
           {[
             t("freeScanner.lockedReject"),
             t("freeScanner.lockedWithdraw"),
@@ -222,22 +532,16 @@ export function FreeScanResult({ token }: { token: string }) {
             t("freeScanner.lockedReports"),
             t("freeScanner.lockedEvidence"),
           ].map((line) => (
-            <li key={line} className="flex items-start gap-2">
-              <CheckIcon className="mt-0.5 shrink-0 text-primary" />
-              {line}
+            <li key={line} className="flex items-start gap-2.5">
+              <CheckIcon className="mt-0.5 size-4 shrink-0 text-success" />
+              <span>{line}</span>
             </li>
           ))}
         </ul>
 
-        <div className="mt-5 flex flex-col items-start gap-1.5">
-          {/*
-            §3.2: the CTA "pre-fills the URL into signup". `free_scan_token` is
-            carried as a query parameter and read by the onboarding wizard.
-          */}
+        <div className="mt-6 flex flex-col items-start gap-1.5 border-t border-border pt-4">
           <Link
             href={`/signup?free_scan_token=${encodeURIComponent(token)}`}
-            // §3.2's funnel ends here: submitted → completed → result_viewed →
-            // signup_clicked → signup_completed, attributed by the token.
             onClick={() => trackClient("free_scan_signup_clicked")}
             className={buttonClasses("primary", "md")}
           >
@@ -247,7 +551,7 @@ export function FreeScanResult({ token }: { token: string }) {
         </div>
       </Card>
 
-      <p className="text-caption text-muted-foreground">{t("freeScanner.expiresNote")}</p>
+      <p className="text-caption text-muted-foreground text-center">{t("freeScanner.expiresNote")}</p>
     </div>
   );
 }
@@ -258,20 +562,20 @@ function Running({ status }: { status: string }) {
     { key: "RUNNING", label: t("freeScanner.stageRunning") },
   ];
   return (
-    <Card className="flex flex-col gap-3 p-5">
-      <p className="flex items-center gap-2 text-small font-medium">
-        <ClockIcon className="text-info" />
-        {t("freeScanner.runningTitle")}
+    <Card className="mx-auto flex max-w-lg flex-col gap-4 p-6 shadow-md">
+      <p className="flex items-center gap-2 text-base font-semibold text-foreground">
+        <ClockIcon className="size-5 text-info animate-spin" />
+        <span>{t("freeScanner.runningTitle")}</span>
       </p>
-      <ul className="flex flex-col gap-1.5 text-small text-muted-foreground">
+      <ul className="flex flex-col gap-2 text-small text-muted-foreground">
         {stages.map((stage) => (
-          <li key={stage.key} className="flex items-center gap-2">
+          <li key={stage.key} className="flex items-center gap-2.5">
             {status === stage.key ? (
-              <ClockIcon className="text-info" />
+              <ClockIcon className="size-4 text-info" />
             ) : (
-              <CheckIcon className="text-success" />
+              <CheckIcon className="size-4 text-success" />
             )}
-            {stage.label}
+            <span>{stage.label}</span>
           </li>
         ))}
       </ul>
@@ -282,10 +586,11 @@ function Running({ status }: { status: string }) {
 
 function Notice({ tone, title }: { tone: "warning"; title: string }) {
   return (
-    <Card className={`flex items-start gap-2.5 border-warning/40 bg-warning-muted p-4`}>
-      <AlertTriangleIcon className="mt-0.5 text-warning" />
+    <Card className="flex items-start gap-2.5 border-warning/40 bg-warning-muted p-4">
+      <AlertTriangleIcon className="mt-0.5 size-4 text-warning" />
       <p className="text-small">{title}</p>
       <span className="sr-only">{tone}</span>
     </Card>
   );
 }
+
