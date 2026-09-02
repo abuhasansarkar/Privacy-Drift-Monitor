@@ -130,8 +130,8 @@ export async function createCheckoutSession(
   });
   const eligibleForTrial = !priorSubscription?.stripeSubscriptionId;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
+  const sessionParams = {
+    mode: "subscription" as const,
     customer: customerId,
     // ⚠️ The agency link the webhook reads. See `interpretEvent`.
     client_reference_id: ctx.agencyId,
@@ -140,15 +140,31 @@ export async function createCheckoutSession(
       ? { subscription_data: { trial_period_days: TRIAL_DAYS } }
       : {}),
     allow_promotion_codes: true,
-    // §9.1: tax collection enabled. Requires Stripe Tax to be active on the
-    // account; harmless when it is not.
-    automatic_tax: { enabled: true },
-    // Needed for automatic_tax to compute a rate.
-    customer_update: { address: "auto", name: "auto" },
-    tax_id_collection: { enabled: true },
     success_url: `${input.returnUrl}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${input.returnUrl}?checkout=cancelled`,
-  });
+  };
+
+  let session;
+  try {
+    // §9.1: tax collection enabled if Stripe Tax is configured on the account.
+    session = await stripe.checkout.sessions.create({
+      ...sessionParams,
+      automatic_tax: { enabled: true },
+      customer_update: { address: "auto", name: "auto" },
+      tax_id_collection: { enabled: true },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("automatic tax") || message.includes("tax")) {
+      logger.warn(
+        { component: "billing-checkout", reason: "STRIPE_TAX_NOT_CONFIGURED" },
+        "Stripe Tax not configured on account; proceeding with standard checkout",
+      );
+      session = await stripe.checkout.sessions.create(sessionParams);
+    } else {
+      throw err;
+    }
+  }
 
   if (!session.url) {
     throw new BillingUnavailableError(t("billing.unavailable"), {

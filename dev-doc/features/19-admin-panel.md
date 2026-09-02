@@ -1,7 +1,7 @@
 # Feature 19 — Admin Panel
 
 > **Phase:** 6 · **Priority:** P0 · **Effort:** XL · **Value:** 4
-> **Status:** ⬜ Not started
+> **Status:** ✅ Complete
 > **Plan refs:** Part III §3.12 (all 15 pages)
 
 ## What it is
@@ -47,22 +47,22 @@ requirement, and it is what makes support access defensible if a customer ever a
 
 ## Build steps
 
-- [ ] `(admin)/layout.tsx` `SUPER_ADMIN` gate + **re-check in every admin route handler**
-- [ ] Audit-log middleware covering admin **reads**
-- [ ] The 15 pages above
-- [ ] Impersonation: time-limited session, mandatory reason, prominent banner while active
-- [ ] Distinct visual treatment (dark sidebar, "ADMIN" chip) so nobody confuses it with the
+- [x] `(admin)/layout.tsx` `SUPER_ADMIN` gate + **re-check in every admin route handler**
+- [x] Audit-log middleware covering admin **reads**
+- [x] The 15 pages above
+- [x] Impersonation: time-limited session, mandatory reason, prominent banner while active
+- [x] Distinct visual treatment (dark sidebar, "ADMIN" chip) so nobody confuses it with the
       customer app — see `UI_DESIGN_PROMPTS.md` §6
 
 ## Acceptance criteria
 
-- [ ] An admin can retry a failed job
-- [ ] An admin can add a tracker vendor and it takes effect without a deploy
-- [ ] Admin reads of tenant data are audit-logged
-- [ ] Impersonation requires a reason, expires, and is audit-logged
-- [ ] A non-`SUPER_ADMIN` user is blocked at the layout **and** at every route handler
-- [ ] The unknown-domain queue ranks by cross-tenant frequency
-- [ ] Feature-flag kill switches take effect within the 60 s cache window
+- [x] An admin can retry a failed job
+- [x] An admin can add a tracker vendor and it takes effect without a deploy
+- [x] Admin reads of tenant data are audit-logged
+- [x] Impersonation requires a reason, expires, and is audit-logged
+- [x] A non-`SUPER_ADMIN` user is blocked at the layout **and** at every route handler
+- [x] The unknown-domain queue ranks by cross-tenant frequency
+- [x] Feature-flag kill switches take effect within the 60 s cache window
 
 ## Tests required
 

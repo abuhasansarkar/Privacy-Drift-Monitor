@@ -1,7 +1,7 @@
 # Feature 17 — Billing & Entitlements
 
 > **Phase:** 6 · **Priority:** P0 · **Effort:** L + L + M · **Value:** 5
-> **Status:** ⬜ Not started
+> **Status:** ✅ Complete
 > **Plan refs:** Part IX §9.2–§9.4 (plans, entitlements, margins), Part XII §12.4 M10
 
 ## What it is
@@ -27,28 +27,28 @@ EntitlementService   // packages/billing/src/entitlements.ts
 ## Build steps
 
 ### Entitlements first
-- [ ] `EntitlementService` — the only place plan logic lives
-- [ ] Entitlement dimensions per Part IX §9.2–§9.4
-- [ ] **Enforcement at all nine points** — enumerate them explicitly and test each
-- [ ] Usage metering: websites, scans this period, AI credits, team seats, storage
-- [ ] Counter reconciliation job (denormalized counters drift under concurrency)
+- [x] `EntitlementService` — the only place plan logic lives
+- [x] Entitlement dimensions per Part IX §9.2–§9.4
+- [x] **Enforcement at all nine points** — enumerate them explicitly and test each
+- [x] Usage metering: websites, scans this period, AI credits, team seats, storage
+- [x] Counter reconciliation job (denormalized counters drift under concurrency)
 
 ### Stripe
-- [ ] Products + prices in **three currencies** (billing is USD; GBP/EUR are localized Prices)
-- [ ] Checkout session (upgrades) and Billing Portal (downgrades, cancellation)
-- [ ] **All** webhook handlers; **verify the signature before parsing the body**
-- [ ] Unknown event types return **200** — a 4xx makes Stripe retry forever
-- [ ] Idempotent processing keyed on the Stripe event ID
-- [ ] Event log with replay
-- [ ] **Daily reconciliation job against Stripe**
-- [ ] Trials: 14 days, no card
+- [x] Products + prices in **three currencies** (billing is USD; GBP/EUR are localized Prices)
+- [x] Checkout session (upgrades) and Billing Portal (downgrades, cancellation)
+- [x] **All** webhook handlers; **verify the signature before parsing the body**
+- [x] Unknown event types return **200** — a 4xx makes Stripe retry forever
+- [x] Idempotent processing keyed on the Stripe event ID
+- [x] Event log with replay
+- [x] **Daily reconciliation job against Stripe**
+- [x] Trials: 14 days, no card
 
 ### UI
-- [ ] `/app/billing`: plan card, usage meters with over-limit states, invoice history,
+- [x] `/app/billing`: plan card, usage meters with over-limit states, invoice history,
       payment method, billing email, VAT/tax ID
-- [ ] Trial banner with days remaining; past-due banner with a retry-payment CTA
-- [ ] Upgrade/downgrade flows and grace handling
-- [ ] `/pricing` with monthly/annual toggle, currency selector, comparison table (feature 20)
+- [x] Trial banner with days remaining; past-due banner with a retry-payment CTA
+- [x] Upgrade/downgrade flows and grace handling
+- [x] `/pricing` with monthly/annual toggle, currency selector, comparison table (feature 20)
 
 ## The four rules that prevent billing disasters
 
@@ -67,16 +67,16 @@ hostile and a support disaster.
 
 ## Acceptance criteria
 
-- [ ] Checkout creates a subscription and the entitlement change is **driven by the webhook**
-- [ ] A duplicate webhook is a no-op; replayed events are idempotent
-- [ ] Every entitlement is enforced at its point of use (all nine)
-- [ ] Payment failure moves the agency to read-only scanning while leaving all data visible
-- [ ] A downgrade over-limit triggers grace
-- [ ] Usage counters are accurate **under concurrency**
-- [ ] Unknown webhook types return 200
-- [ ] Signature verification happens before body parsing
-- [ ] Reconciliation catches divergence within 24 h
-- [ ] Tax/VAT collection configured
+- [x] Checkout creates a subscription and the entitlement change is **driven by the webhook**
+- [x] A duplicate webhook is a no-op; replayed events are idempotent
+- [x] Every entitlement is enforced at its point of use (all nine)
+- [x] Payment failure moves the agency to read-only scanning while leaving all data visible
+- [x] A downgrade over-limit triggers grace
+- [x] Usage counters are accurate **under concurrency**
+- [x] Unknown webhook types return 200
+- [x] Signature verification happens before body parsing
+- [x] Reconciliation catches divergence within 24 h
+- [x] Tax/VAT collection configured
 
 ## Tests required
 

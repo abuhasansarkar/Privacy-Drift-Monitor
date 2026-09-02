@@ -64,6 +64,7 @@ export default async function BillingPage({
           plans={data.plans}
           currency={data.currency}
           hasSubscription={data.planKey !== null}
+          currentInterval={data.interval}
         />
       ) : null}
 

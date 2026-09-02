@@ -92,8 +92,13 @@ export async function getBillingPageData(ctx: AgencyContext): Promise<BillingPag
       getStripeSideData(ctx),
     ]);
 
+  const hasActiveSubscription =
+    subscription?.status === "ACTIVE" ||
+    subscription?.status === "TRIALING" ||
+    subscription?.status === "PAST_DUE";
+
   const interval = (subscription?.interval ?? "MONTHLY") as "MONTHLY" | "ANNUAL";
-  const planRow = subscription?.plan ?? null;
+  const planRow = hasActiveSubscription ? subscription?.plan ?? null : null;
 
   const websiteUsage = usage.find((row) => row.metric === "WEBSITES");
   const grace = resolveGrace({
@@ -128,7 +133,7 @@ export async function getBillingPageData(ctx: AgencyContext): Promise<BillingPag
       priceAnnualCents: plan.priceAnnualCents,
       currency: plan.currency,
       entitlements: plan.entitlements as unknown as EntitlementSet,
-      current: plan.key === planRow?.key,
+      current: hasActiveSubscription && plan.key === planRow?.key,
     })),
     stripe,
     /*

@@ -57,6 +57,35 @@ const eslintConfig = defineConfig([
   ]),
 
   {
+    /*
+     * TypeScript convention: an underscore-prefixed parameter means
+     * "required by the interface, intentionally unused in this implementation".
+     * Without this, every stub rule (R040, R041, R043, R045, R049) that
+     * returns [] warns — and the interface is `evaluate(context: RuleContext)`.
+     */
+    name: "pdm/allow-underscore-unused-args",
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+
+  {
+    /*
+     * k6 load-testing scripts MUST use `export default function()` as
+     * their entry point — this is a k6 runtime convention, not a choice.
+     */
+    name: "pdm/k6-load-tests",
+    files: ["load/**/*.js"],
+    rules: {
+      "import/no-anonymous-default-export": "off",
+    },
+  },
+
+  {
     name: "pdm/no-raw-prisma-in-request-scope",
     files: [
       "src/app/**/*.ts",

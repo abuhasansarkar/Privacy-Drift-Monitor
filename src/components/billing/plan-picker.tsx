@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { CheckIcon } from "@/components/ui/icons";
 import { formatMoney, formatNumber } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { CheckoutButton, PortalButton } from "./billing-actions";
 import type { PlanOption } from "@/server/queries/billing";
 
@@ -31,12 +32,14 @@ export function PlanPicker({
   plans,
   currency,
   hasSubscription,
+  currentInterval = "MONTHLY",
 }: {
   plans: PlanOption[];
   currency: string;
   hasSubscription: boolean;
+  currentInterval?: "MONTHLY" | "ANNUAL";
 }) {
-  const [interval, setInterval] = useState<"MONTHLY" | "ANNUAL">("MONTHLY");
+  const [interval, setInterval] = useState<"MONTHLY" | "ANNUAL">(currentInterval);
   const currentIndex = plans.findIndex((plan) => plan.current);
 
   return (
@@ -72,20 +75,24 @@ export function PlanPicker({
         {plans.map((plan, index) => {
           const price =
             interval === "ANNUAL" ? plan.priceAnnualCents : plan.priceMonthlyCents;
-          const isDowngrade = currentIndex >= 0 && index < currentIndex;
+          const isCurrentPlan = plan.current;
+          const isCurrentExact = hasSubscription && isCurrentPlan && interval === currentInterval;
+          const isSamePlanDifferentInterval =
+            hasSubscription && isCurrentPlan && interval !== currentInterval;
+          const isDowngrade = hasSubscription && currentIndex >= 0 && index < currentIndex;
 
           return (
             <div
               key={plan.key}
               className={
-                plan.current
+                isCurrentExact
                   ? "flex flex-col gap-2 rounded-lg border-2 border-primary p-3.5"
                   : "flex flex-col gap-2 rounded-lg border border-border p-3.5"
               }
             >
               <div className="flex items-center gap-2">
                 <span className="font-medium">{plan.name}</span>
-                {plan.current ? (
+                {isCurrentExact ? (
                   <Badge variant="secondary">{t("billing.currentPlanBadge")}</Badge>
                 ) : null}
               </div>
@@ -119,17 +126,28 @@ export function PlanPicker({
               </ul>
 
               <div className="mt-auto pt-2">
-                {plan.current ? null : isDowngrade ? (
-                  /*
-                   * ⚠️ A DOWNGRADE IS A PORTAL TRIP, and the sentence beside it
-                   * says why. Without it the button looks like the same action
-                   * with a different label and the customer wonders why one
-                   * plan sends them elsewhere.
-                   */
+                {isCurrentExact ? (
+                  <Button disabled variant="secondary" className="w-full cursor-not-allowed opacity-60">
+                    Current plan
+                  </Button>
+                ) : isDowngrade ? (
                   <div className="flex flex-col gap-1">
                     <PortalButton label={t("billing.switchToPlan")} />
                     <p className="text-caption text-muted-foreground">
                       {t("billing.downgradeViaPortal")}
+                    </p>
+                  </div>
+                ) : isSamePlanDifferentInterval ? (
+                  <div className="flex flex-col gap-1">
+                    <PortalButton
+                      label={
+                        interval === "ANNUAL"
+                          ? t("billing.annual")
+                          : t("billing.monthly")
+                      }
+                    />
+                    <p className="text-caption text-muted-foreground">
+                      {t("billing.manageBillingHelp")}
                     </p>
                   </div>
                 ) : (

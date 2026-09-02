@@ -26,7 +26,11 @@ async function openStripe(
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    console.error(`Billing action failed on ${endpoint}:`, response.status, err);
+    return null;
+  }
   const data: unknown = await response.json().catch(() => null);
   const url = (data as { url?: unknown } | null)?.url;
   return typeof url === "string" ? url : null;

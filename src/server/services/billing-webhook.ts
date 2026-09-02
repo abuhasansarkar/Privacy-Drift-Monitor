@@ -165,12 +165,23 @@ async function apply(intent: WebhookIntent): Promise<WebhookOutcome> {
           );
         }
 
+        // ⚠️ Don't let an INCOMPLETE status from checkout.session.completed overwrite
+        // an already ACTIVE or TRIALING subscription.
+        const shouldKeepActiveStatus =
+          intent.status === "INCOMPLETE" &&
+          (subscription.status === "ACTIVE" || subscription.status === "TRIALING");
+        const statusToApply = shouldKeepActiveStatus
+          ? subscription.status
+          : (intent.status as never);
+
         await db.subscription.update({
           where: { id: subscription.id },
           data: {
             stripeSubscriptionId: intent.stripeSubscriptionId,
-            status: intent.status as never,
-            interval: intent.interval as never,
+            status: statusToApply,
+            // ⚠️ Interval and plan arrive on customer.subscription.* which carries the price.
+            // checkout.session.completed carries no price, so don't let it overwrite an interval.
+            ...(plan ? { interval: intent.interval as never } : {}),
             /*
              * ⚠️ PERIOD DATES AND PLAN ARE ONLY OVERWRITTEN WHEN THE EVENT
              * CARRIES THEM. `checkout.session.completed` deliberately reports

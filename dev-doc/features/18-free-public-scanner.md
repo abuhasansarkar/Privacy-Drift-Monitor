@@ -1,7 +1,7 @@
 # Feature 18 — Free Public Scanner
 
 > **Phase:** 6 · **Priority:** P1 · **Effort:** L · **Value:** 4
-> **Status:** ⬜ Not started
+> **Status:** ✅ Complete
 > **⚠️ The highest-risk public surface in the product.**
 > **Plan refs:** Part III §3.2 (`/free-scanner`), Part X §10.3 (SSRF), §10.5 (abuse)
 
@@ -37,30 +37,30 @@ Deliberate: enough value to be credible, enough gap to convert.
 
 ## Abuse controls — all mandatory
 
-- [ ] **Cloudflare Turnstile** before enqueue; token verified server-side, **single-use**
-- [ ] IP rate limit: 3 scans/hour, 10/day (Redis sliding window)
-- [ ] Domain rate limit: **1 scan / 24 h per registrable domain, globally across all users**
-- [ ] Global circuit breaker: > 200 waiting jobs → "high demand, try later"
-- [ ] **Dedicated `scan:free` queue, low priority, capped concurrency — cannot starve paying
+- [x] **Cloudflare Turnstile** before enqueue; token verified server-side, **single-use**
+- [x] IP rate limit: 3 scans/hour, 10/day (Redis sliding window)
+- [x] Domain rate limit: **1 scan / 24 h per registrable domain, globally across all users**
+- [x] Global circuit breaker: > 200 waiting jobs → "high demand, try later"
+- [x] **Dedicated `scan:free` queue, low priority, capped concurrency — cannot starve paying
       customers**
-- [ ] Full SSRF guard, identical to authenticated scans
-- [ ] Admin-maintained domain blocklist + automatic block after 3 consecutive failures
-- [ ] Email gate: results are viewable without email; **the PDF download and "monitor this
+- [x] Full SSRF guard, identical to authenticated scans
+- [x] Admin-maintained domain blocklist + automatic block after 3 consecutive failures
+- [x] Email gate: results are viewable without email; **the PDF download and "monitor this
       site" require an email**
 
 ## Build steps
 
-- [ ] Input page with Turnstile
-- [ ] `POST /api/public/free-scan` → validate → SSRF → Turnstile → rate limits → enqueue
-- [ ] Running state with the live stage checklist
-- [ ] Result page `/free-scanner/[token]` — **32-byte URL-safe random token, public but
+- [x] Input page with Turnstile
+- [x] `POST /api/public/free-scan` → validate → SSRF → Turnstile → rate limits → enqueue
+- [x] Running state with the live stage checklist
+- [x] Result page `/free-scanner/[token]` — **32-byte URL-safe random token, public but
       unguessable, `noindex`**
-- [ ] Locked/blurred panel listing what monitoring adds (Reject All testing, withdrawal
+- [x] Locked/blurred panel listing what monitoring adds (Reject All testing, withdrawal
       testing, drift, alerts, reports)
-- [ ] CTA "Monitor this website — start free trial" pre-filling the URL into signup
-- [ ] `free_scan_token` cookie carried through signup for attribution
-- [ ] 7-day purge job
-- [ ] Error states (below)
+- [x] CTA "Monitor this website — start free trial" pre-filling the URL into signup
+- [x] `free_scan_token` cookie carried through signup for attribution
+- [x] 7-day purge job
+- [x] Error states (below)
 
 ## Error states
 
@@ -79,15 +79,15 @@ Attributed via the `free_scan_token` cookie carried through signup.
 
 ## Acceptance criteria
 
-- [ ] Every abuse control is enforced
-- [ ] The free queue **cannot starve the paid queue** (assert under load)
-- [ ] SSRF vectors are blocked identically to authenticated scans
-- [ ] The Turnstile token is single-use and verified server-side
-- [ ] Result tokens are unguessable and the page is `noindex`
-- [ ] Results purge after 7 days
-- [ ] No full URLs or cookie values appear in anonymous results
-- [ ] The funnel events fire and attribute correctly through signup
-- [ ] Tested against **20 real websites** before launch
+- [x] Every abuse control is enforced
+- [x] The free queue **cannot starve the paid queue** (assert under load)
+- [x] SSRF vectors are blocked identically to authenticated scans
+- [x] The Turnstile token is single-use and verified server-side
+- [x] Result tokens are unguessable and the page is `noindex`
+- [x] Results purge after 7 days
+- [x] No full URLs or cookie values appear in anonymous results
+- [x] The funnel events fire and attribute correctly through signup
+- [x] Tested against **20 real websites** before launch
 
 ## Tests required
 
