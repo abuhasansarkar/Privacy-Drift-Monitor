@@ -270,8 +270,6 @@ export function BulkSelection({
         </div>
       ) : null}
 
-      {children({ selected, onToggle: toggle, label: t("bulk.selected") })}
-
       {confirmingArchive ? (
         <div className="rounded-md border border-border bg-card p-3">
           <p className="text-small font-semibold">
