@@ -20,7 +20,13 @@ dev-doc/
 │   ├── phase-4-agency-workflow.md
 │   ├── phase-5-ai.md
 │   ├── phase-6-commercial-admin.md
-│   └── phase-7-hardening-launch.md
+│   ├── phase-7-hardening-launch.md
+│   ├── phase-8-us-compliance-gpc.md
+│   ├── phase-9-cipa-wiretap-session-replay.md
+│   ├── phase-10-geo-proxy-matrix-scanning.md
+│   ├── phase-11-policy-to-code-auditor.md
+│   ├── phase-12-interactive-journeys-advanced.md
+│   └── phase-13-automated-remediation-v2-ui.md
 └── features/                      ← one working sheet per feature (reference, not order)
     ├── 01-tenancy-auth-rbac.md
     ├── 02-clients.md
@@ -43,7 +49,13 @@ dev-doc/
     ├── 19-admin-panel.md
     ├── 20-marketing-site.md
     ├── 21-design-system.md
-    └── 22-observability-ops.md
+    ├── 22-observability-ops.md
+    ├── 23-us-compliance-gpc.md
+    ├── 24-cipa-wiretap-session-replay.md
+    ├── 25-geo-proxy-matrix-scanning.md
+    ├── 26-policy-to-code-auditor.md
+    ├── 27-interactive-journeys-advanced-detection.md
+    └── 28-automated-remediation-gtm-fixes.md
 ```
 
 **Phases are the order. Features are the detail.** Start a piece of work by opening the
@@ -139,6 +151,12 @@ to see which one fails first without the others masking it.
 | [Phase 5](phases/phase-5-ai.md) | Grounded explanation and recommendation | ✅ Complete — both tiers verified against live OpenAI |
 | [Phase 6](phases/phase-6-commercial-admin.md) | Billing, free scanner, admin panel | ⬜ **Next.** Start at 6.2 entitlements |
 | [Phase 7](phases/phase-7-hardening-launch.md) | Security, load, a11y, DR, launch | 🟡 Hardening, DR, deploy pipeline, E2E & changelog built; operational launch steps documented |
+| [Phase 8](phases/phase-8-us-compliance-gpc.md) | US Compliance & Global Privacy Control (GPC) | ✅ Complete |
+| [Phase 9](phases/phase-9-cipa-wiretap-session-replay.md) | CIPA Wiretap & Session Replay Risk Analyzer | ✅ Complete |
+| [Phase 10](phases/phase-10-geo-proxy-matrix-scanning.md) | Multi-Region Geo-Proxy Mesh & Matrix Scans | ✅ Complete |
+| [Phase 11](phases/phase-11-policy-to-code-auditor.md) | AI Policy-to-Code LLM Reconciliation | ✅ Complete |
+| [Phase 12](phases/phase-12-interactive-journeys-advanced.md) | Interactive Journeys & Advanced Detection | ✅ Complete |
+| [Phase 13](phases/phase-13-automated-remediation-v2-ui.md) | Automated Remediation, GTM Auto-Fix & V2 Reports | ✅ Complete |
 
 Update the status column as phases complete. Keep it honest — a phase is done only when its
 acceptance criteria all pass, not when the code is written.

@@ -10,18 +10,22 @@
  * silently disagree.
  */
 
-/** The four consent journeys. Every recorded artifact carries one. */
+/** The consent journeys. Every recorded artifact carries one. */
 export type ConsentPhase =
   | "NO_CONSENT"
   | "REJECT_ALL"
   | "ACCEPT_ALL"
-  | "WITHDRAW";
+  | "WITHDRAW"
+  | "GLOBAL_PRIVACY_CONTROL"
+  | "INTERACTIVE_ACTION";
 
 export const CONSENT_PHASES: readonly ConsentPhase[] = [
   "NO_CONSENT",
   "REJECT_ALL",
   "ACCEPT_ALL",
   "WITHDRAW",
+  "GLOBAL_PRIVACY_CONTROL",
+  "INTERACTIVE_ACTION",
 ];
 
 /**

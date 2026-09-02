@@ -339,6 +339,8 @@ model Website {
   reports      Report[]
   ignoreRules  IgnoreRule[]
   suppressions DriftSuppression[]
+  jurisdictionConfig WebsiteJurisdictionConfig?
+  policyAudits       PolicyAudit[]
 
   @@unique([agencyId, url])
   @@index([agencyId, monitoringStatus, archivedAt])
@@ -458,6 +460,9 @@ model Scan {
   evidence      IssueEvidence[]
   driftEvents   PrivacyDriftEvent[] @relation("DriftCurrentScan")
   driftPrevious PrivacyDriftEvent[] @relation("DriftPreviousScan")
+  gpcAudits           GpcAuditRecord[]
+  sessionReplayAudits SessionReplayAudit[]
+  policyAudits        PolicyAudit[]
 
   @@index([agencyId, createdAt(sort: Desc)])
   @@index([websiteId, createdAt(sort: Desc)])
@@ -515,6 +520,8 @@ enum ConsentPhase {
   REJECT_ALL
   ACCEPT_ALL
   WITHDRAW
+  GLOBAL_PRIVACY_CONTROL
+  INTERACTIVE_ACTION
 }
 
 enum PhaseStatus {
@@ -823,6 +830,23 @@ enum IssueCategory {
   DRIFT
   SCAN_HEALTH
   TRANSPORT_SECURITY
+  US_CCPA
+  FTC_COMPLIANCE
+  CIPA_WIRETAP
+  CLOAKING
+  STORAGE
+  TRANSPORT
+  CMP_HYGIENE
+  INTERACTION
+  TAG_MANAGER
+  FINGERPRINT
+  PERFORMANCE
+  SECURITY
+  POLICY
+  EU_GERMANY
+  EU_FRANCE
+  EU_ITALY
+  UK_PECR
 }
 
 enum Severity {
@@ -1629,3 +1653,96 @@ model FreeScan {
   @@index([expiresAt])
   @@map("free_scans")
 }
+
+// ───────────────────────────── V2 Global Privacy & Jurisdiction Extensions ─────────────────────────────
+
+enum Jurisdiction {
+  GLOBAL
+  EU_GENERAL
+  EU_GERMANY_STRICT
+  EU_FRANCE_CNIL
+  EU_SPAIN_AEPD
+  EU_ITALY_GARANTE
+  UK_ICO
+  US_CCPA_CALIFORNIA
+  US_MULTI_STATE
+}
+
+enum GeoEgressRegion {
+  EU_CENTRAL_DE
+  EU_WEST_FR
+  UK_LONDON
+  US_WEST_CA
+  US_EAST_VA
+}
+
+model WebsiteJurisdictionConfig {
+  id               String            @id @default(uuid())
+  agencyId         String
+  websiteId        String            @unique
+  primaryRegion    Jurisdiction      @default(EU_GENERAL)
+  activeRegions    Jurisdiction[]
+  enableGpcTest    Boolean           @default(true)
+  enableCipaAudit  Boolean           @default(true)
+  enablePolicyDiff Boolean           @default(true)
+  preferredEgress  GeoEgressRegion   @default(EU_CENTRAL_DE)
+
+  website          Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  @@index([agencyId])
+  @@map("website_jurisdiction_configs")
+}
+
+model PolicyAudit {
+  id                 String          @id @default(uuid())
+  agencyId           String
+  websiteId          String
+  scanId             String
+  policyUrl          String
+  effectiveDate      DateTime?
+  declaredVendors    String[]
+  detectedVendors    String[]
+  undisclosedVendors String[]
+  staleVendors       String[]
+  complianceScore    Int             // 0 - 100
+  createdAt          DateTime        @default(now())
+
+  website            Website         @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  scan               Scan            @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  @@index([agencyId])
+  @@index([websiteId, createdAt(sort: Desc)])
+  @@map("policy_audits")
+}
+
+model SessionReplayAudit {
+  id              String             @id @default(uuid())
+  agencyId        String
+  scanId          String
+  vendorId        String             // e.g. 'hotjar', 'fullstory'
+  unmaskedFields  String[]           // CSS selectors of unmasked inputs
+  isMaskingActive Boolean
+  hasPriorConsent Boolean
+  riskSeverity    Severity
+  createdAt       DateTime           @default(now())
+
+  scan            Scan               @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  @@index([agencyId])
+  @@index([scanId])
+  @@map("session_replay_audits")
+}
+
+model GpcAuditRecord {
+  id                 String          @id @default(uuid())
+  agencyId           String
+  scanId             String
+  gpcHeaderSent      Boolean         @default(true)
+  signalAcknowledged Boolean
+  trackersSuppressed Boolean
+  offendingVendors   String[]
+  createdAt          DateTime        @default(now())
+
+  scan               Scan            @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  @@index([agencyId])
+  @@index([scanId])
+  @@map("gpc_audit_records")
+}
+

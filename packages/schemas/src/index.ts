@@ -33,6 +33,8 @@ export type {
   ScanTrigger,
   Severity,
   TrackerCategory,
+  Jurisdiction,
+  GeoEgressRegion,
 } from "./enums";
 
 export type { IgnoreIssueInput, IssueListQuery } from "./issue";

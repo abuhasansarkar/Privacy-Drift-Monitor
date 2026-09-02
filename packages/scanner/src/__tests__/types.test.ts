@@ -105,12 +105,14 @@ describe("isRetryable", () => {
 });
 
 describe("CONSENT_PHASES", () => {
-  it("is the four journeys, in execution order", () => {
+  it("is the consent journeys, in execution order", () => {
     expect(CONSENT_PHASES).toEqual([
       "NO_CONSENT",
       "REJECT_ALL",
       "ACCEPT_ALL",
       "WITHDRAW",
+      "GLOBAL_PRIVACY_CONTROL",
+      "INTERACTIVE_ACTION",
     ]);
   });
 });

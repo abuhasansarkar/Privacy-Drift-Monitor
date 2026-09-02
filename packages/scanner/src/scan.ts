@@ -95,7 +95,7 @@ function actionFor(
   adapters: readonly ConsentAdapter[],
   onDetect: (detection: CmpDetectionResult) => void,
 ): ConsentAction | null {
-  if (phase === "NO_CONSENT") return null;
+  if (phase === "NO_CONSENT" || phase === "GLOBAL_PRIVACY_CONTROL") return null;
 
   const intent =
     phase === "ACCEPT_ALL" ? "accept" : phase === "REJECT_ALL" ? "reject" : "withdraw";

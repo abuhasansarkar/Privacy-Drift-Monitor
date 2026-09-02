@@ -92,6 +92,17 @@ export async function runPhase(
   const budget = input.budget ?? DEFAULT_BUDGET;
   const startedAt = new Date();
 
+  const contextOptions = {
+    ...(input.phase === "GLOBAL_PRIVACY_CONTROL"
+      ? {
+          extraHTTPHeaders: {
+            "Sec-GPC": "1",
+            "DNT": "1",
+          },
+        }
+      : {}),
+  };
+
   return pool.withContext(async (context: BrowserContext) => {
     const page = await context.newPage();
 
@@ -234,5 +245,5 @@ export async function runPhase(
         screenshots,
       };
     }
-  });
+  }, contextOptions);
 }

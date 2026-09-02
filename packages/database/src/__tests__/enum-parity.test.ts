@@ -58,6 +58,8 @@ const PAIRS: ReadonlyArray<readonly [keyof typeof enums, string]> = [
   ["aiModelTier", "AiModelTier"],
   ["aiFeature", "AIFeature"],
   ["aiRequestStatus", "AIRequestStatus"],
+  ["jurisdiction", "Jurisdiction"],
+  ["geoEgressRegion", "GeoEgressRegion"],
 ];
 
 const prismaEnums = new Map(

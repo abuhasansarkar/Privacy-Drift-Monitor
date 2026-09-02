@@ -40,7 +40,24 @@ export type IssueCategory =
   | "UNKNOWN_VENDOR"
   | "DRIFT"
   | "SCAN_HEALTH"
-  | "TRANSPORT_SECURITY";
+  | "TRANSPORT_SECURITY"
+  | "US_CCPA"
+  | "FTC_COMPLIANCE"
+  | "CIPA_WIRETAP"
+  | "CLOAKING"
+  | "STORAGE"
+  | "TRANSPORT"
+  | "CMP_HYGIENE"
+  | "INTERACTION"
+  | "TAG_MANAGER"
+  | "FINGERPRINT"
+  | "PERFORMANCE"
+  | "SECURITY"
+  | "POLICY"
+  | "EU_GERMANY"
+  | "EU_FRANCE"
+  | "EU_ITALY"
+  | "UK_PECR";
 
 export interface Finding {
   ruleId: string;

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SeverityBadge, StatusBadge } from "@/components/ui/severity-badge";
 import { IssueActions } from "@/components/issues/issue-actions";
+import { RemediationDialog } from "@/components/issues/remediation-dialog";
 import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { ISSUE_STATUS_LABEL, ISSUE_STATUS_TONE } from "@/lib/labels";
 import { requirePermission } from "@/server/auth/context";
@@ -108,12 +109,21 @@ export default async function IssueDetailPage({
         }
         actions={
           <div className="flex flex-col items-end gap-2">
-            <IssueActions
-              issueId={issue.id}
-              status={issue.status}
-              canTransition={can(ctx.role, "issue:transition")}
-              canIgnore={can(ctx.role, "issue:ignore")}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <RemediationDialog
+                issueId={issue.id}
+                websiteId={issue.website.id}
+                ruleId={issue.ruleId}
+                vendorName={issue.ruleId.startsWith("PDM-R031") ? "GPC Opt-Out Tag" : "Marketing Tracker"}
+                category="MARKETING"
+              />
+              <IssueActions
+                issueId={issue.id}
+                status={issue.status}
+                canTransition={can(ctx.role, "issue:transition")}
+                canIgnore={can(ctx.role, "issue:ignore")}
+              />
+            </div>
             {/* §8.5 feature 4. A DRAFT generator, not a sender — the dialog has
                 no send button and no path to `@pdm/email`. */}
             {can(ctx.role, "ai:generate") ? (

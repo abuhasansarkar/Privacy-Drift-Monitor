@@ -79,6 +79,8 @@ export const CONSENT_PHASE_LABEL: Record<ConsentPhase, string> = {
   REJECT_ALL: t("scans.phaseRejectAll"),
   ACCEPT_ALL: t("scans.phaseAcceptAll"),
   WITHDRAW: t("scans.phaseWithdraw"),
+  GLOBAL_PRIVACY_CONTROL: t("scans.phaseGpc"),
+  INTERACTIVE_ACTION: t("scans.phaseInteractive"),
 };
 
 export const ROLE_LABEL: Record<AgencyRole, string> = {
@@ -116,6 +118,23 @@ export const ISSUE_CATEGORY_LABEL: Record<IssueCategory, string> = {
   DRIFT: t("issueCategory.drift"),
   SCAN_HEALTH: t("issueCategory.scanHealth"),
   TRANSPORT_SECURITY: t("issueCategory.transportSecurity"),
+  US_CCPA: t("issueCategory.usCcpa"),
+  FTC_COMPLIANCE: t("issueCategory.ftcCompliance"),
+  CIPA_WIRETAP: t("issueCategory.cipaWiretap"),
+  CLOAKING: t("issueCategory.cloaking"),
+  STORAGE: t("issueCategory.storage"),
+  TRANSPORT: t("issueCategory.transport"),
+  CMP_HYGIENE: t("issueCategory.cmpHygiene"),
+  INTERACTION: t("issueCategory.interaction"),
+  TAG_MANAGER: t("issueCategory.tagManager"),
+  FINGERPRINT: t("issueCategory.fingerprint"),
+  PERFORMANCE: t("issueCategory.performance"),
+  SECURITY: t("issueCategory.security"),
+  POLICY: t("issueCategory.policy"),
+  EU_GERMANY: t("issueCategory.euGermany"),
+  EU_FRANCE: t("issueCategory.euFrance"),
+  EU_ITALY: t("issueCategory.euItaly"),
+  UK_PECR: t("issueCategory.ukPecr"),
 };
 
 export const TRACKER_CATEGORY_LABEL: Record<TrackerCategory, string> = {

@@ -73,6 +73,10 @@ export const TENANT_MODELS = [
   "aiRequest",
   "auditLog",
   "featureFlagOverride",
+  "websiteJurisdictionConfig",
+  "policyAudit",
+  "sessionReplayAudit",
+  "gpcAuditRecord",
 ] as const;
 
 export type TenantModel = (typeof TENANT_MODELS)[number];

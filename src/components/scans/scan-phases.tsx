@@ -30,10 +30,12 @@ export interface ScanPhaseView {
 }
 
 const PHASE_LABEL: Record<ConsentPhase, string> = {
-  NO_CONSENT: t("scan.journeyNoConsent"),
-  ACCEPT_ALL: t("scan.journeyAcceptAll"),
-  REJECT_ALL: t("scan.journeyRejectAll"),
-  WITHDRAW: t("scan.journeyWithdraw"),
+  NO_CONSENT: t("scans.phaseNoConsent"),
+  ACCEPT_ALL: t("scans.phaseAcceptAll"),
+  REJECT_ALL: t("scans.phaseRejectAll"),
+  WITHDRAW: t("scans.phaseWithdraw"),
+  GLOBAL_PRIVACY_CONTROL: t("scans.phaseGpc"),
+  INTERACTIVE_ACTION: t("scans.phaseInteractive"),
 };
 
 /**

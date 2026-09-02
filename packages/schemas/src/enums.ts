@@ -65,12 +65,14 @@ export const scanTrigger = z.enum([
   "FREE_PUBLIC",
 ]);
 
-/** The four consent journeys. Everything recorded is tagged with one of these. */
+/** The consent journeys. Everything recorded is tagged with one of these. */
 export const consentPhase = z.enum([
   "NO_CONSENT",
   "REJECT_ALL",
   "ACCEPT_ALL",
   "WITHDRAW",
+  "GLOBAL_PRIVACY_CONTROL",
+  "INTERACTIVE_ACTION",
 ]);
 
 /**
@@ -101,6 +103,43 @@ export const issueCategory = z.enum([
   "DRIFT",
   "SCAN_HEALTH",
   "TRANSPORT_SECURITY",
+  "US_CCPA",
+  "FTC_COMPLIANCE",
+  "CIPA_WIRETAP",
+  "CLOAKING",
+  "STORAGE",
+  "TRANSPORT",
+  "CMP_HYGIENE",
+  "INTERACTION",
+  "TAG_MANAGER",
+  "FINGERPRINT",
+  "PERFORMANCE",
+  "SECURITY",
+  "POLICY",
+  "EU_GERMANY",
+  "EU_FRANCE",
+  "EU_ITALY",
+  "UK_PECR",
+]);
+
+export const jurisdiction = z.enum([
+  "GLOBAL",
+  "EU_GENERAL",
+  "EU_GERMANY_STRICT",
+  "EU_FRANCE_CNIL",
+  "EU_SPAIN_AEPD",
+  "EU_ITALY_GARANTE",
+  "UK_ICO",
+  "US_CCPA_CALIFORNIA",
+  "US_MULTI_STATE",
+]);
+
+export const geoEgressRegion = z.enum([
+  "EU_CENTRAL_DE",
+  "EU_WEST_FR",
+  "UK_LONDON",
+  "US_WEST_CA",
+  "US_EAST_VA",
 ]);
 
 /**
@@ -276,3 +315,5 @@ export type UsageMetric = z.infer<typeof usageMetric>;
 export type AiModelTier = z.infer<typeof aiModelTier>;
 export type AIFeature = z.infer<typeof aiFeature>;
 export type AIRequestStatus = z.infer<typeof aiRequestStatus>;
+export type Jurisdiction = z.infer<typeof jurisdiction>;
+export type GeoEgressRegion = z.infer<typeof geoEgressRegion>;

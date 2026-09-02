@@ -26,3 +26,5 @@ export {
   type DriftEvent,
   type ScanFingerprint,
 } from "./drift";
+export * from "./remediation";
+

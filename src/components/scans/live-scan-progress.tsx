@@ -35,6 +35,8 @@ const PHASE_LABEL: Record<ConsentPhase, string> = {
   REJECT_ALL: t("scans.phaseRejectAll"),
   ACCEPT_ALL: t("scans.phaseAcceptAll"),
   WITHDRAW: t("scans.phaseWithdraw"),
+  GLOBAL_PRIVACY_CONTROL: t("scans.phaseGpc"),
+  INTERACTIVE_ACTION: t("scans.phaseInteractive"),
 };
 
 /** Terminal states — polling stops and the page refreshes. */

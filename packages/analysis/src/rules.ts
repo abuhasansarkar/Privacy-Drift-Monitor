@@ -2,6 +2,24 @@ import { CONSENT_RULES } from "./rules/consent";
 import { DRIFT_RULES } from "./rules/drift";
 import { EXTRA_RULES } from "./rules/extra";
 import { HYGIENE_RULES } from "./rules/hygiene";
+import { R026, R027, R028, R029, R030 } from "./rules/jurisdictions";
+import { R031, R032, R033 } from "./rules/us-compliance";
+import { R034, R035, R049 } from "./rules/policy-compliance";
+import { R036, R037 } from "./rules/cipa-wiretap";
+import {
+  R038,
+  R039,
+  R040,
+  R041,
+  R042,
+  R043,
+  R044,
+  R045,
+  R046,
+  R047,
+  R048,
+  R050,
+} from "./rules/advanced";
 import type { Finding, Rule, RuleContext } from "./rules/types";
 
 /**
@@ -33,11 +51,35 @@ export type {
 } from "./rules/types";
 export { fingerprint } from "./rules/types";
 
+export const JURISDICTION_RULES: readonly Rule[] = [R026, R027, R028, R029, R030];
+export const US_COMPLIANCE_RULES: readonly Rule[] = [R031, R032, R033];
+export const POLICY_RULES: readonly Rule[] = [R034, R035, R049];
+export const CIPA_WIRETAP_RULES: readonly Rule[] = [R036, R037];
+export const ADVANCED_RULES: readonly Rule[] = [
+  R038,
+  R039,
+  R040,
+  R041,
+  R042,
+  R043,
+  R044,
+  R045,
+  R046,
+  R047,
+  R048,
+  R050,
+];
+
 /** Everything that can be decided from one scan's evidence. */
 export const SCAN_RULES: readonly Rule[] = [
   ...CONSENT_RULES,
   ...HYGIENE_RULES,
   ...EXTRA_RULES,
+  ...JURISDICTION_RULES,
+  ...US_COMPLIANCE_RULES,
+  ...POLICY_RULES,
+  ...CIPA_WIRETAP_RULES,
+  ...ADVANCED_RULES,
 ];
 
 /** Everything that needs the drift engine to have run first. */
