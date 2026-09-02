@@ -1,6 +1,5 @@
 import {
   fingerprint,
-  NO_EVIDENCE,
   vendorName,
   type Finding,
   type Rule,
@@ -92,7 +91,7 @@ export const R049: Rule = {
   id: "PDM-R049",
   category: "POLICY",
   precedence: 40,
-  evaluate(context: RuleContext): Finding[] {
+  evaluate(_context: RuleContext): Finding[] {
     // Evaluated when policy audit date indicates older than 365 days
     return [];
   },

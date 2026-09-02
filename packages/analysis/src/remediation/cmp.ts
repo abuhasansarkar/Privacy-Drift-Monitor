@@ -37,7 +37,6 @@ export function generateCmpSnippet(options: CmpSnippetOptions): CmpSnippetResult
   const isAnalytics = options.category === "ANALYTICS";
   const catName = isAnalytics ? "statistics" : "marketing";
   const vendor = options.vendorName;
-  const scriptPlaceholder = options.originalScriptTag ?? `<script src="https://example-tracker.com/tag.js" async></script>`;
 
   switch (options.cmp) {
     case "cookiebot":

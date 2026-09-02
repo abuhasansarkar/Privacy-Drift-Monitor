@@ -2,7 +2,6 @@ import type { ConsentPhase } from "@pdm/scanner/types";
 import {
   executed,
   fingerprint,
-  vendorName,
   type Finding,
   type Rule,
   type RuleContext,
@@ -198,7 +197,7 @@ export const R045: Rule = {
   id: "PDM-R045",
   category: "FINGERPRINT",
   precedence: 93,
-  evaluate(context: RuleContext): Finding[] {
+  evaluate(_context: RuleContext): Finding[] {
     // Evaluated from console or browser runtime telemetry for canvas.toDataURL or AudioContext
     return [];
   },
