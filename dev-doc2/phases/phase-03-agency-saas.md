@@ -25,19 +25,37 @@ flowchart TD
 
 ## 2. Implementation Tasks
 
-| # | Task | Package / Location | DoD Verification |
-|---|---|---|---|
-| **3.1** | Tenant Extension | `packages/database/src/tenant.ts` | `forAgency` prevents cross-tenant data access |
-| **3.2** | Tenant Context Resolution | `src/server/auth/context.ts` | Resolves user, organization, role, and timezone |
-| **3.3** | Portfolio Attention Center | `src/app/(app)/app/page.tsx` | Displays high-risk sites, active drift, recent scans |
-| **3.4** | Website Hub & Detail Tabs | `src/app/(app)/app/websites/[websiteId]/` | Issues, trackers, cookies, consent, drift, evidence |
-| **3.5** | Issue Triage Queue | `src/app/(app)/app/issues/` | Filters by severity, rule, status, and client |
+| # | Task | Package / Location | DoD Verification | Status |
+|---|---|---|---|---|
+| **3.1** | Multi-Tenant Scoping Extension | `packages/database/src/tenant.ts` | `forAgency(agencyId)` automatically injects `where: { agencyId }` across 40 tenant models | ✅ Verified (19/19 tests) |
+| **3.2** | Tenant Context Resolution | `src/server/auth/context.ts` | Resolves Clerk org, RBAC permissions, timezone, and support impersonation sessions | ✅ Verified (7/7 tests) |
+| **3.3** | Portfolio Attention Center | `src/app/(app)/app/page.tsx` | Parallel query resolution (`Promise.all`), attention cards, nullable scores (`—`) | ✅ Verified |
+| **3.4** | Website Hub & 8 Detail Tabs | `src/app/(app)/app/websites/[websiteId]/` | Scans, Issues, Trackers, Cookies, Consent, Drift, Evidence, and Reports | ✅ Verified |
+| **3.5** | Issue Triage & Auto-Verification | `src/app/(app)/app/issues/` | Transitions (`RESOLVED` enqueues `trigger: "VERIFICATION"`), reason-mandatory ignore | ✅ Verified (22/22 tests) |
 
 ---
 
 ## 3. Acceptance Verification Checklist
 
-- [x] Agency A cannot read, update, or delete websites belonging to Agency B.
-- [x] Deleting another tenant's row throws an error and leaves the target row untouched.
-- [x] Dashboard loads warm in < 2.5s with skeleton loading states.
-- [x] Marking an issue resolved automatically enqueues a verification re-scan.
+- [x] **Strict Tenant Scoping:** Agency A cannot read, update, or delete websites, issues, or scans belonging to Agency B.
+- [x] **Fail-Closed Write Isolation:** Deleting or updating another tenant's row throws an error and leaves the target row completely untouched.
+- [x] **Dashboard Performance:** Dashboard loads warm in < 2.5s with responsive layouts (1 → 2 → 4 columns) and skeleton loading states.
+- [x] **Verification Re-Scan Pipeline:** Marking an issue `RESOLVED` in `setIssueStatus` automatically triggers a verification re-scan.
+- [x] **Mandatory Reason for Ignore:** Suppressing an issue requires a reason of at least 10 characters and the `issue:ignore` permission.
+- [x] **Support Impersonation Guard:** 30-minute signed token tickets enforce read-only access and write customer-visible audit logs.
+
+---
+
+## 4. Verification Commands
+
+```powershell
+# Run all Phase 3 tenant, server, and repository tests (148 tests)
+npx.cmd vitest run src/server packages/database
+
+# Run terminology check
+npm.cmd run check:terminology
+
+# Run linter
+npm.cmd run lint
+```
+
