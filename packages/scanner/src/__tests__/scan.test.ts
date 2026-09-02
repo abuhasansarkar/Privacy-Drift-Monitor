@@ -255,6 +255,32 @@ describe("runScan", () => {
     expect(result.cmp?.confidence).toBeLessThan(0.5);
   });
 
+  it("executes GLOBAL_PRIVACY_CONTROL phase cleanly with Sec-GPC header", async () => {
+    const server = await fixture("F08");
+    const result = await runScan(
+      input(server.origin, { phases: ["GLOBAL_PRIVACY_CONTROL"] }),
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
+    );
+
+    const gpcPhase = result.phases.find((p) => p.phase === "GLOBAL_PRIVACY_CONTROL");
+    expect(gpcPhase?.status).toBe("EXECUTED");
+    expect(gpcPhase?.actionMethod).toBeNull();
+    expect(result.status).toBe("COMPLETED");
+  });
+
+  it("executes INTERACTIVE_ACTION phase with simulated interaction", async () => {
+    const server = await fixture("F08");
+    const result = await runScan(
+      input(server.origin, { phases: ["INTERACTIVE_ACTION"] }),
+      { pool, urlGuard: allowAnyUrl, adapters: [GENERIC_ADAPTER], budget: FAST },
+    );
+
+    const interactivePhase = result.phases.find((p) => p.phase === "INTERACTIVE_ACTION");
+    expect(interactivePhase?.status).toBe("EXECUTED");
+    expect(interactivePhase?.actionMethod).toBe("dom_heuristic");
+    expect(result.status).toBe("COMPLETED");
+  });
+
   it("returns every context to the pool", () => {
     expect(pool.stats().activeContexts).toBe(0);
   });

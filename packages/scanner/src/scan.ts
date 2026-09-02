@@ -97,6 +97,40 @@ function actionFor(
 ): ConsentAction | null {
   if (phase === "NO_CONSENT" || phase === "GLOBAL_PRIVACY_CONTROL") return null;
 
+  if (phase === "INTERACTIVE_ACTION") {
+    return {
+      async perform(page: Page) {
+        const resolved = await resolveAdapter(page, adapters);
+        if (resolved) {
+          onDetect(resolved.detection);
+          await resolved.adapter.perform(page, "accept").catch(() => {});
+        }
+        await page
+          .evaluate<void>(
+            `(() => {
+              window.scrollTo(0, document.body.scrollHeight * 0.25);
+              window.scrollTo(0, document.body.scrollHeight * 0.5);
+              window.scrollTo(0, document.body.scrollHeight * 0.75);
+              window.scrollTo(0, document.body.scrollHeight);
+            })()`,
+          )
+          .catch(() => {});
+        await page.waitForTimeout(500).catch(() => {});
+        return {
+          performed: true,
+          method: "dom_heuristic" as const,
+          confidence: 1.0,
+          selectorUsed: null,
+          elementText: null,
+          inIframe: false,
+          bannerDismissed: true,
+          errorCode: null,
+          errorMessage: null,
+        };
+      },
+    };
+  }
+
   const intent =
     phase === "ACCEPT_ALL" ? "accept" : phase === "REJECT_ALL" ? "reject" : "withdraw";
 
