@@ -101,6 +101,42 @@ const SPECS: AdapterSpec[] = [
     preferences: "[data-testid='uc-more-button']",
     confidence: 0.9,
   },
+  {
+    id: "didomi",
+    name: "Didomi",
+    detectExpression:
+      "!!window.Didomi || !!document.getElementById('didomi-host') || !!document.getElementById('didomi-notice')",
+    signals: ["window.Didomi", "#didomi-notice", "#didomi-host"],
+    banner: "#didomi-notice, #didomi-host",
+    reject: "#didomi-notice-disagree-button, .didomi-continue-without-agreeing",
+    accept: "#didomi-notice-agree-button",
+    preferences: "#didomi-notice-learn-more-button",
+    confidence: 0.9,
+  },
+  {
+    id: "axeptio",
+    name: "Axeptio",
+    detectExpression:
+      "!!window.axeptioSDK || !!document.getElementById('axeptio_overlay') || !!document.querySelector('.axeptio_mount')",
+    signals: ["window.axeptioSDK", "#axeptio_overlay"],
+    banner: "#axeptio_overlay, .axeptio_mount",
+    reject: "#axeptio_btn_refuse, [data-axeptio-action='refuse']",
+    accept: "#axeptio_btn_accept, [data-axeptio-action='accept']",
+    preferences: "#axeptio_btn_configure",
+    confidence: 0.9,
+  },
+  {
+    id: "klaro",
+    name: "Klaro",
+    detectExpression:
+      "!!window.klaro || !!document.querySelector('.klaro .cookie-notice, .klaro .cookie-modal')",
+    signals: ["window.klaro", ".klaro"],
+    banner: ".klaro .cookie-notice, .klaro .cookie-modal",
+    reject: ".klaro .cn-decline, .klaro button.cn-decline, [data-action='decline']",
+    accept: ".klaro .cm-btn-accept-all, .klaro button.cm-btn-accept-all, [data-action='accept-all']",
+    preferences: ".klaro .cn-learn-more, .klaro button.cn-learn-more",
+    confidence: 0.9,
+  },
 ];
 
 function selectorFor(spec: AdapterSpec, intent: ConsentIntent): string | null {
