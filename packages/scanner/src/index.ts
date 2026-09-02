@@ -21,6 +21,14 @@ export {
 } from "./net/guard";
 
 export {
+  checkCnameCloaking,
+  resolveCnameChain,
+  clearCnameCache,
+  KNOWN_CLOAKING_TARGETS,
+  type CnameResolutionResult,
+} from "./net/cname";
+
+export {
   diagnosticHeaderNames,
   hashValue,
   redactValue,
