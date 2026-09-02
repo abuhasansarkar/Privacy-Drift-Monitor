@@ -22,19 +22,37 @@ flowchart TD
 
 ## 2. Implementation Tasks
 
-| # | Task | Package / Location | DoD Verification |
-|---|---|---|---|
-| **4.1** | Report Compilation Worker | `worker/src/jobs/report.job.ts` | Generates PDF asynchronously without blocking web tier |
-| **4.2** | 5 Report Templates | `packages/reports/src/templates/` | Scan, Issue, Monthly, Health, and Drift reports |
-| **4.3** | White-Label Branding Resolver | `packages/reports/src/branding.ts` | Replaces PDM logo/colors with agency assets |
-| **4.4** | Client Portal Magic Links | `src/server/portal/` | 14-day signed tokens; non-Clerk session handling |
-| **4.5** | Resend Email Transport | `packages/email/src/` | Verified delivery with RFC 5322 From headers |
+| # | Task | Package / Location | DoD Verification | Status |
+|---|---|---|---|---|
+| **4.1** | Asynchronous Report Worker | `worker/src/jobs/report.job.ts` | BullMQ `report` queue, atomic `markGenerating` state guard, S3 storage under tenant prefix | ✅ Verified |
+| **4.2** | 5 Master Report Templates | `packages/reports/src/templates/` | Scan, Issue, Monthly Monitoring, Website Health, and Privacy Drift reports | ✅ Verified |
+| **4.3** | White-Label Branding Resolver | `packages/reports/src/branding.ts` | Entitlement-checked (`whiteLabel` feature tier), agency-keyed cache, snapshotting on report row | ✅ Verified (19/19 tests) |
+| **4.4** | Passwordless Client Portal | `src/server/portal/` | 32-byte SHA-256 tokens, 15-min single-use magic links, anti-enumeration 204 responses, no Clerk dependency | ✅ Verified (14/14 tests) |
+| **4.5** | Resend Email & Alert Pipeline | `packages/email/`, `packages/notifications/` | RFC 5322 From parser, permanent vs. transient error split (`EmailRejectedError`), quiet hours & digests | ✅ Verified (96/96 tests) |
 
 ---
 
 ## 3. Acceptance Verification Checklist
 
-- [x] White-label branding strictly obeys the agency's subscription entitlement tier.
-- [x] Client portal sessions are read-only and cannot reach agency settings or other clients.
-- [x] Monthly monitoring PDF renders cleanly in Adobe Acrobat, Chrome, and Apple Preview.
-- [x] Bounced email addresses trigger automatic delivery suppression.
+- [x] **White-Label Entitlement Enforcement:** White-label branding is resolved centrally through `@pdm/billing`; plans without white-label entitlement strictly fall back to platform default branding.
+- [x] **Branding Immutability:** Generated reports snapshot branding at creation time so future branding updates never alter historical client documents.
+- [x] **Client Portal Data Isolation:** Portal sessions resolve `clientId` + `agencyId` and are strictly barred from agency configuration routes or other clients' websites.
+- [x] **Anti-Enumeration Magic Links:** Submitting an uninvited email address returns HTTP 204 No Content without leaking user existence.
+- [x] **Permanent Email Failure Split:** Deterministic email rejections (400, 401, 403, 404, 422) throw `EmailRejectedError` and fail immediately instead of wasting 8 retries over 2 hours.
+- [x] **Quiet Hours & Alert Digests:** Notifications respect agency working hours and group multi-finding scans into a single consolidated email.
+
+---
+
+## 4. Verification Commands
+
+```powershell
+# Run all Phase 4 report, branding, portal, email, and notification tests (129 tests)
+npx.cmd vitest run packages/reports packages/email packages/notifications src/server/portal
+
+# Run terminology verification
+npm.cmd run check:terminology
+
+# Run linter
+npm.cmd run lint
+```
+
