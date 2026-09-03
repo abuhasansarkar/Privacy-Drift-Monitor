@@ -103,7 +103,7 @@ export default async function HelpPage({ searchParams }: PageProps<"/app/help">)
       </div>
 
       <p className="text-caption text-muted-foreground">
-        {HELP_ARTICLES.length} articles
+        {HELP_ARTICLES.length} {t("help.articles")}
       </p>
     </div>
   );

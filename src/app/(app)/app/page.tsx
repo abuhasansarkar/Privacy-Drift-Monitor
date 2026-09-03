@@ -91,7 +91,7 @@ export default async function DashboardPage() {
         }
       />
 
-      {/* 1 → 2 → 4 columns. Four tiles side by side is unreadable under ~700px. */}
+      {/* Portfolio overview: 4 primary metrics */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t("dashboard.websitesMonitored")}
@@ -141,6 +141,10 @@ export default async function DashboardPage() {
             </>
           }
         />
+      </div>
+
+      {/* Activity velocity: 3 rolling window metrics */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile
           label={t("dashboard.scansToday")}
           value={formatNumber(overview.scansToday)}
@@ -200,7 +204,7 @@ export default async function DashboardPage() {
                   className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
                 >
                   <span className="min-w-0 flex-1 truncate text-small">
-                    {DRIFT_CHANGE_LABEL[row.changeType as never]}
+                    {DRIFT_CHANGE_LABEL[row.changeType as keyof typeof DRIFT_CHANGE_LABEL] ?? row.changeType}
                   </span>
                   <MutedBadge>{formatNumber(row.count)}</MutedBadge>
                 </li>

@@ -79,6 +79,48 @@ export default async function IssueDetailPage({
     href: `/app/websites/${issue.website.id}/evidence?scan=${row.scanId}`,
   }));
 
+  // Derive vendorName and category dynamically from the issue and evidence
+  let vendorName = "Marketing Tracker";
+  if (issue.ruleId.startsWith("PDM-R031") || issue.ruleId.startsWith("PDM-R032")) {
+    vendorName = "GPC Opt-Out Tag";
+  } else {
+    const reqEvidence = issue.evidence.find((e) => e.kind === "NETWORK_REQUEST");
+    const cookieEvidence = issue.evidence.find((e) => e.kind === "COOKIE");
+    if (reqEvidence && typeof reqEvidence.payload === "object" && reqEvidence.payload !== null) {
+      const url = (reqEvidence.payload as Record<string, unknown>).url;
+      if (typeof url === "string") {
+        try {
+          const host = new URL(url).hostname.replace(/^www\./, "");
+          if (host) vendorName = host;
+        } catch {
+          // ignore
+        }
+      }
+    } else if (cookieEvidence && typeof cookieEvidence.payload === "object" && cookieEvidence.payload !== null) {
+      const domain = (cookieEvidence.payload as Record<string, unknown>).domain;
+      if (typeof domain === "string") {
+        const d = domain.replace(/^\./, "").replace(/^www\./, "");
+        if (d) vendorName = d;
+      }
+    } else if (issue.title) {
+      const firstWord = issue.title.split(" ")[0];
+      if (firstWord && firstWord.length > 2 && !["Tracker", "Cookie", "Consent", "Unknown"].includes(firstWord)) {
+        vendorName = firstWord;
+      }
+    }
+  }
+
+  const categoryMap: Record<string, "MARKETING" | "ANALYTICS" | "ADVERTISING" | "FUNCTIONAL"> = {
+    TRACKER_WITHOUT_CONSENT: "MARKETING",
+    COOKIE_WITHOUT_CONSENT: "ANALYTICS",
+    STORAGE_WITHOUT_CONSENT: "FUNCTIONAL",
+    FINGERPRINTING: "MARKETING",
+    CLOAKING: "ADVERTISING",
+    GPC_SIGNAL_IGNORED: "MARKETING",
+    SESSION_REPLAY_ACTIVE: "ANALYTICS",
+  };
+  const category = categoryMap[issue.category] ?? "MARKETING";
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <PageHeader
@@ -114,8 +156,8 @@ export default async function IssueDetailPage({
                 issueId={issue.id}
                 websiteId={issue.website.id}
                 ruleId={issue.ruleId}
-                vendorName={issue.ruleId.startsWith("PDM-R031") ? "GPC Opt-Out Tag" : "Marketing Tracker"}
-                category="MARKETING"
+                vendorName={vendorName}
+                category={category}
               />
               <IssueActions
                 issueId={issue.id}

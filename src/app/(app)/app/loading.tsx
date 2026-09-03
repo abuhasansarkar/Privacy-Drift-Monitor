@@ -18,6 +18,11 @@ export default function DashboardLoading() {
           <Skeleton key={index} className="h-24" />
         ))}
       </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }, (_, index) => (
+          <Skeleton key={index} className="h-20" />
+        ))}
+      </div>
       <TableSkeleton rows={4} />
     </div>
   );

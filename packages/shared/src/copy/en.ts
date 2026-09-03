@@ -691,6 +691,7 @@ export const en = {
     shortcutsTitle: "Keyboard shortcuts",
     statusTitle: "System status",
     statusBody: "Queue depth, scan failures and dependency health.",
+    articles: "articles",
   },
 
   /**

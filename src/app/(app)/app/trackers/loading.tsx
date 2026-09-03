@@ -1,0 +1,21 @@
+import { t } from "@pdm/shared/copy";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+
+/**
+ * §11.7 — skeleton for Portfolio Tracker Inventory.
+ */
+export default function TrackersLoading() {
+  return (
+    <div
+      className="flex w-full flex-col gap-5"
+      role="status"
+      aria-label={t("a11y.loading")}
+    >
+      <div className="flex flex-col gap-1">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-4 w-44" />
+      </div>
+      <TableSkeleton rows={8} />
+    </div>
+  );
+}
