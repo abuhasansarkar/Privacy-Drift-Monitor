@@ -21,16 +21,40 @@ client reports.
 
 ## Current state — read this before claiming anything exists
 
-**Phases 0–5 are complete. `npm run verify` passes: lint, typecheck,
-terminology (358 files), 618 tests, `next build`.** Both processes have been
-started and exercised against the docker-compose stack.
+**Phases 0–13 have landed.** `npm run verify` runs lint, typecheck, terminology,
+`test:coverage` and `next build` — see the table below for what each gate
+actually reported on the last full run, and `OVERVIEW.md` for the audit that
+produced it.
+
+⚠️ **THIS SECTION HAS BEEN WRONG BEFORE, IN THE DIRECTION THAT COSTS MOST.** It
+claimed `verify` passed while `build` was failing and two lint errors were
+committed; it claimed 25 rules when 50 were registered, six of which could never
+fire; it listed `packages/billing` and `/admin` as non-existent long after both
+shipped. Everything below is dated. If you are about to rely on a line here,
+run the gate.
 
 | | |
 |---|---|
-| Built and exercised | `packages/{config,database,shared,schemas,scanner,analysis,storage,notifications,email,reports,ai}`, `worker/` (scan + analysis + notification + email + report + digest + **ai**, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` route groups, the scan pipeline, the F01–F30 fixture matrix, all 25 rules, drift, scoring, alerts, the five report types, the client portal, the four legal documents, and the AI layer (grounding/terminology/claim validators, `inputHash` cache, pre-call budget enforcement, issue sections 7–8, drift summary, client message draft, AI settings) |
-| Built, **never run against the real dependency** | The Resend delivery webhook (`RESEND_WEBHOOK_SECRET` unset — the handler fails closed with 401, which is correct), the Clerk webhook, CI |
+| Built and exercised | Every `packages/*` (including **`billing`**), `worker/` (scan + analysis + notification + email + report + digest + ai + free-scan + schedulers, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` / `(admin)` / `(onboarding)` route groups, the scan pipeline, the F01–F30 fixture matrix, drift, scoring, alerts, the five report types, the client portal, the free public scanner, Stripe billing, the admin surface, and the AI layer |
+| Built, **never run against the real dependency** | The Resend delivery webhook (`RESEND_WEBHOOK_SECRET` unset — the handler fails closed with 401, which is correct), the Clerk webhook, the Stripe webhook, CI |
 | Exercised against the real dependency | Resend: a live `portal-magic-link` went through `processEmailJob` and Resend reported `delivered`. With no verified domain, `EMAIL_FROM` points at `onboarding@resend.dev` and delivery is restricted — production needs a verified domain. **OpenAI**: both tiers produce validated, grounded output — `gpt-4o-mini` (standard) and `gpt-5-nano` (advanced) — via `worker/src/ai.smoke.ts` |
-| Does **not** exist | `packages/{billing,ui}`, billing and Stripe, the free public scanner, `/admin` (so no `/admin/ai-usage`), `POST /api/ai/*`, `/app/billing`, `/app/help`, `/pricing`, `/blog`, `/resources`, `/about`, `/contact`, shadcn. `/app/ai` EXISTS but is behind `AI_ASSISTANT_PAGE`, which defaults off |
+| Specified but **NOT wired** | **Outbound webhooks** — `dispatchWebhook` is correct and tested and is called from nothing; there is no endpoint model, signing secret or producer. **Slack** — a feature flag defaulting to false with no delivery code; `policy.ts` routes `email` and nothing else. **Public API v1** and the **WordPress plugin** (dev-doc2 Modules 24, 25) do not exist. **Policy extraction** (Module 23) does not exist, which is why `PDM-R034` and `PDM-R049` are dormant. Do not describe any of these as shipped |
+| Does **not** exist | shadcn. `/app/ai` EXISTS but is behind `AI_ASSISTANT_PAGE`, which defaults off |
+
+### The rule inventory is three lists, not one number
+
+"50 rules" was true and meaningless: R029, R040, R041, R043 and R045 were
+registered with an `evaluate()` that returned `[]` under a comment describing
+behaviour it did not have. `packages/analysis/src/rules.ts` now separates:
+
+- **`RULES`** — registered and able to fire.
+- **`DORMANT_RULE_IDS`** — implemented and correct, waiting on a fact source
+  (`PDM-R034`, `PDM-R049` need policy extraction).
+- **`RESERVED_RULE_IDS`** — id reserved, no implementation, with the specific
+  evidence each would need written next to it.
+
+`rules.test.ts` asserts the lists are disjoint and together cover
+PDM-R001…R050. A registered rule that cannot fire is a defect, not a placeholder.
 
 ### Three things here are CONTRACTS, not labels
 
@@ -41,7 +65,7 @@ worked, the tests were green, and the green meant nothing.
 |---|---|---|
 | Fixture ids `F01`–`F30` | §4.15, `packages/scanner/src/testing/fixtures.ts` | "F28 passes" stops meaning "no spurious drift" |
 | Prompt versions `<FEATURE>_V<n>` | §8.7, `packages/ai/src/prompts/index.ts` | The version is in `inputHash`. **Editing a prompt without bumping it serves output from the OLD prompt forever** — the change appears to do nothing and the reason is invisible |
-| Rule ids `PDM-R001`–`PDM-R025` | §4.11, `packages/analysis/src/rules/` | Renaming one orphans every `Issue` row that stores it |
+| Rule ids `PDM-R001`–`PDM-R050` | §4.11, `packages/analysis/src/rules/` | Renaming one orphans every `Issue` row that stores it |
 | Queue and job ids | §7.2, `packages/scanner/src/queue/queues.ts` | BullMQ rejects a `:` in a job id, at runtime, in production |
 
 All three now have a test that fails the build if one goes missing. Anything
@@ -107,6 +131,44 @@ All fixed, all worth knowing before you write similar code:
 10. **`server-only` throws in vitest**, because outside a bundler it resolves to
    the client entry whose job is to throw. `test/server-only-stub.ts` is aliased
    in `vitest.config.ts` so `src/server/**` can be tested directly.
+11. **One `headers()` call in the ROOT layout made the entire product dynamic.**
+   It read `x-nonce` for the inline theme script. Nothing errored — Next simply
+   stopped prerendering, so §3.2's "statically prerendered marketing pages" were
+   not prerendered at all (a build emitted `_global-error.html` and nothing
+   else), and `proxy.ts`'s careful two-policy CSP was choosing between policies
+   for a category of page that no longer existed. It surfaced only because
+   `/solutions/[industry]` asserts its own staticness with `dynamic = "error"`
+   and failed the build. The theme script is now allowed by **SHA-256**, derived
+   from the same constant the component renders, and the root layout reads
+   nothing. **The hash goes in the strict policy ONLY** — `'unsafe-inline'` is
+   ignored by any browser that sees a hash in the same directive, so adding it
+   to the static policy would switch `'unsafe-inline'` off and block Next's own
+   prerendered bootstrap scripts.
+12. **Six marketing pages shipped behind the login wall.** `/solutions` (+5
+   industry pages), `/methodology`, `/security`, `/integrations` and
+   `/changelog` were written, styled, linked from the header AND footer — and
+   missing from `isPublicRoute`, so `auth.protect()` bounced every signed-out
+   visitor to /login. The homepage linked ten dead URLs. Each page rendered
+   perfectly when opened by someone already signed in, which is why review
+   never caught it. `src/__tests__/marketing-routes.test.ts` now walks
+   `content/marketing/nav.ts` against the matcher; the patterns moved to
+   `src/lib/public-routes.ts` so a test can read them.
+13. **A rule invented a fact and told a customer's client about it.** `PDM-R034`
+   raised a HIGH-severity finding reading "<vendor> active on site but omitted
+   from privacy policy" by filtering detections to advertising vendors, taking
+   the first, and asserting the omission. No policy was fetched, parsed or
+   compared — `RuleContext` had no field for one. This is precisely what P1 and
+   P6 forbid, and nothing caught it because the output looked plausible. It now
+   reads `context.policy.undisclosedVendors` and emits nothing until policy
+   extraction exists.
+14. **A working resolver, exported, tested, called from nowhere — again.** This
+   is defect #8's exact shape. `net/cname.ts` resolves DNS CNAME chains against
+   a known-networks list; `PDM-R038` "detected CNAME cloaking" by searching each
+   request's HTTP `redirectChain` for the substring `"cname"`. Real cloaking is
+   a DNS arrangement that produces no redirect and never contains that string,
+   so the rule could not fire on the thing it was named after. Resolution now
+   happens **at scan time** (a CNAME changes without notice, so resolving during
+   analysis would break replayability) and is stored in `CnameResolution`.
 
 `pnpm-workspace.yaml` is an inert tombstone awaiting deletion; the workspace is npm.
 
