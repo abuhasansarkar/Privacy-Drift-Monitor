@@ -9,7 +9,9 @@ import type {
 } from "@pdm/scanner/types";
 import type { Detection, VendorPattern } from "../classify";
 import {
+  DORMANT_RULE_IDS,
   DRIFT_RULES,
+  RESERVED_RULE_IDS,
   evaluateDriftRules,
   evaluateRules,
   RULES,
@@ -237,14 +239,65 @@ describe("rule engine — the PARTIAL guarantee", () => {
 });
 
 describe("§4.11 coverage", () => {
+  /** PDM-R001 … PDM-R050. */
+  const PLANNED = Array.from(
+    { length: 50 },
+    (_unused, index) => `PDM-R${String(index + 1).padStart(3, "0")}`,
+  );
+
   it("implements all twenty-five planned rules", () => {
-    const planned = Array.from(
-      { length: 25 },
-      (_unused, index) => `PDM-R${String(index + 1).padStart(3, "0")}`,
-    );
+    const planned = PLANNED.slice(0, 25);
     const implemented = new Set(RULES.map((rule) => rule.id));
     const missing = planned.filter((id) => !implemented.has(id));
     expect(missing, `missing rules: ${missing.join(", ")}`).toEqual([]);
+  });
+
+  /*
+   * ⚠️ EVERY PLANNED ID IS EITHER IMPLEMENTED OR EXPLICITLY RESERVED.
+   *
+   * Five ids used to be neither: R029, R040, R041, R043 and R045 were
+   * registered with an `evaluate()` that returned `[]` unconditionally, so
+   * "50 rules" counted five rules that could not produce a finding under any
+   * input. The count was the only thing anyone checked, and the count was true.
+   *
+   * These three assertions make the inventory answerable instead: what runs,
+   * what is reserved and why, and that the two together leave no gap.
+   */
+  it("accounts for every planned id — implemented or explicitly reserved", () => {
+    const implemented = new Set(RULES.map((rule) => rule.id));
+    const reserved = new Set(Object.keys(RESERVED_RULE_IDS));
+
+    const unaccounted = PLANNED.filter(
+      (id) => !implemented.has(id) && !reserved.has(id),
+    );
+    expect(
+      unaccounted,
+      `PDM ids neither implemented nor reserved: ${unaccounted.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("never registers a reserved id", () => {
+    const implemented = new Set(RULES.map((rule) => rule.id));
+    const both = Object.keys(RESERVED_RULE_IDS).filter((id) => implemented.has(id));
+    expect(
+      both,
+      `reserved ids must not be in the registry: ${both.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("gives every reserved id a written reason", () => {
+    for (const [id, reason] of Object.entries(RESERVED_RULE_IDS)) {
+      expect(id).toMatch(/^PDM-R\d{3}$/);
+      // A reason is what stops a reserved id becoming a forgotten one.
+      expect(reason.length, `${id} needs a reason`).toBeGreaterThan(20);
+    }
+  });
+
+  it("keeps dormant rules registered — they fire when their input exists", () => {
+    const implemented = new Set(RULES.map((rule) => rule.id));
+    for (const id of Object.keys(DORMANT_RULE_IDS)) {
+      expect(implemented.has(id), `${id} should still be registered`).toBe(true);
+    }
   });
 
   it("keeps our own rules out of the plan's numbering", () => {
@@ -633,5 +686,188 @@ describe("every finding carries what the UI renders", () => {
       expect(finding.recommendedAction.length).toBeGreaterThan(10);
       expect(finding.fingerprint).not.toContain("undefined");
     }
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+describe("PDM-R038 — CNAME cloaking reads recorded DNS evidence", () => {
+  /*
+   * The rule this replaced searched each request's HTTP `redirectChain` for the
+   * substring "cname". Real CNAME cloaking produces no redirect at all, so the
+   * old rule could not fire on the thing it was named after — while a working
+   * DNS resolver sat in the scanner, exported and called from nowhere.
+   */
+  const cloakedHost = "metrics.example.test";
+
+  const cloakedFact = {
+    host: cloakedHost,
+    chain: ["client.sc.omtrdc.net"],
+    canonicalHost: "client.sc.omtrdc.net",
+    isCloaked: true,
+  };
+
+  const firstPartyRequest = request({
+    url: `https://${cloakedHost}/b/ss/track`,
+    host: cloakedHost,
+    registrableDomain: "example.test",
+    isThirdParty: false,
+    timestampMs: 500,
+  });
+
+  it("reports a host whose CNAME leaves the registrable domain", () => {
+    const findings = evaluateRules(
+      context({ requests: [firstPartyRequest], cnames: [cloakedFact] }),
+      SCAN_RULES,
+    );
+
+    const finding = findings.find((f) => f.ruleId === "PDM-R038");
+    expect(finding).toBeDefined();
+    expect(finding?.subject).toBe(cloakedHost);
+    expect(finding?.title).toContain("client.sc.omtrdc.net");
+    // The finding cites the traffic, not just the lookup.
+    expect(finding?.evidenceRefs.requestUrls).toContain(firstPartyRequest.url);
+  });
+
+  it("stays silent when no CNAME evidence was recorded", () => {
+    // Absent is "not determined" — never a clean verdict (P5).
+    const findings = evaluateRules(context({ requests: [firstPartyRequest] }), SCAN_RULES);
+    expect(idsOf(findings)).not.toContain("PDM-R038");
+  });
+
+  it("stays silent for a resolved host that is not cloaked", () => {
+    const findings = evaluateRules(
+      context({
+        requests: [firstPartyRequest],
+        cnames: [{ ...cloakedFact, isCloaked: false, chain: [], canonicalHost: null }],
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R038");
+  });
+
+  it("does not report a cloaked host the scan never contacted", () => {
+    // A DNS lookup on its own is not an observation of traffic.
+    const findings = evaluateRules(context({ requests: [], cnames: [cloakedFact] }), SCAN_RULES);
+    expect(idsOf(findings)).not.toContain("PDM-R038");
+  });
+});
+
+describe("PDM-R034 — never claims a policy omission without a policy", () => {
+  /*
+   * ⚠️ THE REGRESSION THIS HOLDS. R034 used to title its finding "<vendor>
+   * active on site but omitted from privacy policy" after reading no policy at
+   * all: it filtered detections to advertising vendors, took the first, and
+   * asserted the omission. The finding went to an agency and from there to
+   * their client. P1 and P6 both forbid it, and nothing caught it because the
+   * rule produced plausible output.
+   */
+  const withAdVendor = context({
+    detections: [detection("vendor-meta", "NO_CONSENT")],
+  });
+
+  it("emits nothing when no policy was extracted", () => {
+    expect(idsOf(evaluateRules(withAdVendor, SCAN_RULES))).not.toContain("PDM-R034");
+  });
+
+  it("emits nothing when the policy discloses the vendor", () => {
+    const findings = evaluateRules(
+      context({
+        detections: [detection("vendor-meta", "NO_CONSENT")],
+        policy: {
+          policyUrl: "https://example.test/privacy",
+          effectiveDate: new Date(),
+          declaredVendors: ["ga"],
+          undisclosedVendors: [],
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R034");
+  });
+
+  it("reports only a vendor the policy omits AND the scan detected", () => {
+    const findings = evaluateRules(
+      context({
+        detections: [detection("vendor-meta", "NO_CONSENT")],
+        policy: {
+          policyUrl: "https://example.test/privacy",
+          effectiveDate: new Date(),
+          declaredVendors: ["ga"],
+          // "hotjar" is undisclosed but was never detected — not an observation.
+          undisclosedVendors: ["ga", "hotjar"],
+        },
+      }),
+      SCAN_RULES,
+    );
+    // `meta` is detected but not in undisclosedVendors → no finding.
+    expect(idsOf(findings)).not.toContain("PDM-R034");
+  });
+});
+
+describe("PDM-R049 — stale policy date", () => {
+  it("emits nothing with no policy", () => {
+    expect(idsOf(evaluateRules(context(), SCAN_RULES))).not.toContain("PDM-R049");
+  });
+
+  it("reports a policy whose stated effective date is over a year old", () => {
+    const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000);
+    const findings = evaluateRules(
+      context({
+        policy: {
+          policyUrl: "https://example.test/privacy",
+          effectiveDate: twoYearsAgo,
+          declaredVendors: [],
+          undisclosedVendors: [],
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).toContain("PDM-R049");
+  });
+
+  it("accepts a policy updated within the year", () => {
+    const findings = evaluateRules(
+      context({
+        policy: {
+          policyUrl: "https://example.test/privacy",
+          effectiveDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          declaredVendors: [],
+          undisclosedVendors: [],
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R049");
+  });
+});
+
+describe("PDM-R035 — sensitive identifiers, anchored to parameters", () => {
+  /*
+   * The first version tested the whole URL against `/@/`, so a scoped package
+   * on a CDN raised a CRITICAL "sensitive user data transmitted".
+   */
+  it.each([
+    "https://cdn.example/@scope/package.js",
+    "https://cdn.example/a@2x.png",
+    "https://analytics.example/collect?cid=123&tid=UA-1",
+  ])("does not fire on %s", (url) => {
+    const findings = evaluateRules(
+      context({ requests: [request({ url, host: "cdn.example" })] }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R035");
+  });
+
+  it.each([
+    "https://ads.example/px?email=jo%40example.test",
+    "https://ads.example/px?user_email=jo@example.test",
+    "https://ads.example/px?phone=447700900000",
+  ])("fires on %s", (url) => {
+    const findings = evaluateRules(
+      context({ requests: [request({ url, host: "ads.example" })] }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).toContain("PDM-R035");
   });
 });

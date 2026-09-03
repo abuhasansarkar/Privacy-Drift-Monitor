@@ -15,35 +15,73 @@ import {
  * GTM Re-injection, and Security hygiene.
  */
 
-/** PDM-R038 — CNAME Cloaked Third-Party Tracker Detected. */
+/**
+ * PDM-R038 — CNAME Cloaked Third-Party Tracker Detected.
+ *
+ * ⚠️ THIS READS RECORDED DNS EVIDENCE (`context.cnames`), and it has to.
+ * The previous implementation searched each request's HTTP `redirectChain` for
+ * the literal substring `"cname"`. CNAME cloaking is a DNS-level arrangement:
+ * the browser resolves `metrics.client.com` to `client.sc.omtrdc.net` and then
+ * makes ONE request that looks entirely first-party. There is no redirect and
+ * nothing in the chain ever says "cname", so the rule could not fire on a real
+ * cloaked host — while `packages/scanner/src/net/cname.ts`, a working resolver
+ * written for exactly this, was called from nowhere.
+ *
+ * ⚠️ NO EVIDENCE MEANS NO FINDING. `context.cnames` is undefined for scans
+ * recorded before resolution existed, and empty when DNS timed out. Neither is
+ * "nothing is cloaked", so neither produces a clean verdict here (P5).
+ */
 export const R038: Rule = {
   id: "PDM-R038",
   category: "CLOAKING",
   precedence: 89,
   evaluate(context: RuleContext): Finding[] {
-    // Detects first-party requests resolving to third-party ad-tech networks
-    return context.requests
-      .filter((r) => !r.isThirdParty && r.redirectChain.some((h) => h.includes("cname") || h.includes("2o7.net") || h.includes("omtrdc.net")))
-      .map((r) => {
-        return {
+    const cloaked = (context.cnames ?? []).filter((entry) => entry.isCloaked);
+    if (cloaked.length === 0) return [];
+
+    return cloaked.flatMap((entry) => {
+      /*
+       * Tie the DNS fact back to the requests that actually went to the host,
+       * so the finding cites recorded traffic rather than a lookup on its own.
+       * A host we resolved but never contacted is not a finding.
+       */
+      const requests = context.requests.filter(
+        (request) => request.host.toLowerCase() === entry.host.toLowerCase(),
+      );
+      if (requests.length === 0) return [];
+
+      // The earliest phase it appeared in — cloaking before consent is the
+      // more serious observation, and precedence dedupes the rest.
+      const earliest = requests.reduce((best, candidate) =>
+        candidate.timestampMs < best.timestampMs ? candidate : best,
+      );
+
+      return [
+        {
           ruleId: "PDM-R038",
           category: "CLOAKING",
           severity: "HIGH" as Severity,
-          fingerprint: fingerprint(["PDM-R038", r.host, r.consentPhase]),
-          title: `First-party subdomain ${r.host} resolves via CNAME to external tracking network`,
-          subject: r.host,
-          consentPhase: r.consentPhase,
+          fingerprint: fingerprint(["PDM-R038", entry.host, earliest.consentPhase]),
+          title: `First-party subdomain ${entry.host} resolves via CNAME to ${
+            entry.canonicalHost ?? "an external network"
+          }`,
+          subject: entry.host,
+          consentPhase: earliest.consentPhase,
           evidenceRefs: {
-            requestUrls: [r.url],
+            requestUrls: requests.map((request) => request.url),
             cookieNames: [],
             storageKeys: [],
           },
           rationale:
-            "CNAME cloaking routes tracking traffic through a first-party subdomain to bypass browser privacy protections.",
+            `The host ${entry.host} appears first-party to the browser, but DNS resolves it ` +
+            `through ${entry.chain.join(" → ")}. Requests to it are treated as same-site, so ` +
+            "cookies set in the response are first-party and are not subject to third-party " +
+            "cookie restrictions.",
           recommendedAction:
             "Disclose CNAME cloaked vendor endpoints and ensure consent gating is applied to custom subdomains.",
-        } satisfies Finding;
-      });
+        } satisfies Finding,
+      ];
+    });
   },
 };
 
@@ -81,26 +119,6 @@ export const R039: Rule = {
   },
 };
 
-/** PDM-R040 — Cross-Border PII Exfiltration to Non-Adequate Country. */
-export const R040: Rule = {
-  id: "PDM-R040",
-  category: "TRANSPORT",
-  precedence: 68,
-  evaluate(_context: RuleContext): Finding[] {
-    return [];
-  },
-};
-
-/** PDM-R041 — Asymmetric Button Sizing / Visual Dark Pattern. */
-export const R041: Rule = {
-  id: "PDM-R041",
-  category: "CMP_HYGIENE",
-  precedence: 62,
-  evaluate(_context: RuleContext): Finding[] {
-    return [];
-  },
-};
-
 /** PDM-R042 — Post-Interaction Delayed Tracker Spike. */
 export const R042: Rule = {
   id: "PDM-R042",
@@ -133,16 +151,6 @@ export const R042: Rule = {
         },
       ];
     }
-    return [];
-  },
-};
-
-/** PDM-R043 — Form Submission Tracker Trigger. */
-export const R043: Rule = {
-  id: "PDM-R043",
-  category: "INTERACTION",
-  precedence: 83,
-  evaluate(_context: RuleContext): Finding[] {
     return [];
   },
 };
@@ -188,17 +196,6 @@ export const R044: Rule = {
       ];
     }
 
-    return [];
-  },
-};
-
-/** PDM-R045 — Canvas / WebGL / Audio Fingerprinting Detected. */
-export const R045: Rule = {
-  id: "PDM-R045",
-  category: "FINGERPRINT",
-  precedence: 93,
-  evaluate(_context: RuleContext): Finding[] {
-    // Evaluated from console or browser runtime telemetry for canvas.toDataURL or AudioContext
     return [];
   },
 };

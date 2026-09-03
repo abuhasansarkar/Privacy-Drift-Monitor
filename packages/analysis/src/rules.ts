@@ -2,19 +2,15 @@ import { CONSENT_RULES } from "./rules/consent";
 import { DRIFT_RULES } from "./rules/drift";
 import { EXTRA_RULES } from "./rules/extra";
 import { HYGIENE_RULES } from "./rules/hygiene";
-import { R026, R027, R028, R029, R030 } from "./rules/jurisdictions";
+import { R026, R027, R028, R030 } from "./rules/jurisdictions";
 import { R031, R032, R033 } from "./rules/us-compliance";
 import { R034, R035, R049 } from "./rules/policy-compliance";
 import { R036, R037 } from "./rules/cipa-wiretap";
 import {
   R038,
   R039,
-  R040,
-  R041,
   R042,
-  R043,
   R044,
-  R045,
   R046,
   R047,
   R048,
@@ -38,6 +34,15 @@ import type { Finding, Rule, RuleContext } from "./rules/types";
  * rules run after the drift engine has produced its events, because they must
  * describe the same change the drift feed shows. Running them together would
  * mean the rule engine diffing scans itself.
+ *
+ * ⚠️ A REGISTERED RULE MUST BE ABLE TO FIRE. Five ids were registered with an
+ * `evaluate()` that returned `[]` unconditionally — R029, R040, R041, R043 and
+ * R045 — each under a comment describing behaviour it did not have. They were
+ * counted in "50 rules", shown in the admin catalogue, and could never produce
+ * a finding. `RESERVED_RULE_IDS` below replaces them: the id stays reserved so
+ * it is never reused for something else, and the reason it cannot be built yet
+ * is written down next to it. `rules.test.ts` asserts the registry and the
+ * reserved list are disjoint and together cover PDM-R001…R050 with no gaps.
  */
 
 export type {
@@ -51,24 +56,61 @@ export type {
 } from "./rules/types";
 export { fingerprint } from "./rules/types";
 
-export const JURISDICTION_RULES: readonly Rule[] = [R026, R027, R028, R029, R030];
+export const JURISDICTION_RULES: readonly Rule[] = [R026, R027, R028, R030];
 export const US_COMPLIANCE_RULES: readonly Rule[] = [R031, R032, R033];
 export const POLICY_RULES: readonly Rule[] = [R034, R035, R049];
 export const CIPA_WIRETAP_RULES: readonly Rule[] = [R036, R037];
 export const ADVANCED_RULES: readonly Rule[] = [
   R038,
   R039,
-  R040,
-  R041,
   R042,
-  R043,
   R044,
-  R045,
   R046,
   R047,
   R048,
   R050,
 ];
+
+/**
+ * Ids that are DELIBERATELY NOT IMPLEMENTED, and the evidence each one would
+ * need first.
+ *
+ * ⚠️ RESERVED, NOT AVAILABLE. Nothing may reuse these ids for a different rule:
+ * `Issue.ruleId` is a stored contract (§4.11), and an id that once meant
+ * "fingerprinting" must never come to mean something else.
+ *
+ * Each of these needs a fact the scanner does not record. Recording it is the
+ * work — writing the predicate is the easy half, which is exactly why these
+ * shipped as empty predicates that looked finished.
+ */
+export const RESERVED_RULE_IDS: Readonly<Record<string, string>> = {
+  /** Needs DOM interaction facts: scroll-lock, backdrop, focus trap. */
+  "PDM-R029": "Cookie wall / forcible gating — requires recorded DOM gating state",
+  /** Needs geo-IP of the request DESTINATION; we record egress region, not destination country. */
+  "PDM-R040":
+    "Cross-border PII exfiltration — requires destination-country resolution per request",
+  /** Needs rendered geometry of the accept and reject controls. */
+  "PDM-R041":
+    "Asymmetric button sizing — requires recorded bounding boxes for consent controls",
+  /** Needs the scanner to submit a form; the INTERACTIVE_ACTION phase does not. */
+  "PDM-R043":
+    "Form submission tracker trigger — requires a form-submission step in the interactive phase",
+  /** Needs JS API instrumentation (canvas/WebGL/AudioContext call interception). */
+  "PDM-R045":
+    "Canvas / WebGL / audio fingerprinting — requires JS API call instrumentation",
+} as const;
+
+/**
+ * Rules that are implemented but cannot fire until a fact SOURCE exists.
+ *
+ * Different from `RESERVED_RULE_IDS`: the predicate is real and correct, and it
+ * starts producing findings the moment its input is populated. Listed so that
+ * "how many rules can fire against a scan today" stays an answerable question.
+ */
+export const DORMANT_RULE_IDS: Readonly<Record<string, string>> = {
+  "PDM-R034": "Policy-to-code vendor mismatch — needs policy extraction (Module 23)",
+  "PDM-R049": "Stale privacy policy date — needs policy extraction (Module 23)",
+} as const;
 
 /** Everything that can be decided from one scan's evidence. */
 export const SCAN_RULES: readonly Rule[] = [

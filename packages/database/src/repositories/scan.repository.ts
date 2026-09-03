@@ -33,6 +33,12 @@ export interface ScanEvidence {
   storage: Array<Row<Prisma.StorageEntryCreateManyInput>>;
   consoleLogs: Array<Row<Prisma.ConsoleLogCreateManyInput>>;
   screenshots: Array<Row<Prisma.ScreenshotCreateManyInput>>;
+  /**
+   * DNS CNAME chains resolved DURING the scan (Module 22). Optional because a
+   * scan that never navigated has none, and because a DNS timeout records
+   * nothing rather than an empty-means-clean result.
+   */
+  cnameResolutions?: Array<Row<Prisma.CnameResolutionCreateManyInput>>;
 }
 
 export interface ScanCompletion {
@@ -194,6 +200,20 @@ export function scanRepository(db: TenantClient, agencyId: string) {
           await tx.screenshot.createMany({
             data: evidence.screenshots.map((row) => ({ ...row, scanId, agencyId })),
           });
+          /*
+           * Written in the SAME transaction as the requests they describe. A
+           * CNAME row that outlived a rolled-back scan would be a fact about
+           * evidence that does not exist.
+           */
+          if (evidence.cnameResolutions?.length) {
+            await tx.cnameResolution.createMany({
+              data: evidence.cnameResolutions.map((row) => ({
+                ...row,
+                scanId,
+                agencyId,
+              })),
+            });
+          }
 
           // The website's summary fields follow the scan, in the same
           // transaction, so the list page can never show a last-scan time for a

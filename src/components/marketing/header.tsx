@@ -145,6 +145,24 @@ export function MarketingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  /*
+   * Close the drawer when the route changes, so back/forward never reopens it.
+   *
+   * ⚠️ ADJUSTED DURING RENDER, NOT IN AN EFFECT. This was
+   * `useEffect(() => setMenuOpen(false), [pathname])`, which React's
+   * `set-state-in-effect` rule rejects: an effect that sets state synchronously
+   * renders the new route WITH THE DRAWER STILL OPEN, then immediately renders
+   * again to close it. Comparing the route against the one the drawer belongs
+   * to and correcting it in the same pass is React's documented pattern for
+   * "adjusting state when a prop changes" — one render, no flash of an open
+   * drawer over the new page.
+   */
+  const [drawerPathname, setDrawerPathname] = useState(pathname);
+  if (pathname !== drawerPathname) {
+    setDrawerPathname(pathname);
+    setMenuOpen(false);
+  }
+
   // Hairline border + firmer background only once the page scrolls; the
   // transition is the only animation here, and the global reduced-motion rule
   // already neutralises it.
@@ -156,11 +174,6 @@ export function MarketingHeader() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // Close the drawer after navigation so back/forward never reopens it.
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   return (
     <header

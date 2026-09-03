@@ -4,7 +4,7 @@ import { GENERIC_ADAPTER } from "../consent/generic-adapter";
 import { runScan } from "../scan";
 import { startFixture, type FixtureServer } from "../testing/fixture-server";
 import { allowAnyUrl, type NavigationBudget } from "../navigate";
-import type { ScanInput } from "../types";
+import { deriveScanStatus, type ScanInput } from "../types";
 
 /**
  * FOUR-PHASE ORCHESTRATION against fixtures.
@@ -285,3 +285,107 @@ describe("runScan", () => {
     expect(pool.stats().activeContexts).toBe(0);
   });
 }, 180_000);
+
+describe("CNAME resolution is recorded by the scan, not derived later", () => {
+  /*
+   * ⚠️ WHY THIS RUNS AT SCAN TIME. A CNAME is a DNS fact that changes without
+   * notice. Resolving it while INTERPRETING stored evidence would mean
+   * re-running analysis over the same scan could produce a different answer —
+   * the replayability the evidence/interpretation split exists to guarantee
+   * (P6). So the scan records it and the rule engine only reads it.
+   *
+   * Before this wiring, `net/cname.ts` was exported and called from nowhere,
+   * while PDM-R038 "detected" cloaking by searching HTTP redirect chains for
+   * the substring "cname" — which real cloaking never contains.
+   */
+  it("records a chain for the first-party hosts it contacted", async () => {
+    const server = await fixture("F01");
+    const seen: string[] = [];
+
+    const result = await runScan(input(server.origin), {
+      pool,
+      urlGuard: allowAnyUrl,
+      adapters: [GENERIC_ADAPTER],
+      budget: FAST,
+      cnameChecker: async (host, registrableDomain) => {
+        seen.push(host);
+        return {
+          isCloaked: true,
+          originalHost: host,
+          canonicalHost: "client.sc.omtrdc.net",
+          chain: [`${registrableDomain}.cdn.example`, "client.sc.omtrdc.net"],
+        };
+      },
+    });
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(result.cnameResolutions.length).toBeGreaterThan(0);
+    expect(result.cnameResolutions[0]!.isCloaked).toBe(true);
+    expect(result.cnameResolutions[0]!.canonicalHost).toBe("client.sc.omtrdc.net");
+  });
+
+  it("resolves each host once, however many requests it served", async () => {
+    const server = await fixture("F02");
+    const seen: string[] = [];
+
+    await runScan(input(server.origin), {
+      pool,
+      urlGuard: allowAnyUrl,
+      adapters: [GENERIC_ADAPTER],
+      budget: FAST,
+      cnameChecker: async (host) => {
+        seen.push(host);
+        return { isCloaked: false, originalHost: host, canonicalHost: null, chain: [] };
+      },
+    });
+
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("records nothing rather than failing the scan when the resolver throws", async () => {
+    /*
+     * A DNS outage must never downgrade a scan. The recording is the expensive,
+     * unrepeatable half — losing it over a name lookup would be the worst
+     * possible trade.
+     */
+    const server = await fixture("F01");
+
+    const result = await runScan(input(server.origin), {
+      pool,
+      urlGuard: allowAnyUrl,
+      adapters: [GENERIC_ADAPTER],
+      budget: FAST,
+      cnameChecker: async () => {
+        throw new Error("ESERVFAIL");
+      },
+    });
+
+    /*
+     * The claim is that DNS does not influence the outcome — not that this
+     * fixture is COMPLETED. `deriveScanStatus` decides status from the phases
+     * alone, so a thrown resolver must leave it exactly where the phases put
+     * it, and must certainly not make the scan FAILED.
+     */
+    expect(result.status).toBe(deriveScanStatus(result.phases, true));
+    expect(result.status).not.toBe("FAILED");
+    expect(result.cnameResolutions).toEqual([]);
+  });
+
+  it("resolves nothing when navigation never succeeded", async () => {
+    let called = false;
+    const result = await runScan(input("http://127.0.0.1:1/"), {
+      pool,
+      urlGuard: allowAnyUrl,
+      adapters: [GENERIC_ADAPTER],
+      budget: { navTimeoutMs: 2_000, settleMaxMs: 200, observeMs: 200 },
+      cnameChecker: async (host) => {
+        called = true;
+        return { isCloaked: false, originalHost: host, canonicalHost: null, chain: [] };
+      },
+    });
+
+    expect(result.status).toBe("FAILED");
+    expect(called).toBe(false);
+    expect(result.cnameResolutions).toEqual([]);
+  });
+});

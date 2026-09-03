@@ -133,25 +133,6 @@ export const R028: Rule = {
   },
 };
 
-/** PDM-R029 — Cookie Wall / Forcible Gating Detected. */
-export const R029: Rule = {
-  id: "PDM-R029",
-  category: "CONSENT_MISSING",
-  precedence: 80,
-  evaluate(context: RuleContext): Finding[] {
-    const noConsentPhase = context.phases.find((p) => p.phase === "NO_CONSENT");
-    if (!noConsentPhase || noConsentPhase.status !== "EXECUTED") return [];
-
-    // If banner was detected and page has scroll-lock or backdrop-filter blocking interaction
-    if (context.scan?.cmpId && noConsentPhase.bannerDismissed === false) {
-      // Checked against DOM gating facts if present
-      return [];
-    }
-
-    return [];
-  },
-};
-
 /** PDM-R030 — Unconsented Marketing Tag via GTM Consent Mode Default (UK ICO). */
 export const R030: Rule = {
   id: "PDM-R030",

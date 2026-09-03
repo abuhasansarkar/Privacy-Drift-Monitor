@@ -463,6 +463,7 @@ model Scan {
   gpcAudits           GpcAuditRecord[]
   sessionReplayAudits SessionReplayAudit[]
   policyAudits        PolicyAudit[]
+  cnameResolutions    CnameResolution[]
 
   @@index([agencyId, createdAt(sort: Desc)])
   @@index([websiteId, createdAt(sort: Desc)])
@@ -584,6 +585,39 @@ model NetworkRequest {
   @@index([scanId, registrableDomain])
   @@index([scanId, trackerVendorId])
   @@map("network_requests")
+}
+
+/// CNAME chains for the first-party hosts a scan contacted (Module 22).
+///
+/// EVIDENCE, recorded at scan time. A CNAME is a DNS fact that changes without
+/// warning, so resolving it during analysis would make re-running analysis over
+/// the same scan produce different answers — the replayability P6 protects.
+/// One row per unique first-party host; `isCloaked` is decided by the resolver,
+/// and the rule engine only reads it.
+model CnameResolution {
+  id       String @id @default(uuid())
+  scanId   String
+  agencyId String
+
+  /// The first-party host as observed in a request.
+  host          String
+  /// Every CNAME target traversed, in order. Empty when the host is a plain A record.
+  chain         String[] @default([])
+  /// The final target in the chain, or null when there was none.
+  canonicalHost String?
+  /// True when the chain leaves the site's registrable domain or lands on a
+  /// known tracking network. Never inferred later.
+  isCloaked     Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  /// One resolution per host per scan — the resolver dedupes, this enforces it.
+  @@unique([scanId, host])
+  @@index([scanId, isCloaked])
+  @@index([agencyId])
+  @@map("cname_resolutions")
 }
 
 model CookieRecord {

@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "@/lib/theme-script";
 
 /**
  * THEME PROVIDER — PLAN.md §3.3 (user menu theme choice), §11.3 (dark tokens),
@@ -30,23 +31,16 @@ import {
 
 export type Theme = "light" | "dark" | "system";
 
-const STORAGE_KEY = "pdm-theme";
-
 const ThemeContext = createContext<{
   /** The stored preference — "system" is a real value, not resolved away. */
   theme: Theme;
   setTheme: (theme: Theme) => void;
 } | null>(null);
 
-/** Pre-hydration, dependency-free, and resilient to a blocked localStorage. */
-const APPLY_ON_LOAD = `try{var t=localStorage.getItem(${JSON.stringify(
-  STORAGE_KEY,
-)});var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}`;
-
 function readStoredTheme(): Theme {
   if (typeof window === "undefined") return "system";
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     return stored === "light" || stored === "dark" ? stored : "system";
   } catch {
     return "system";
@@ -61,21 +55,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("dark", dark);
 }
 
-export function ThemeProvider({
-  children,
-  /**
-   * The CSP nonce for this request, from `src/proxy.ts`.
-   *
-   * ⚠️ OPTIONAL, BECAUSE THE STATIC MARKETING PAGES HAVE NONE — their policy
-   * uses `'unsafe-inline'` instead, for the reason set out in `proxy.ts`. An
-   * `undefined` nonce renders no attribute, which is exactly right there and
-   * exactly wrong anywhere the strict policy applies; the layout passes it.
-   */
-  nonce,
-}: {
-  children: ReactNode;
-  nonce?: string;
-}) {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   // Initialized from storage on the client; the server renders "system" and the
   // inline script has already applied the real class before hydration.
   const [theme, setThemeState] = useState<Theme>(readStoredTheme);
@@ -83,7 +63,7 @@ export function ThemeProvider({
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
     try {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       // Storage unavailable (private mode) — the choice still applies for
       // this page's lifetime via the effect below.
@@ -105,13 +85,18 @@ export function ThemeProvider({
   return (
     <ThemeContext.Provider value={value}>
       {/*
-        ⚠️ THE NONCE IS REQUIRED, NOT OPTIONAL (§10.1). This is the one inline
-        script the app ships, and under a nonce-based CSP an inline script
-        without one is refused — which means the stored theme is not applied
-        before hydration and every dark-mode user gets a white flash on every
-        navigation. The nonce is read from the request header the proxy sets.
+        ⚠️ ALLOWED BY HASH, NOT BY NONCE (§10.1), AND THAT IS WHAT KEEPS THE
+        MARKETING PAGES STATIC. A nonce has to be read from the request, and
+        reading the request in the ROOT layout makes every route in the app
+        dynamic — which is how `/solutions/[industry]` came to fail its build
+        and how the "statically prerendered marketing pages" of §3.2 quietly
+        stopped being prerendered at all.
+
+        This script's bytes are a compile-time constant, so the strict policy
+        names its SHA-256 instead. `src/proxy.ts` derives that hash from the
+        same constant. Nothing here touches the request.
       */}
-      <script nonce={nonce} dangerouslySetInnerHTML={{ __html: APPLY_ON_LOAD }} />
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       {children}
     </ThemeContext.Provider>
   );

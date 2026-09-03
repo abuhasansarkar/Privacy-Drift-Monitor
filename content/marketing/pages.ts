@@ -133,8 +133,20 @@ export const INTEGRATIONS = {
     { name: "Didomi", category: "CMP", status: "partial", note: "Some configurations expose no operable reject control." },
     { name: "Termly", category: "CMP", status: "heuristic", note: "Detected generically; journeys may report undetermined." },
     { name: "Bespoke banners", category: "CMP", status: "heuristic", note: "Generic strategies only; honest could-not-be-determined outcomes." },
-    { name: "Slack", category: "Alerting", status: "available", note: "Drift and finding alerts to channels." },
-    { name: "Webhooks", category: "Alerting", status: "available", note: "Signed webhook events for alert rules." },
+    /*
+     * ⚠️ BOTH OF THESE READ "available" UNTIL AN AUDIT CHECKED THEM, AND
+     * NEITHER IS BUILT. Slack is a feature flag (`SLACK_INTEGRATION`) that
+     * defaults to false with no delivery code anywhere — `policy.ts` routes the
+     * `email` channel and nothing else. The webhook dispatcher exists and is
+     * tested, but nothing calls it: there is no endpoint model, no signing
+     * secret and no producer (see `src/server/services/webhooks.ts`).
+     *
+     * A status label on this page is a product claim. "available" against
+     * something a customer cannot switch on is the same defect as a rule that
+     * reports a finding it did not observe, one surface further out.
+     */
+    { name: "Slack", category: "Alerting", status: "planned", note: "Alert delivery to Slack channels." },
+    { name: "Webhooks", category: "Alerting", status: "planned", note: "Signed webhook events for alert rules." },
     { name: "Email digests", category: "Alerting", status: "available", note: "Weekly summaries per agency." },
     { name: "Jira", category: "Workflow", status: "planned", note: "Create issues from findings." },
     { name: "Linear", category: "Workflow", status: "planned", note: "Create issues from findings." },

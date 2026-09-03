@@ -48,6 +48,7 @@ export const TENANT_MODELS = [
   "scanPhase",
   "scanPage",
   "networkRequest",
+  "cnameResolution",
   "cookieRecord",
   "storageEntry",
   "consoleLog",

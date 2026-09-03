@@ -13,52 +13,112 @@ import {
  * Catches discrepancies between written legal policies and technical browser reality.
  */
 
-/** PDM-R034 — Policy-to-Code Vendor Mismatch (Ghost Tracker). */
+/**
+ * PDM-R034 — Policy-to-Code Vendor Mismatch (Ghost Tracker).
+ *
+ * ⚠️ IT NEEDS A POLICY, AND IT WILL NOT PRETEND OTHERWISE. This rule previously
+ * raised a HIGH-severity finding reading "<vendor> active on site but omitted
+ * from privacy policy" by filtering detections down to advertising vendors,
+ * taking the first one, and asserting the omission. No privacy policy was ever
+ * fetched, parsed or compared; `RuleContext` did not even carry a field for
+ * one. Every finding it produced was an invented fact, sent to an agency, and
+ * from there to that agency's client.
+ *
+ * That is the exact failure P1 and P6 exist to prevent — an interpretation
+ * layer manufacturing an observation the scanner never made. A rule may only
+ * describe what was recorded.
+ *
+ * So it now reads `context.policy.undisclosedVendors`, which is produced by
+ * policy extraction (Module 23). Until that ships, `context.policy` is
+ * undefined and this rule emits NOTHING — which is the correct output for a
+ * comparison whose second input does not exist. The rule id is kept so no
+ * historical `Issue` row is orphaned (§4.11).
+ */
 export const R034: Rule = {
   id: "PDM-R034",
   category: "FTC_COMPLIANCE",
   precedence: 87,
   evaluate(context: RuleContext): Finding[] {
-    // When policy extraction facts indicate an undisclosed active vendor
-    return context.detections
-      .filter((d) => {
-        if (!d.vendorId) return false;
-        const vendor = context.vendorsById.get(d.vendorId);
-        return vendor?.category === "MARKETING" || vendor?.category === "ADVERTISING";
-      })
-      .slice(0, 1) // Scoped to verified mismatches
-      .map((d) => {
-        const name = vendorName(context, d);
-        return {
+    const policy = context.policy;
+    if (!policy || policy.undisclosedVendors.length === 0) return [];
+
+    const undisclosed = new Set(
+      policy.undisclosedVendors.map((slug) => slug.toLowerCase()),
+    );
+
+    /*
+     * Only vendors we ACTUALLY DETECTED and the policy does not name. The
+     * detection is what makes this an observation rather than a policy review;
+     * an undisclosed vendor that never fired is not something we saw.
+     */
+    const seen = new Set<string>();
+    return context.detections.flatMap((detection) => {
+      if (!detection.vendorId) return [];
+      const vendor = context.vendorsById.get(detection.vendorId);
+      if (!vendor || !undisclosed.has(vendor.slug.toLowerCase())) return [];
+      if (seen.has(vendor.slug)) return [];
+      seen.add(vendor.slug);
+
+      const name = vendorName(context, detection);
+      return [
+        {
           ruleId: "PDM-R034",
           category: "FTC_COMPLIANCE",
           severity: "HIGH" as Severity,
-          fingerprint: fingerprint(["PDM-R034", d.vendorId, "policy-diff"]),
-          title: `${name} active on site but omitted from privacy policy`,
+          fingerprint: fingerprint(["PDM-R034", vendor.slug, "policy-diff"]),
+          title: `${name} was detected but is not named in the published privacy policy`,
           subject: name,
-          consentPhase: d.consentPhase,
+          consentPhase: detection.consentPhase,
           evidenceRefs: {
-            requestUrls: d.evidenceSummary.hosts,
-            cookieNames: d.evidenceSummary.cookies,
-            storageKeys: d.evidenceSummary.storageKeys,
+            requestUrls: [],
+            cookieNames: [],
+            storageKeys: [],
           },
           rationale:
-            "Active tracker detected in browser network traffic that is missing from declared vendor disclosures in the privacy policy.",
+            `${name} was observed loading on the website. The privacy policy at ` +
+            `${policy.policyUrl} does not name it among the third parties it discloses.`,
           recommendedAction:
-            "Add vendor disclosure to privacy policy or remove unapproved script tag to prevent FTC Section 5 deceptive trade practice liabilities.",
-        } satisfies Finding;
-      });
+            "Review the published privacy policy against the vendors currently in use, " +
+            "and update whichever is out of date.",
+        } satisfies Finding,
+      ];
+    });
   },
 };
 
-/** PDM-R035 — Sensitive Field Data Transmitted to Third Party. */
+/**
+ * PDM-R035 — Sensitive identifiers in third-party request URLs.
+ *
+ * ⚠️ IT MATCHES PARAMETER NAMES, NOT THE WHOLE URL. The first version tested
+ * the raw URL against `/@/` among others, so ANY third-party URL containing an
+ * "@" — a path segment, a scoped npm package on a CDN, a base64 fragment —
+ * produced a CRITICAL "Sensitive user data transmitted" finding. A CRITICAL
+ * that fires on `cdn.example.com/@scope/pkg.js` is worse than no rule: it
+ * teaches the reader to skim past the severity that matters most.
+ *
+ * ⚠️ AND IT LOOKS AT THE QUERY STRING KNOWING ONE IS RARELY THERE. §10.6 has
+ * `sanitizeUrl()` strip query strings before storage, so in practice this fires
+ * on the path and on the few recorders that keep a fragment. That is a
+ * deliberate trade: under-reporting a leak we cannot see beats inventing one.
+ */
 export const R035: Rule = {
   id: "PDM-R035",
   category: "FTC_COMPLIANCE",
   precedence: 95,
   evaluate(context: RuleContext): Finding[] {
-    // Scans network requests for sensitive query params (e.g. email, pwd, ssn, dob)
-    const sensitivePatterns = [/@/, /password=/i, /email=/i, /ssn=/i, /dob=/i];
+    /*
+     * Anchored to a parameter BOUNDARY (`?`, `&`, `#` or `/`) followed by a
+     * key that names a personal identifier, then `=`. A bare "@" is not
+     * evidence of anything.
+     */
+    const SENSITIVE_PARAM =
+      /[?&#/](?:e?mail|user(?:name)?|pass(?:word|wd)?|pwd|ssn|dob|birth(?:date|day)|phone|tel|first_?name|last_?name|full_?name|address|postcode|zip)=[^&#\s]+/i;
+
+    /** An email address as a VALUE, not an "@" anywhere in the string. */
+    const EMAIL_VALUE = /=[^&#\s]*[A-Z0-9._%+-]+%40[A-Z0-9.-]+\.[A-Z]{2,}/i;
+    const EMAIL_VALUE_PLAIN = /=[^&#\s]*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
+    const sensitivePatterns = [SENSITIVE_PARAM, EMAIL_VALUE, EMAIL_VALUE_PLAIN];
 
     return context.requests
       .filter((r) => r.isThirdParty)
@@ -86,13 +146,52 @@ export const R035: Rule = {
   },
 };
 
-/** PDM-R049 — Stale Privacy Policy Date (> 12 Months). */
+/**
+ * PDM-R049 — Stale Privacy Policy Date (> 12 Months).
+ *
+ * ⚠️ THIS WAS A REGISTERED NO-OP. It returned `[]` unconditionally, under a
+ * comment describing behaviour it did not have ("Evaluated when policy audit
+ * date indicates older than 365 days"), while being counted among the product's
+ * rules. A registered rule that cannot fire makes the rule count a claim
+ * nobody can check.
+ *
+ * It now does the comparison it always described. Like PDM-R034 it depends on
+ * policy extraction (Module 23), so it emits nothing until `context.policy` is
+ * populated — the difference is that the reason is now the absence of an input,
+ * stated in one line, rather than an empty function body.
+ */
+const STALE_POLICY_DAYS = 365;
+
 export const R049: Rule = {
   id: "PDM-R049",
   category: "POLICY",
   precedence: 40,
-  evaluate(_context: RuleContext): Finding[] {
-    // Evaluated when policy audit date indicates older than 365 days
-    return [];
+  evaluate(context: RuleContext): Finding[] {
+    const effectiveDate = context.policy?.effectiveDate;
+    if (!context.policy || !effectiveDate) return [];
+
+    const ageDays = Math.floor(
+      (Date.now() - effectiveDate.getTime()) / (24 * 60 * 60 * 1000),
+    );
+    if (ageDays <= STALE_POLICY_DAYS) return [];
+
+    return [
+      {
+        ruleId: "PDM-R049",
+        category: "POLICY",
+        severity: "LOW" as Severity,
+        fingerprint: fingerprint(["PDM-R049", context.policy.policyUrl]),
+        title: `Privacy policy states an effective date ${ageDays} days ago`,
+        subject: context.policy.policyUrl,
+        consentPhase: "NO_CONSENT",
+        evidenceRefs: { requestUrls: [], cookieNames: [], storageKeys: [] },
+        rationale:
+          `The policy at ${context.policy.policyUrl} declares an effective date of ` +
+          `${effectiveDate.toISOString().slice(0, 10)}. Tracking setups change more often ` +
+          "than that, so the document may no longer describe what the website does.",
+        recommendedAction:
+          "Review the policy against the vendors currently detected and refresh its effective date.",
+      } satisfies Finding,
+    ];
   },
 };

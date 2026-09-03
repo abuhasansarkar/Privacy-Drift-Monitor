@@ -12,6 +12,19 @@ import { childLogger } from "@pdm/shared/logger";
  *
  * Dispatches HMAC-SHA256 signed event payloads to customer endpoints.
  * Enforces SSRF pre-flight validation and timeout bounding.
+ *
+ * ⚠️ **NOT WIRED INTO THE PRODUCT. THIS IS INFRASTRUCTURE, NOT A FEATURE.**
+ * Nothing calls `dispatchWebhook` except its own test. There is no Prisma model
+ * for a customer endpoint, no UI to register one, no secret to sign with and no
+ * enqueue path from any event. Module 24 also specifies a public API v1, which
+ * does not exist either.
+ *
+ * It is documented here rather than deleted because the transport is correct
+ * and tested, and because a reader finding a complete-looking dispatcher has no
+ * other way to discover it is unreachable. Do not describe webhooks as a
+ * shipped capability — in the marketing copy, in `dev-doc2/modules/24-*.md`, or
+ * to a customer — until an endpoint model, a signing secret and a producer
+ * exist. See `OVERVIEW.md`.
  */
 
 export interface WebhookDispatchResult {
