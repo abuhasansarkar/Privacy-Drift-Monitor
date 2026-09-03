@@ -215,3 +215,77 @@ Audit-এর জন্য দুটো agency-র `clerkOrgId` swap করা �
 ---
 
 *rendered page থেকে তৈরি, code পড়ে নয়। প্রতিটা finding-এর root cause কোডে যাচাই করা।*
+
+---
+
+# পরিশিষ্ট — Production Readiness Audit (কোডবেস-ব্যাপী)
+
+**তারিখ:** ২০২৬-০৯-০৪। উপরের UI audit-এর পর পুরো codebase-এ চালানো।
+
+## ✅ যা পরীক্ষা করে ভালো পাওয়া গেছে
+
+| ক্ষেত্র | ফল |
+|---|---|
+| Committed secret | **নেই** — `.env*` gitignored, tracked file-এ কোনো live key নেই। দুটো `sk_live_` hit শুধু stripe-provision-এর নিরাপত্তা guard |
+| Migration drift | **নেই** — 10 migration, "Database schema is up to date" |
+| Webhook auth | Clerk · Stripe · Resend তিনটেই signature verify করে, secret না থাকলে **401 fail-closed** |
+| Dockerfile | multi-stage, **non-root `USER`**, `npm ci --ignore-scripts`, HEALTHCHECK দুটোতেই |
+| Readiness probe | fatal আর degraded আলাদা করে — fatal-এ 503, degraded-এ 200 |
+| Worker shutdown | SIGTERM handler, প্রতিটা queue worker `close()` হয় |
+| `console.log` | shipped code-এ **নেই** (শুধু seed CLI-তে) |
+| npm audit | 3 high (`deepmerge-ts` via prisma) — কিন্তু `prisma` **devDependency**, production image-এ যায় না। Build-time only, defer করা সঠিক |
+
+## 🔴 P01 — `PORTAL_TOKEN_SECRET` required কিন্তু undocumented
+
+`src/server/admin/impersonation.ts` cross-tenant support ticket sign করে এই secret দিয়ে, আর না থাকলে **throw** করে (সঠিক — constant fallback হলে source পড়া যে কেউ ticket forge করতে পারত)। কিন্তু variable-টা `.env.example`-এ ছিল না।
+
+**ফল:** documented contract মেনে deploy করলে admin impersonation runtime-এ ভাঙত, আর operator জানতেও পারত না variable-টার অস্তিত্ব আছে।
+
+**Fixed:** `.env.example`-এ generation command সহ যোগ করা।
+
+## 🔴 P02 — Admin health panel ভুল env var পড়ত
+
+`admin/health.ts` আর `admin/queries.ts` `OPENAI_API_KEY` দেখে "OpenAI configured" রিপোর্ট করত। কিন্তু AI layer পড়ে **`AI_API_KEY`** (`packages/ai/src/config.ts:134,147`)।
+
+**দুই দিকেই ভুল:** সঠিকভাবে configure করা deployment-এ dashboard বলত OpenAI **নেই**; আর যে variable-টা row-তে নাম করা ছিল সেটা সেট করলে বলত **আছে** অথচ AI বন্ধ।
+
+Incident-এর সময় একটা ভুল বলা health panel না থাকার চেয়ে খারাপ — ভুল জায়গায় debug করতে পাঠায়।
+
+**Fixed:** দুটোই `AI_API_KEY` পড়ে।
+
+## 🟠 P03 — `ANALYTICS_SALT` চুপচাপ খালি হয়ে যেত
+
+`domainHash()`-এর কোডেই লেখা: salt ছাড়া hash "cosmetic", কারণ registrable domain-এর space ছোট আর public — dictionary দিয়ে সেকেন্ডে reverse হয়। অথচ code `?? ""` করে, আর `ANALYTICS_SALT`/`PORTAL_TOKEN_SECRET` কোনোটাই documented ছিল না। **অর্থাৎ খালি salt-ই ছিল default path।**
+
+**Fixed:** `.env.example`-এ যোগ করা।
+
+## 🟠 P04 — `/api/public/analytics` unauthenticated, rate limit ছাড়া
+
+Event-name allowlist আছে (আজেবাজে নাম আটকায়), property filter আছে — কিন্তু **volume নিয়ে কিছু নেই**। একটা script লুপে `pricing_viewed` পাঠিয়ে পুরো funnel metric অকেজো করতে পারত, আর metered analytics transport-এ সেটা আমাদের খরচে।
+
+**Fixed:** IP-প্রতি 120/ঘণ্টা। IP salted-hash করে key বানানো হয় (raw IP Redis key-তেও রাখা হয় না), আর refuse করলেও 204 ফেরে — telemetry-র জন্য page কখনও error দেখাবে না।
+
+## 🟠 P05 — Deploy workflow test চালাত না
+
+`pr.yml`-এ পূর্ণ gate (lint, typecheck, terminology, migration, coverage, build, e2e)। কিন্তু `deploy.yml` trigger হয় `push: branches: [main]`-এ আর চালাত **শুধু তিনটে gate**।
+
+অর্থাৎ **সরাসরি main-এ push করলে 1,072টা test একবারও না চালিয়ে production-এ যেত** — আর এই repo-তে ঠিক সেটাই হচ্ছে। "PR গুলো gated" শুধু তখনই নিরাপত্তা, যখন main-এ যাওয়ার প্রতিটা পথ PR।
+
+**Fixed:** `validate` job-এ postgres + redis service, migration check আর `test:coverage` যোগ করা — `pr.yml`-এর সাথে হুবহু মিলিয়ে।
+
+## 🟡 P06 — বাসি TODO: নতুন website-এ baseline scan enqueue হত না
+
+`websites.ts`-এ লেখা ছিল "there is no queue until Phase 2, so `nextScanAt` is the only signal for now"। Queue বহু আগেই এসেছে, comment-টা behaviour আটকে রেখেছিল।
+
+**ফল:** website add করার পর **৬০ সেকেন্ড পর্যন্ত** কিছুই হত না — user "Never scanned" দেখত, বুঝতে পারত না কিছু শুরু হয়েছে কিনা।
+
+**Fixed:** commit-এর পরে `triggerScan(trigger: "ONBOARDING")`। ব্যর্থ হলে website creation ব্যর্থ **হয় না** (quota শেষ বা Redis down কোনোটাই "আপনার website যোগ হয়নি" বলার কারণ নয়) — `nextScanAt` fallback হিসেবে থাকে।
+
+**Browser-এ যাচাই করা:** website যোগ করার পর সাথে সাথে `trigger=ONBOARDING, status=RUNNING` scan row তৈরি হয় আর Redis-এ job বসে। পরীক্ষার data মুছে ফেলা হয়েছে।
+
+## যা এখনও যাচাই করা হয়নি
+
+- Load/soak test, N+1 query profiling, index coverage আসল traffic-এ
+- Backup restore drill (`scripts/restore-drill.sh` আছে, চালানো হয়নি)
+- CI GitHub-এ সত্যিই চলতে দেখা হয়নি
+- Production secret (Stripe/Resend/Turnstile webhook secret, verified email domain) — সবই environment, code নয়

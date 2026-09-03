@@ -34,10 +34,54 @@ env:
   IMAGE_NAME_WORKER: ${{ github.repository }}/worker
 
 jobs:
+  # ⚠️ THIS JOB RAN THREE GATES AND DEPLOYED. `pr.yml` runs lint, typecheck,
+  # terminology, migrations, the coverage gate, the build and E2E — but this
+  # workflow triggers on `push: branches: [main]`, so anything pushed straight
+  # to main reached production having never run a single one of the 1,072
+  # tests. "PRs are gated" is only a safety property if every path to main is a
+  # PR, and a repository where maintainers push directly is exactly where the
+  # assumption quietly stops holding.
+  #
+  # The services and env below mirror `pr.yml` deliberately: two definitions
+  # that can drift is how a gate passes in one workflow and cannot even start
+  # in the other.
   validate:
     name: Pre-deploy Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pdm
+          POSTGRES_PASSWORD: pdm
+          POSTGRES_DB: pdm_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pdm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pdm:pdm@localhost:5432/pdm_test
+      REDIS_URL: redis://localhost:6379
+      # Placeholders — no third party is exercised here; they only keep config
+      # validation from failing. Real secrets are injected at deploy time.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
+      CLERK_SECRET_KEY: sk_test_ci
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ci-fixed-key-not-a-real-secret-000000
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,6 +102,16 @@ jobs:
 
       - name: Terminology check
         run: npm run check:terminology
+
+      # Phase 0 acceptance: "migrations apply cleanly to a fresh database".
+      # Also the step that would catch a migration missing from a hotfix push.
+      - name: Migration check
+        run: npm run db:deploy
+
+      # `test:coverage`, not `test` — the ≥85% thresholds in `vitest.config.ts`
+      # are only evaluated by the coverage run. See the note in `pr.yml`.
+      - name: Test + coverage gate
+        run: npm run test:coverage
 
   build-images:
     name: Build & Push Container Images

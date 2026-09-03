@@ -6,8 +6,10 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { website as websiteSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ConflictError, ValidationError } from "@pdm/shared/errors";
+import { childLogger } from "@pdm/shared/logger";
 import { requirePermission, requireWebsiteAccess } from "@/server/auth/context";
 import { requireAllowedValue } from "@/server/services/entitlement-guard";
+import { triggerScan } from "@/server/services/scan-service";
 import { validateWebsiteUrl } from "@/server/services/website-validation";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
@@ -113,9 +115,40 @@ export async function createWebsite(
       { userId: ctx.userId },
     );
 
-    // TODO(2.13): enqueue the baseline scan here — AFTER the commit above, never
-    // inside it. There is no queue until Phase 2, so `nextScanAt` is the only
-    // signal for now, which is also what the scheduler reads.
+    /*
+     * The baseline scan, enqueued AFTER the write above and never inside it.
+     *
+     * ⚠️ THIS TODO OUTLIVED ITS REASON. It read "there is no queue until Phase
+     * 2, so `nextScanAt` is the only signal for now" — but the queue shipped
+     * long ago, and the comment kept the behaviour frozen. The effect was that
+     * adding a website did nothing visible for up to a full scheduler tick
+     * (60s by default): the user pressed Add, landed on a site reading "Never
+     * scanned", and had no way to tell whether anything had been set in motion.
+     *
+     * ⚠️ A FAILURE HERE MUST NOT FAIL THE CREATE. The website exists and is
+     * committed; `triggerScan` can legitimately refuse (a scan quota reached,
+     * Redis briefly down), and none of those are reasons to tell the user their
+     * website was not added. `nextScanAt` is still set, so the scheduler picks
+     * up anything this misses — the enqueue is an accelerator, not the
+     * mechanism.
+     */
+    if (parsed.data.scanFrequency !== "MANUAL") {
+      try {
+        await triggerScan({
+          agencyId: ctx.agencyId,
+          websiteId: created.id,
+          userId: ctx.userId,
+          // `ONBOARDING`, not `SCHEDULED` — the enum distinguishes a site's
+          // first scan from a recurring one, and admin scan lists read it.
+          trigger: "ONBOARDING",
+        });
+      } catch (error) {
+        childLogger({ agencyId: ctx.agencyId, websiteId: created.id }).warn(
+          { err: error },
+          "baseline scan not enqueued; the scheduler will pick it up",
+        );
+      }
+    }
 
     revalidatePath("/app/websites");
     revalidatePath("/app");

@@ -111,7 +111,18 @@ export function externalServices() {
     { name: "Clerk", configured: Boolean(process.env.CLERK_SECRET_KEY) },
     { name: "Stripe", configured: isStripeConfigured() },
     { name: "Resend", configured: Boolean(process.env.RESEND_API_KEY) },
-    { name: "OpenAI", configured: Boolean(process.env.OPENAI_API_KEY) },
+    /*
+     * ⚠️ `AI_API_KEY`, NOT `OPENAI_API_KEY`. This row read a variable the
+     * product does not use: `packages/ai/src/config.ts` resolves the key from
+     * `AI_API_KEY` and gates `enabled` on it. So a correctly configured
+     * deployment — one following `.env.example` — had its own operations
+     * dashboard report OpenAI as NOT configured, and setting the variable this
+     * row named would have reported configured while the AI layer stayed off.
+     *
+     * A health panel that is wrong in both directions is worse than a missing
+     * row: it sends somebody debugging the wrong thing during an incident.
+     */
+    { name: "OpenAI", configured: Boolean(process.env.AI_API_KEY) },
     { name: "Turnstile", configured: Boolean(process.env.TURNSTILE_SECRET_KEY) },
     // Through the helper, so "configured" here means the same thing it means
     // to `instrumentation.ts` — including the NEXT_PUBLIC_ fallback.

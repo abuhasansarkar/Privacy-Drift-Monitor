@@ -514,7 +514,9 @@ export function getPlatformSettings() {
     ai: {
       standard: process.env.AI_MODEL_STANDARD ?? "unset",
       advanced: process.env.AI_MODEL_ADVANCED ?? "unset",
-      configured: Boolean(process.env.OPENAI_API_KEY),
+      // `AI_API_KEY` is what `packages/ai/src/config.ts` reads — see the note
+      // in `admin/health.ts`. This row named a variable nothing else uses.
+      configured: Boolean(process.env.AI_API_KEY),
     },
   };
 }
