@@ -277,11 +277,14 @@ export async function analyseScan(
   const scan = await repos.scans.withPhases(scanId);
   if (!scan) throw new Error(`scan ${scanId} not found`);
 
-  const [vendors, requests, cookies, storage] = await Promise.all([
+  const [vendors, requests, cookies, storage, cnames] = await Promise.all([
     loadVendors(),
     repos.db.networkRequest.findMany({ where: { scanId } }),
     repos.db.cookieRecord.findMany({ where: { scanId } }),
     repos.db.storageEntry.findMany({ where: { scanId } }),
+    // Recorded by the scanner at scan time (Module 22). Read, never derived —
+    // resolving DNS here would make analysis non-replayable.
+    repos.db.cnameResolution.findMany({ where: { scanId } }),
   ]);
 
   const detections = classify({
@@ -336,6 +339,22 @@ export async function analyseScan(
     cookies: cookies as never,
     storage: storage as never,
     scan: scanFacts,
+    /*
+     * ⚠️ An EMPTY array is "we resolved nothing", not "nothing is cloaked".
+     * PDM-R038 treats both the same way — no evidence, no finding — so the
+     * distinction never becomes a clean verdict we did not earn (P5).
+     */
+    cnames: cnames.map((row) => ({
+      host: row.host,
+      chain: row.chain,
+      canonicalHost: row.canonicalHost,
+      isCloaked: row.isCloaked,
+    })),
+    /*
+     * Policy extraction (Module 23) is not built, so this stays undefined and
+     * PDM-R034 / PDM-R049 emit nothing. Deliberate: see `PolicyFacts`.
+     */
+    policy: undefined,
   };
 
   const findings = evaluateRules(ruleContext);

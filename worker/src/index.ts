@@ -328,6 +328,15 @@ async function persist(
             : [];
         }),
       ),
+      // Resolved by the scanner while the scan ran, never recomputed here —
+      // DNS moves, and a fact re-derived at write time is not the fact the
+      // scan observed.
+      cnameResolutions: result.cnameResolutions.map((entry) => ({
+        host: entry.originalHost,
+        chain: [...entry.chain],
+        canonicalHost: entry.canonicalHost,
+        isCloaked: entry.isCloaked,
+      })),
     },
   );
 }

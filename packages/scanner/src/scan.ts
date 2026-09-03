@@ -5,6 +5,7 @@ import { CMP_ADAPTERS } from "./consent/cmp-adapters";
 import { GENERIC_ADAPTER } from "./consent/generic-adapter";
 import { DEFAULT_BUDGET, type NavigationBudget, type UrlGuard } from "./navigate";
 import { runPhase, type ConsentAction } from "./phase-runner";
+import { checkCnameCloaking, type CnameResolutionResult } from "./net/cname";
 import {
   deriveScanStatus,
   type CmpDetectionResult,
@@ -13,6 +14,7 @@ import {
   type ScanErrorCode,
   type ScanInput,
   type ScanResult,
+  type CnameChecker,
 } from "./types";
 
 /**
@@ -55,6 +57,12 @@ export interface ScanDeps {
    * Omitting it uses the real guard, so production fails CLOSED.
    */
   urlGuard?: UrlGuard;
+  /**
+   * Injected so the fixture suite needs no live DNS. The default is the real
+   * resolver, so a forgotten parameter records nothing rather than faking a
+   * clean result.
+   */
+  cnameChecker?: CnameChecker;
 }
 
 /**
@@ -157,6 +165,65 @@ function actionFor(
   };
 }
 
+/**
+ * Resolves the CNAME chain for every FIRST-PARTY host the scan actually
+ * contacted — PLAN-V2 Part III, dev-doc2 Module 22.
+ *
+ * ⚠️ THIS RUNS AT SCAN TIME, NOT AT ANALYSIS TIME, AND THAT IS P6. A CNAME is
+ * a DNS fact that changes without warning: resolving it while interpreting
+ * stored evidence would mean re-running analysis over the same scan could
+ * produce a different answer, which is exactly the replayability the
+ * evidence/interpretation split exists to guarantee. So it is RECORDED here,
+ * beside the requests it describes, and the rule engine only reads it.
+ *
+ * ⚠️ FIRST-PARTY HOSTS ONLY. Cloaking is the practice of pointing a
+ * first-party subdomain at a third-party tracking network so the request looks
+ * same-site to the browser. A host that is already third-party has nothing to
+ * cloak, and resolving every third-party host would mean dozens of DNS lookups
+ * per scan for a question nobody asked.
+ *
+ * ⚠️ BOUNDED AND FAILURE-TOLERANT. DNS is the slowest thing in this pipeline
+ * and the one most likely to hang. The host count is capped, the whole step is
+ * time-boxed, and any failure yields NO fact rather than a wrong one — a scan
+ * must never be downgraded because a resolver was slow.
+ */
+const MAX_CNAME_HOSTS = 25;
+const CNAME_STEP_TIMEOUT_MS = 5_000;
+
+async function resolveCnames(
+  phases: readonly PhaseResult[],
+  registrableDomain: string,
+  check: CnameChecker,
+): Promise<CnameResolutionResult[]> {
+  const hosts = new Set<string>();
+  for (const phase of phases) {
+    for (const request of phase.requests) {
+      if (request.isThirdParty) continue;
+      hosts.add(request.host.toLowerCase());
+      if (hosts.size >= MAX_CNAME_HOSTS) break;
+    }
+    if (hosts.size >= MAX_CNAME_HOSTS) break;
+  }
+
+  if (hosts.size === 0) return [];
+
+  const work = Promise.all(
+    [...hosts].map((host) =>
+      check(host, registrableDomain).catch(() => null),
+    ),
+  );
+
+  // A timeout yields an empty set, never a partial one presented as complete.
+  const timeout = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), CNAME_STEP_TIMEOUT_MS).unref?.(),
+  );
+
+  const settled = await Promise.race([work, timeout]);
+  if (!settled) return [];
+
+  return settled.filter((entry): entry is CnameResolutionResult => entry !== null);
+}
+
 export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanResult> {
   const startedAt = new Date();
   const adapters = deps.adapters ?? defaultAdapters();
@@ -199,6 +266,19 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
     navigationSucceeded = true;
   }
 
+  /*
+   * Recorded only when navigation worked. A scan that never loaded the page
+   * observed no hosts, and resolving the entry URL alone would produce a fact
+   * about a site we failed to reach.
+   */
+  const cnameResolutions = navigationSucceeded
+    ? await resolveCnames(
+        phases,
+        input.registrableDomain,
+        deps.cnameChecker ?? checkCnameCloaking,
+      )
+    : [];
+
   const finishedAt = new Date();
 
   return {
@@ -218,5 +298,6 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
     errorCode,
     errorMessage,
     errorPhase,
+    cnameResolutions,
   };
 }

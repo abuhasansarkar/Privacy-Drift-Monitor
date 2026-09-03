@@ -258,6 +258,30 @@ export interface ScanInput {
  * `PARTIAL` is a first-class outcome (P6). A PARTIAL scan must never render a
  * clean verdict and must never be used as a drift baseline (§4.10).
  */
+/**
+ * Resolves whether one host is CNAME-cloaked. Matches `checkCnameCloaking`.
+ * Declared here so `ScanDeps` can accept a stub without the types package
+ * depending on `node:dns`.
+ */
+export type CnameChecker = (
+  host: string,
+  registrableDomain?: string,
+) => Promise<CnameFact>;
+
+/**
+ * One recorded DNS CNAME chain — dev-doc2 Module 22.
+ *
+ * ⚠️ EVIDENCE, NOT INTERPRETATION. `isCloaked` is decided by the resolver at
+ * SCAN time against a known-networks list; the rule engine reads this and adds
+ * nothing (P6). Recorded per first-party host actually contacted.
+ */
+export interface CnameFact {
+  isCloaked: boolean;
+  originalHost: string;
+  canonicalHost: string | null;
+  chain: readonly string[];
+}
+
 export interface ScanResult {
   scanId: string;
   status: "COMPLETED" | "PARTIAL" | "FAILED";
@@ -275,6 +299,12 @@ export interface ScanResult {
   errorMessage: string | null;
   /** Which phase we died in, when we died. Null on success. */
   errorPhase: ConsentPhase | null;
+  /**
+   * CNAME chains for the first-party hosts this scan contacted. Empty when the
+   * scan never navigated, when DNS timed out, or when nothing resolved — an
+   * empty array means "not determined", never "not cloaked".
+   */
+  cnameResolutions: readonly CnameFact[];
 }
 
 /**

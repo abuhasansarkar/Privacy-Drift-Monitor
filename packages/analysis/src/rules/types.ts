@@ -123,6 +123,47 @@ export interface DriftFact {
   preConsent: boolean;
 }
 
+/**
+ * A DNS CNAME chain recorded at SCAN time for one first-party host.
+ *
+ * ⚠️ ABSENT IS NOT "CLEAN". An empty `cnames` array means the resolver did not
+ * run, timed out, or the scan never navigated — it does NOT mean no host is
+ * cloaked. Rules must treat a missing fact as "could not be determined" and
+ * emit nothing, which is P5 applied to a sub-fact rather than a whole phase.
+ */
+export interface CnameFact {
+  host: string;
+  chain: readonly string[];
+  canonicalHost: string | null;
+  isCloaked: boolean;
+}
+
+/**
+ * Facts extracted from a website's published privacy policy.
+ *
+ * ⚠️ NOTHING WRITES THIS YET, AND THAT IS WHY IT IS OPTIONAL. Policy extraction
+ * (Module 23) is not built; until it is, `policy` is undefined and every rule
+ * that depends on it emits NOTHING.
+ *
+ * ⚠️ THE PREVIOUS SHAPE OF PDM-R034 IS THE REASON THIS TYPE EXISTS. That rule
+ * raised a HIGH-severity finding titled "<vendor> active on site but omitted
+ * from privacy policy" by taking any advertising vendor and assuming the
+ * policy did not mention it. No policy was ever read. That is a fabricated
+ * fact reaching a customer's client under our name, and it is precisely what
+ * P1 ("the deterministic scanner is the only source of truth") and P6
+ * ("nothing downstream of EvidenceCollector may add facts") forbid.
+ */
+export interface PolicyFacts {
+  /** Where the policy was fetched from. */
+  policyUrl: string;
+  /** The policy's own stated effective date, when it declares one. */
+  effectiveDate: Date | null;
+  /** Vendor slugs the policy names. */
+  declaredVendors: readonly string[];
+  /** Detected vendor slugs absent from `declaredVendors`. */
+  undisclosedVendors: readonly string[];
+}
+
 export interface RuleContext {
   phases: readonly PhaseResult[];
   detections: readonly Detection[];
@@ -133,6 +174,10 @@ export interface RuleContext {
   /** Optional so evidence-only rules stay testable without a scan record. */
   scan?: ScanFacts;
   drift?: readonly DriftFact[];
+  /** Recorded at scan time. Absent means "not determined" — see `CnameFact`. */
+  cnames?: readonly CnameFact[];
+  /** Absent until policy extraction exists — see `PolicyFacts`. */
+  policy?: PolicyFacts;
 }
 
 export interface Rule {
