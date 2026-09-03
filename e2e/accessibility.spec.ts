@@ -59,12 +59,51 @@ for (const path of APP_PAGES) {
 test.describe("public pages", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  for (const path of ["/", "/pricing", "/free-scanner"]) {
+  /*
+   * ⚠️ THE WHOLE PUBLIC SURFACE, NOT THREE PAGES OF IT. This list was
+   * "/", "/pricing", "/free-scanner" — so /features shipped with NO `<h1>` at
+   * all (it opened on a section `<h2>`) and nothing noticed. These are the
+   * pages a stranger sees first and the pages a crawler reads, and they are
+   * cheap to check: they are static, so there is no fixture to build.
+   */
+  const PUBLIC_PAGES = [
+    "/",
+    "/features",
+    "/how-it-works",
+    "/pricing",
+    "/free-scanner",
+    "/solutions",
+    "/solutions/web-agencies",
+    "/methodology",
+    "/security",
+    "/integrations",
+    "/changelog",
+    "/resources",
+    "/blog",
+    "/about",
+    "/contact",
+    "/legal/privacy",
+  ];
+
+  for (const path of PUBLIC_PAGES) {
     test(`no WCAG AA violations on ${path}`, async ({ page }) => {
       const results = await scan(page, path);
       expect(
         results.violations.map((v) => `${v.id}: ${v.nodes.length} node(s) — ${v.help}`),
       ).toEqual([]);
+    });
+  }
+
+  /*
+   * `scan()` already waits for a level-1 heading, so a page with none fails
+   * above. This states the rule explicitly rather than leaving it as a
+   * side effect of the helper — exactly one h1, which is the part a helper
+   * waiting for "at least one" cannot catch.
+   */
+  for (const path of PUBLIC_PAGES) {
+    test(`exactly one h1 on ${path}`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     });
   }
 

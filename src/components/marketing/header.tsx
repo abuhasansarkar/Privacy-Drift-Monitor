@@ -205,7 +205,7 @@ export function MarketingHeader() {
         <div className="hidden items-center gap-2 md:flex">
           <MarketingAuthLinks />
           <Link href="/free-scanner" className={buttonClasses("primary", "md")}>
-            Run free scan
+            {t("nav.runFreeScan")}
           </Link>
         </div>
 
@@ -257,7 +257,7 @@ export function MarketingHeader() {
                     href="/free-scanner"
                     className={buttonClasses("primary", "md", "mt-2 w-full")}
                   >
-                    Run free scan
+                    {t("nav.runFreeScan")}
                   </Link>
                 </div>
               </nav>

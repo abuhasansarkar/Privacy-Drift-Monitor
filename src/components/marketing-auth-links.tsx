@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { t } from "@pdm/shared/copy";
 
 /**
@@ -16,13 +16,24 @@ import { t } from "@pdm/shared/copy";
  * `useAuth()` moves that decision to the browser: the page prerenders, and this
  * island swaps in once Clerk loads. `isLoaded` gates the first paint so the
  * header does not flash "Sign in" at someone who is already signed in.
+ *
+ * ⚠️ SIGNED OUT, THIS RENDERS EXACTLY ONE CONTROL, AND IT IS NOT A BUTTON.
+ * It used to render "Sign in" AND a solid-primary "Start free trial", directly
+ * beside the header's solid-primary "Run free scan" — two identical-weight
+ * blue buttons, 8px apart, asking for different things. When everything is
+ * emphasised nothing is, and the one the product actually wants first is the
+ * free scan: it needs no account, so it is the cheapest possible yes.
+ *
+ * The trial is not lost. It is the CTA on every pricing card and in the
+ * closing band of every page, which is where someone who has already decided
+ * goes looking for it.
  */
 export function MarketingAuthLinks() {
   const { isLoaded, isSignedIn } = useAuth();
 
   // Reserve the space before Clerk answers. Rendering nothing at all would let
   // the nav collapse and then jump, which is a layout shift on every load.
-  if (!isLoaded) return <span className="h-8 w-40" aria-hidden="true" />;
+  if (!isLoaded) return <span className="h-8 w-16" aria-hidden="true" />;
 
   if (isSignedIn) {
     return (
@@ -36,17 +47,10 @@ export function MarketingAuthLinks() {
   }
 
   return (
-    <>
-      <SignInButton>
-        <button className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">
-          {t("auth.signIn")}
-        </button>
-      </SignInButton>
-      <SignUpButton>
-        <button className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90">
-          {t("auth.startTrial")}
-        </button>
-      </SignUpButton>
-    </>
+    <SignInButton>
+      <button className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">
+        {t("auth.signIn")}
+      </button>
+    </SignInButton>
   );
 }

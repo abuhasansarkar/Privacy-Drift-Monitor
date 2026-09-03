@@ -1,4 +1,34 @@
 /**
+ * FEATURES PAGE — page hero + per-section eyebrows.
+ *
+ * ⚠️ THE EYEBROW MUST NOT BE THE HEADING. This page shipped with
+ * `eyebrow={t("features.browserTitle")}` AND `heading={t("features.browserTitle")}`,
+ * so it rendered "REAL BROWSER, REAL BEHAVIOUR" in caps directly above "Real
+ * browser, real behaviour" in display type. An eyebrow names the CATEGORY the
+ * heading sits in; repeating the heading makes it noise.
+ *
+ * ⚠️ AND THE PAGE HAD NO `<h1>` AT ALL. It opened on a section `<h2>`, which
+ * is an outline with no root — bad for a screen reader moving by heading, and
+ * bad for the one page most likely to rank for feature queries.
+ */
+export const FEATURES_PAGE = {
+  eyebrow: "Capabilities",
+  title: "What the scanner records, and what it does with it",
+  subtitle:
+    "Every capability below is a thing a real browser observed and stored. What each one gives an agency is the point; the mechanism is how it stays checkable.",
+  sections: {
+    runtime: "Runtime engine",
+    consent: "Consent journeys",
+    drift: "Privacy Drift",
+  },
+  captions: {
+    consentDemo: "Illustrative data — one website, one scan.",
+    driftTimeline: "Illustrative timeline — your scans produce the real one.",
+  },
+  consentHeading: "Four consent states, four isolated recordings",
+} as const;
+
+/**
  * TRUST-PAGE CONTENT — `/methodology`, `/security`, `/integrations`, `/bot`.
  *
  * ⚠️ THE SECURITY PAGE DESCRIBES IMPLEMENTED CONTROLS ONLY. Every point below

@@ -27,6 +27,8 @@ export const en = {
     pricing: "Pricing",
     resources: "Resources",
     freeScanner: "Free scanner",
+    /** The header's ONE primary action — see marketing-auth-links.tsx. */
+    runFreeScan: "Run free scan",
     skipToContent: "Skip to main content",
   },
 
@@ -901,6 +903,8 @@ export const en = {
       "Paste a URL. We load it in a real browser with no consent given, and show you what fired anyway. No account, no card, about a minute.",
     urlLabel: "Website address",
     urlPlaceholder: "example.com",
+    /** Shown when submit is pressed with nothing usable in the field. */
+    errorUrlRequired: "Enter the website address you want to scan.",
     submit: "Scan this website",
     submitting: "Starting…",
     disclaimer:

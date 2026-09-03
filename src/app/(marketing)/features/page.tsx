@@ -5,6 +5,7 @@ import { TechnicalPipeline } from "@/components/marketing/technical-pipeline";
 import { ConsentJourneyDemo } from "@/components/marketing/consent-journey";
 import { DriftTimeline } from "@/components/marketing/drift-timeline";
 import { DemoLabel } from "@/components/marketing/section";
+import { FEATURES_PAGE } from "@content/marketing/pages";
 
 /**
  * FEATURES — §3.2, UI_DESIGN_PROMPTS §4.4.
@@ -28,13 +29,26 @@ export default function FeaturesPage() {
       <Section id="runtime">
         <Container>
           <SectionHeading
-            eyebrow={t("features.browserTitle")}
-            heading={t("features.browserTitle")}
-            intro={t("features.browserBody")}
+            eyebrow={FEATURES_PAGE.eyebrow}
+            heading={FEATURES_PAGE.title}
+            intro={FEATURES_PAGE.subtitle}
+            center
+            as="h1"
           />
-          <div className="mt-12">
-            <TechnicalPipeline />
-            <DemoLabel>Illustrative scan pipeline, real evidence structure.</DemoLabel>
+          <div className="mt-14">
+            <SectionHeading
+              eyebrow={FEATURES_PAGE.sections.runtime}
+              heading={t("features.browserTitle")}
+              intro={t("features.browserBody")}
+            />
+            {/*
+              `TechnicalPipeline` renders its own illustrative-data label. The
+              second `DemoLabel` that used to sit here printed a near-identical
+              sentence directly beneath the first.
+            */}
+            <div className="mt-10">
+              <TechnicalPipeline />
+            </div>
           </div>
         </Container>
       </Section>
@@ -42,11 +56,11 @@ export default function FeaturesPage() {
       <Section id="consent">
         <Container>
           <SectionHeading
-            eyebrow="Consent journeys"
-            heading="Four consent states, four isolated recordings"
+            eyebrow={FEATURES_PAGE.sections.consent}
+            heading={FEATURES_PAGE.consentHeading}
             intro={t("features.consentBody")}
           />
-                    <div className="mt-12">
+          <div className="mt-12">
             <ConsentJourneyDemo />
           </div>
         </Container>
@@ -55,13 +69,13 @@ export default function FeaturesPage() {
       <Section id="drift">
         <Container>
           <SectionHeading
-            eyebrow={t("features.driftTitle")}
-            heading="Change detection between scans"
+            eyebrow={FEATURES_PAGE.sections.drift}
+            heading={t("features.driftTitle")}
             intro={t("features.driftBody")}
           />
           <div className="mt-12">
             <DriftTimeline />
-            <DemoLabel>Illustrative timeline — your scans produce the real one.</DemoLabel>
+            <DemoLabel>{FEATURES_PAGE.captions.driftTimeline}</DemoLabel>
           </div>
         </Container>
       </Section>

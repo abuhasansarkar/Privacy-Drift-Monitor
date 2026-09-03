@@ -12,6 +12,7 @@ import {
   Section,
   SectionHeading,
 } from "@/components/marketing/section";
+import { HeroVisual } from "@/components/marketing/hero-visual";
 import { TrustBar } from "@/components/marketing/trust-bar";
 import { TechnicalPipeline } from "@/components/marketing/technical-pipeline";
 import { DriftTimeline } from "@/components/marketing/drift-timeline";
@@ -107,6 +108,19 @@ export default function HomePage() {
               </div>
             </Reveal>
           </div>
+
+          {/*
+            The scan trace. It sits BELOW the form rather than beside it: the
+            free scan is the primary conversion (§goal 1) and a two-column hero
+            would halve the input's width to make room for an illustration.
+            This way the visual explains the product to everyone who scrolls
+            past the form without ever competing with it.
+          */}
+          <Reveal delay={0.28}>
+            <div className="mt-12 md:mt-14">
+              <HeroVisual />
+            </div>
+          </Reveal>
         </Container>
       </section>
 

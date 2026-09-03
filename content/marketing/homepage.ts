@@ -25,6 +25,78 @@ export const HERO = {
   formNote: "Free scan · no account needed · result in about two minutes",
 } as const;
 
+/**
+ * THE HERO VISUAL — a scan trace, not a dashboard screenshot.
+ *
+ * ⚠️ THE ANIMATION IS ILLUSTRATIVE AND SAYS SO. It replays a recorded scan's
+ * SHAPE — consent state, then the requests observed under it, then the diff
+ * against the previous scan — because that sequence IS the product, and a
+ * generic dashboard screenshot communicates none of it. It is not a live scan
+ * and must never be presented as one; `demoLabel` renders with it.
+ *
+ * ⚠️ EVERY ROW BELOW IS FICTIONAL, and deliberately mundane: a real analytics
+ * host, a real pixel host, ordinary timings. Inventing a dramatic finding for
+ * the homepage of an evidence product would be the same defect as inventing a
+ * testimonial.
+ */
+export const HERO_VISUAL = {
+  site: "clientwebsite.com",
+  /** Replayed in order; each becomes the active consent state in turn. */
+  journeys: [
+    {
+      id: "NO_CONSENT",
+      label: "No consent",
+      caption: "Loaded the page and touched nothing.",
+      events: [
+        { host: "www.googletagmanager.com", kind: "script", at: "0.41s", flagged: false },
+        { host: "www.google-analytics.com", kind: "request", at: "0.88s", flagged: true },
+        { host: "connect.facebook.net", kind: "script", at: "1.82s", flagged: true },
+      ],
+    },
+    {
+      id: "REJECT_ALL",
+      label: "Reject all",
+      caption: "Found the banner and pressed Reject.",
+      events: [
+        { host: "www.googletagmanager.com", kind: "script", at: "0.44s", flagged: false },
+        { host: "connect.facebook.net", kind: "request", at: "1.91s", flagged: true },
+      ],
+    },
+    {
+      id: "ACCEPT_ALL",
+      label: "Accept all",
+      caption: "Pressed Accept and recorded what followed.",
+      events: [
+        { host: "www.googletagmanager.com", kind: "script", at: "0.40s", flagged: false },
+        { host: "www.google-analytics.com", kind: "request", at: "0.79s", flagged: false },
+        { host: "connect.facebook.net", kind: "script", at: "1.12s", flagged: false },
+        { host: "px.ads.linkedin.com", kind: "request", at: "1.64s", flagged: false },
+      ],
+    },
+    {
+      id: "WITHDRAW",
+      label: "Withdraw",
+      caption: "Reopened the banner and withdrew consent.",
+      events: [
+        { host: "www.googletagmanager.com", kind: "script", at: "0.43s", flagged: false },
+        { host: "www.google-analytics.com", kind: "request", at: "0.95s", flagged: true },
+      ],
+    },
+  ],
+  /** The verdict line, shown once the replay completes. */
+  verdict: {
+    headline: "1 change since the last scan",
+    detail: "connect.facebook.net was not observed under Reject All last week.",
+  },
+  labels: {
+    consentState: "Consent state",
+    observed: "Observed",
+    beforeConsent: "Before consent",
+    drift: "Privacy Drift",
+  },
+  demoLabel: "Illustrative scan — replays the shape of a real recording, not a live scan.",
+} as const;
+
 export const PROBLEM = {
   eyebrow: "The problem",
   heading: "Your clients' websites change after launch. Their privacy behavior changes too.",
@@ -80,6 +152,7 @@ export const COMPARISON = {
   ],
 } as const;
 export const PIPELINE = {
+  demoLabel: "Illustrative pipeline — the stages a real scan runs, in order.",
   eyebrow: "How it works",
   heading: "Real browser testing, four consent journeys, one evidence trail",
   intro:

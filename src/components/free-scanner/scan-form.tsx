@@ -138,6 +138,20 @@ export function FreeScanForm({
         }
         onSubmit={(event) => {
           event.preventDefault();
+          /*
+           * ⚠️ VALIDATED HERE, NOT BY DISABLING THE BUTTON. The submit control
+           * used to carry `disabled={url.length < 4}`, so the product's single
+           * most important call to action rendered greyed-out to every visitor
+           * who had not yet typed — a dead-looking primary button is the first
+           * thing a stranger sees above the fold, and a disabled control also
+           * tells somebody who presses it exactly nothing about why.
+           *
+           * The button is now always live and says what is missing.
+           */
+          if (url.trim().length < 4) {
+            setError(t("freeScanner.errorUrlRequired"));
+            return;
+          }
           submit();
         }}
       >
@@ -167,7 +181,7 @@ export function FreeScanForm({
           type="submit"
           variant="primary"
           size="md"
-          disabled={pending || url.length < 4}
+          disabled={pending}
           className={isHero ? "h-12 px-6 font-medium shadow-sm transition hover:opacity-95" : ""}
         >
           {pending ? (

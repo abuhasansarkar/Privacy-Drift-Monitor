@@ -47,7 +47,16 @@ export function TechnicalPipeline() {
           </motion.li>
         ))}
       </ol>
-      <DemoLabel>{`Illustrative pipeline — the stages a real scan runs, in order`}</DemoLabel>
+      {/*
+        ⚠️ SEPARATED AND CENTRED. Tight against the grid and left-aligned, this
+        caption sat directly beneath the first column's body text and read as a
+        fourth line of "Website ingested" rather than as a note about the whole
+        diagram — which matters, because the note is the one that says the data
+        is illustrative.
+      */}
+      <div className="mt-8 border-t border-border pt-4 text-center">
+        <DemoLabel>{PIPELINE.demoLabel}</DemoLabel>
+      </div>
     </div>
   );
 }

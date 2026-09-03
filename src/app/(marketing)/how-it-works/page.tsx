@@ -28,6 +28,15 @@ const STAGES = [
 export default function HowItWorksPage() {
   return (
     <>
+      {/*
+        ⚠️ ONE SECTION, NOT TWO. `Section` is `py-16 md:py-24`, so a heading in
+        its own section followed by the pipeline in the next stacked 96px of
+        bottom padding on 96px of top padding — and the `mt-12` on the pipeline
+        added another 48. The result was ~240px of empty screen between a
+        sentence and the diagram illustrating it, which read as a broken page
+        rather than as breathing room. Related content belongs inside one
+        section; `Section` owns the rhythm between sections.
+      */}
       <Section>
         <Container>
           <SectionHeading
@@ -37,11 +46,6 @@ export default function HowItWorksPage() {
             center
             as="h1"
           />
-        </Container>
-      </Section>
-
-      <Section>
-        <Container>
           <div className="mt-12">
             <TechnicalPipeline />
           </div>
