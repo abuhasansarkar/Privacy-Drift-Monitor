@@ -1,324 +1,466 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { t } from "@pdm/shared/copy";
+import { pageMetadata } from "@/lib/seo";
 import { FreeScanForm } from "@/components/free-scanner/scan-form";
+import { buttonClasses } from "@/components/ui/button";
+import { CheckIcon, ChevronRightIcon, XIcon } from "@/components/ui/icons";
+import { Reveal, Stagger } from "@/components/marketing/motion";
 import {
-  ActivityIcon,
-  CalendarIcon,
-  CheckIcon,
-  GlobeIcon,
-  ShieldIcon,
-  SparkleIcon,
-} from "@/components/ui/icons";
+  Container,
+  CtaSection,
+  Eyebrow,
+  Section,
+  SectionHeading,
+} from "@/components/marketing/section";
+import { TrustBar } from "@/components/marketing/trust-bar";
+import { TechnicalPipeline } from "@/components/marketing/technical-pipeline";
+import { DriftTimeline } from "@/components/marketing/drift-timeline";
+import { ConsentJourneyDemo } from "@/components/marketing/consent-journey";
+import {
+  AiExplanationCard,
+  EvidenceCards,
+  PortalPreview,
+  ReportPreview,
+} from "@/components/marketing/mockups";
+import { Faq } from "@/components/marketing/faq";
+import { HOMEPAGE_FAQS } from "@content/marketing/faqs";
+import { INDUSTRIES, SENSITIVE_DATA_NOTE } from "@content/marketing/industries";
+import {
+  AGENCY,
+  AI,
+  COMPARISON,
+  CONSENT_JOURNEYS,
+  DRIFT,
+  FINAL_CTA,
+  HERO,
+  PIPELINE,
+  PORTAL,
+  PRICING_PREVIEW,
+  PROBLEM,
+  SECURITY_TEASER,
+  WHITE_LABEL,
+} from "@content/marketing/homepage";
 
 /**
- * PUBLIC HOMEPAGE — §3.2, Phase 1 task 1.13.
+ * PUBLIC HOMEPAGE — the primary conversion surface.
  *
- * Chrome (skip link, header, footer, the §1.11 boundary statement) lives in
- * `(marketing)/layout.tsx`; this file is content only. The page is STATICALLY
- * PRERENDERED — it calls no `cookies()` / `headers()`, and the header's auth
- * controls are a client island (`MarketingAuthLinks`).
+ * Chrome lives in `(marketing)/layout.tsx`; this file is content only. The
+ * page is STATICALLY PRERENDERED — the only client islands are the scan form,
+ * the header and three scroll-animation components, all below the fold or
+ * lazy by design.
+ *
+ * Section order is the conversion argument: understand the product (hero),
+ * believe it is real (trust bar, pipeline, evidence), see the differentiator
+ * (drift, journeys), imagine it in the agency (workflow, white-label, portal),
+ * find your industry, clear the objections (security, pricing, FAQ), act.
  */
-export default function Home() {
-  const steps = [
-    t("marketing.step1"),
-    t("marketing.step2"),
-    t("marketing.step3"),
-    t("marketing.step4"),
-  ];
+export const metadata: Metadata = pageMetadata({
+  title: "Continuous privacy monitoring for client websites",
+  description: HERO.subtitle,
+  path: "/",
+});
 
-  const cmps = [
-    "Google Consent Mode v2",
-    "Cookiebot",
-    "OneTrust",
-    "Usercentrics",
-    "Klaro",
-    "Termly",
-    "Didomi",
-  ];
-
+export default function HomePage() {
   return (
     <>
-      {/*
-        HERO SECTION — Inspired by the high-impact Cookiebot reference (Image 2)
-        using our dark/light tokens, primary blue, and refined typography.
-      */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/5 via-background to-background py-16 md:py-24">
-        {/* Subtle background glow */}
-        <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-96 w-full max-w-5xl -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-
-        <div className="mx-auto w-full max-w-5xl px-4 text-center">
-          {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-caption font-semibold uppercase tracking-wider text-primary">
-            <SparkleIcon className="size-3.5" />
-            {t("marketing.heroEyebrow")}
-          </div>
-
-          {/* Main Headline */}
-          <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-balance">
-            {t("marketing.heroTitle")}
-          </h1>
-
-          {/* Subtitle */}
-          <p className="mx-auto mt-5 max-w-3xl text-body-lg text-muted-foreground sm:text-lg text-balance">
-            {t("marketing.heroSubtitle")}
-          </p>
-
-          {/* Interactive URL Scanner Form + Quick Actions */}
-          <div className="mx-auto mt-10 max-w-2xl">
-            <FreeScanForm
-              variant="hero"
-              placeholder="Enter client website URL (e.g. acme-agency.com)"
-              buttonText="Scan website"
-              hideDisclaimer
-            />
-            <p className="mt-2 text-caption text-muted-foreground">
-              {t("freeScanner.disclaimer")}
-            </p>
-          </div>
-
-          {/* Trust Badges */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-caption font-medium text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <CalendarIcon className="size-4 text-primary" />
-              {t("marketing.badgeTrial")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckIcon className="size-4 text-success" />
-              {t("marketing.badgeCancel")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <ActivityIcon className="size-4 text-primary" />
-              {t("marketing.badgeMonitoring")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <ShieldIcon className="size-4 text-info" />
-              {t("marketing.badgeNoCard")}
-            </span>
-          </div>
-
-          {/* CMP & Tag Manager Support Badges */}
-          <div className="mt-12 pt-8 border-t border-border/60">
-            <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
-              {t("marketing.trustedCmpTitle")}
-            </p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-              {cmps.map((cmp) => (
-                <span
-                  key={cmp}
-                  className="inline-flex items-center rounded-md border border-border bg-card/60 px-2.5 py-1 text-caption font-medium text-foreground/80 shadow-xs"
+      {/* 1. HERO — what/who/why in one screen, with the scanner inline. */}
+      <section className="relative overflow-hidden border-b border-border py-16 md:py-24">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-32 -z-10 mx-auto h-80 max-w-3xl rounded-full bg-primary/10 blur-3xl"
+        />
+        <Container>
+          <div className="mx-auto max-w-4xl text-center">
+            <Reveal>
+              <Eyebrow>{HERO.eyebrow}</Eyebrow>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <h1 className="mt-3 text-balance text-4xl font-bold tracking-tight md:text-display">
+                {HERO.title}
+              </h1>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="mx-auto mt-4 max-w-2xl text-body-lg text-muted-foreground">
+                {HERO.subtitle}
+              </p>
+            </Reveal>
+            <Reveal delay={0.15}>
+              <div className="mx-auto mt-8 max-w-2xl">
+                <FreeScanForm
+                  variant="hero"
+                  placeholder={HERO.placeholder}
+                  buttonText={HERO.scanButton}
+                  hideDisclaimer
+                />
+                <p className="mt-2 text-caption text-muted-foreground">{HERO.formNote}</p>
+              </div>
+            </Reveal>
+            <Reveal delay={0.2}>
+              <div className="mt-6">
+                <Link
+                  href={HERO.secondaryCta.href}
+                  className="text-small font-medium text-primary hover:underline"
                 >
-                  {cmp}
+                  {HERO.secondaryCta.label}
+                  <ChevronRightIcon aria-hidden="true" className="ml-0.5 inline size-3.5" />
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </Container>
+      </section>
+
+      {/* 2. Trust bar — product signals, no fabricated logos. */}
+      <TrustBar />
+
+      {/* 3. PROBLEM — framing, not fear. */}
+      <Section>
+        <Container>
+          <SectionHeading
+            eyebrow={PROBLEM.eyebrow}
+            heading={PROBLEM.heading}
+            intro={PROBLEM.intro}
+          />
+          <Stagger className="mt-10 flex flex-col gap-3 md:flex-row md:items-stretch">
+            {PROBLEM.chain.map((step, index) => (
+              <div
+                key={step}
+                className="flex flex-1 items-start gap-2 rounded-lg border border-border bg-card p-3 text-small"
+              >
+                <span
+                  aria-hidden="true"
+                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-muted text-caption font-semibold text-muted-foreground"
+                >
+                  {index + 1}
                 </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive Browser Mockup Container */}
-        <div className="mx-auto mt-14 w-full max-w-4xl px-4">
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-            {/* Mockup Browser Chrome */}
-            <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <div className="size-3 rounded-full bg-red-400/80" />
-                <div className="size-3 rounded-full bg-amber-400/80" />
-                <div className="size-3 rounded-full bg-green-400/80" />
-              </div>
-              <div className="flex max-w-md flex-1 items-center justify-center px-4">
-                <div className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
-                  <GlobeIcon className="size-3.5 text-primary" />
-                  <span>https://client-store.com/checkout</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                <span className="inline-block size-2 rounded-full bg-success animate-pulse" />
-                <span>Automated scan</span>
-              </div>
-            </div>
-
-            {/* Mockup Viewport Body */}
-            <div className="grid gap-6 p-6 sm:grid-cols-3 bg-card">
-              <div className="rounded-lg border border-border bg-background p-4">
-                <p className="text-caption font-medium text-muted-foreground">
-                  NO CONSENT JOURNEY
-                </p>
-                <div className="mt-2 flex items-center gap-1.5 text-small font-semibold text-success">
-                  <CheckIcon className="size-4" />
-                  <span>0 trackers before consent</span>
-                </div>
-                <p className="mt-1 text-caption text-muted-foreground">
-                  Scripts blocked until user choice
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-border bg-background p-4">
-                <p className="text-caption font-medium text-muted-foreground">
-                  REJECT ALL JOURNEY
-                </p>
-                <div className="mt-2 flex items-center gap-1.5 text-small font-semibold text-success">
-                  <CheckIcon className="size-4" />
-                  <span>Reject signal respected</span>
-                </div>
-                <p className="mt-1 text-caption text-muted-foreground">
-                  No marketing cookies written
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-border bg-background p-4">
-                <p className="text-caption font-medium text-muted-foreground">
-                  DRIFT DETECTION
-                </p>
-                <div className="mt-2 flex items-center gap-1.5 text-small font-semibold text-warning">
-                  <ActivityIcon className="size-4" />
-                  <span>+1 new tag this morning</span>
-                </div>
-                <p className="mt-1 text-caption text-muted-foreground">
-                  Alert sent to agency Slack
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works steps */}
-      <section className="mx-auto w-full max-w-4xl px-4 py-20">
-        <h2 className="text-center text-h2 tracking-tight">
-          {t("marketing.stepsTitle")}
-        </h2>
-        <ol className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-          {steps.map((step, index) => (
-            <li
-              key={step}
-              className="rounded-lg border border-border bg-card p-5"
-            >
-              <span className="font-mono text-caption font-semibold text-primary">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <p className="mt-2 font-medium text-body">{step}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/*
-        §4.2 — the differentiator section. It is the second thing on the page
-        because "we scan your site" is a commodity claim; "we tell you what
-        CHANGED" is the one this product is built around.
-      */}
-      <section className="border-y border-border bg-card">
-        <div className="mx-auto w-full max-w-3xl px-4 py-20">
-          <p className="text-caption font-semibold uppercase tracking-wide text-primary">
-            {t("marketing.driftEyebrow")}
-          </p>
-          <h2 className="mt-2 text-h1 tracking-tight text-balance">
-            {t("marketing.driftTitle")}
-          </h2>
-          <p className="mt-4 max-w-2xl text-body-lg text-muted-foreground">
-            {t("marketing.driftBody")}
-          </p>
-
-          {/* A concrete diff, not an abstract illustration. */}
-          <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
-            <div className="bg-background p-4">
-              <p className="text-caption uppercase tracking-wide text-muted-foreground">
-                {t("marketing.driftLastWeek")}
-              </p>
-              <ul className="mt-3 flex flex-col gap-2 font-mono text-mono text-muted-foreground">
-                <li>google-analytics.com</li>
-                <li>consent.cookiebot.com</li>
-              </ul>
-            </div>
-            <div className="bg-background p-4">
-              <p className="text-caption uppercase tracking-wide text-muted-foreground">
-                {t("marketing.driftToday")}
-              </p>
-              <ul className="mt-3 flex flex-col gap-2 font-mono text-mono">
-                <li className="text-muted-foreground">google-analytics.com</li>
-                <li className="text-muted-foreground">consent.cookiebot.com</li>
-                <li className="rounded bg-warning-muted px-1.5 py-0.5 text-warning">
-                  + connect.facebook.net
-                </li>
-                <li className="rounded bg-severity-critical-bg px-1.5 py-0.5 text-severity-critical">
-                  + fires after Reject All
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* §4.3 (2) — the three problems, in the reader's own words. */}
-      <section className="mx-auto w-full max-w-5xl px-4 py-20">
-        <h2 className="text-h2 tracking-tight">{t("marketing.problemTitle")}</h2>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {[
-            [t("marketing.problem1Title"), t("marketing.problem1Body")],
-            [t("marketing.problem2Title"), t("marketing.problem2Body")],
-            [t("marketing.problem3Title"), t("marketing.problem3Body")],
-          ].map(([title, body]) => (
-            <div key={title} className="rounded-lg border border-border bg-card p-5">
-              <h3 className="text-h4">{title}</h3>
-              <p className="mt-2 text-small text-muted-foreground">{body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* §4.3 (4) — benefits. */}
-      <section className="border-y border-border bg-card">
-        <div className="mx-auto w-full max-w-5xl px-4 py-20">
-          <h2 className="text-h2 tracking-tight">{t("marketing.benefitsTitle")}</h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            {[
-              [t("marketing.benefit1Title"), t("marketing.benefit1Body")],
-              [t("marketing.benefit2Title"), t("marketing.benefit2Body")],
-              [t("marketing.benefit3Title"), t("marketing.benefit3Body")],
-            ].map(([title, body]) => (
-              <div key={title}>
-                <h3 className="text-h4">{title}</h3>
-                <p className="mt-2 text-small text-muted-foreground">{body}</p>
+                {step}
               </div>
             ))}
+          </Stagger>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {PROBLEM.cards.map((card, index) => (
+              <Reveal key={card.title} delay={index * 0.08}>
+                <div className="h-full rounded-lg border border-border bg-card p-5">
+                  <h3 className="text-h4">{card.title}</h3>
+                  <p className="mt-2 text-small text-muted-foreground">{card.body}</p>
+                </div>
+              </Reveal>
+            ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      {/*
-        §4.5's honesty panel, on the homepage rather than only on
-        /how-it-works. §1.11's boundary statement belongs where a buyer forms
-        their expectation, not in a footer they scroll past.
-      */}
-      <section className="mx-auto w-full max-w-3xl px-4 py-20">
-        <div className="rounded-lg border border-border p-6">
-          <h2 className="text-h3">{t("marketing.honestyTitle")}</h2>
-          <div className="mt-4 grid gap-6 sm:grid-cols-2">
-            <p className="text-small text-muted-foreground">
-              {t("marketing.honestyCan")}
-            </p>
-            <p className="text-small text-muted-foreground">
-              {t("marketing.honestyCannot")}
-            </p>
+      {/* 4. WHY ONE-OFF SCANS MISS IT — categories, not named competitors. */}
+      <Section bordered>
+        <Container>
+          <SectionHeading eyebrow={COMPARISON.eyebrow} heading={COMPARISON.heading} />
+          <div className="mx-auto mt-10 grid max-w-4xl gap-4 md:grid-cols-2">
+            <Reveal>
+              <div className="h-full rounded-lg border border-border bg-background p-5">
+                <p className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wider text-muted-foreground">
+                  <XIcon aria-hidden="true" className="size-3.5" />
+                  {COMPARISON.snapshot.title}
+                </p>
+                <ol className="mt-4 flex flex-col gap-2 text-small text-muted-foreground">
+                  {COMPARISON.snapshot.steps.map((step) => (
+                    <li key={step} className="flex items-start gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border"
+                      />
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <div className="h-full rounded-lg border border-primary/30 bg-background p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wider text-primary">
+                  <CheckIcon aria-hidden="true" className="size-3.5" />
+                  {COMPARISON.monitor.title}
+                </p>
+                <ol className="mt-4 flex flex-col gap-2 text-small">
+                  {COMPARISON.monitor.steps.map((step) => (
+                    <li key={step} className="flex items-start gap-2">
+                      <CheckIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-success" />
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </Reveal>
           </div>
-        </div>
-      </section>
+          <div className="mx-auto mt-6 max-w-4xl overflow-hidden rounded-lg border border-border">
+            <table className="w-full text-small">
+              <caption className="sr-only">Snapshot tools versus continuous monitoring</caption>
+              <tbody className="divide-y divide-border">
+                {COMPARISON.rows.map((row) => (
+                  <tr key={row.from}>
+                    <th
+                      scope="row"
+                      className="px-4 py-2.5 text-left font-normal text-muted-foreground"
+                    >
+                      {row.from}
+                    </th>
+                    <td className="px-4 py-2.5 text-left font-medium">{row.to}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Container>
+      </Section>
 
-      <section className="border-t border-border bg-primary/5">
-        <div className="mx-auto w-full max-w-3xl px-4 py-20 text-center">
-          <h2 className="text-h1 tracking-tight text-balance">
-            {t("marketing.ctaTitle")}
-          </h2>
-          <p className="mt-3 text-body-lg text-muted-foreground">
-            {t("marketing.ctaBody")}
+      {/* 5. HOW IT WORKS — the animated six-stage pipeline. */}
+      <Section id="pipeline">
+        <Container>
+          <SectionHeading eyebrow={PIPELINE.eyebrow} heading={PIPELINE.heading} intro={PIPELINE.intro} />
+          <div className="mt-12">
+            <TechnicalPipeline />
+          </div>
+          <p className="mt-8 text-center text-small text-muted-foreground">
+            The full six-stage walkthrough, with the honesty panel, is on{" "}
+            <Link href="/how-it-works" className="text-primary hover:underline">
+              how it works
+            </Link>
+            .
           </p>
-          <Link
-            href="/signup"
-            className="mt-8 inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            {t("marketing.primaryCta")}
-          </Link>
-        </div>
-      </section>
+        </Container>
+      </Section>
+
+      {/* 6. PRIVACY DRIFT — the differentiator. */}
+      <Section id="drift" bordered>
+        <Container>
+          <div className="grid items-start gap-10 lg:grid-cols-2">
+            <div>
+              <SectionHeading
+                eyebrow={DRIFT.eyebrow}
+                heading={DRIFT.heading}
+                intro={DRIFT.intro}
+                center={false}
+              />
+              <div className="mt-6 flex flex-wrap gap-3 text-small">
+                <Link href="/how-it-works" className={buttonClasses("secondary", "md")}>
+                  How drift detection works
+                </Link>
+                <Link href="/free-scanner" className={buttonClasses("ghost", "md")}>
+                  See it on your site
+                </Link>
+              </div>
+            </div>
+            <DriftTimeline />
+          </div>
+        </Container>
+      </Section>
+
+      {/* 7. CONSENT JOURNEYS — interactive demo. */}
+      <Section id="consent-journeys">
+        <Container>
+          <SectionHeading
+            eyebrow={CONSENT_JOURNEYS.eyebrow}
+            heading={CONSENT_JOURNEYS.heading}
+            intro={CONSENT_JOURNEYS.intro}
+          />
+          <div className="mx-auto mt-10 max-w-5xl rounded-xl border border-border bg-card p-4 md:p-6">
+            <ConsentJourneyDemo />
+          </div>
+        </Container>
+      </Section>
+
+      {/* 8. EVIDENCE — technical proof, labelled demo data. */}
+      <Section bordered>
+        <Container>
+          <SectionHeading
+            eyebrow="Technical proof"
+            heading="Every finding traces back to a recorded event"
+          />
+          <div className="mt-10">
+            <EvidenceCards />
+          </div>
+          <p className="mx-auto mt-8 max-w-2xl text-center text-small text-muted-foreground">
+            Evidence is recorded per consent journey — the request, the state it
+            fired under, and the second it happened. The evidence vault behind
+            every finding is described on{" "}
+            <Link href="/methodology" className="text-primary hover:underline">
+              the methodology page
+            </Link>
+            .
+          </p>
+        </Container>
+      </Section>
+
+      {/* 9. AI — the explanation layer over deterministic findings. */}
+      <Section id="ai">
+        <Container>
+          <SectionHeading eyebrow={AI.eyebrow} heading={AI.heading} intro={AI.intro} />
+          <Stagger className="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2">
+            {AI.steps.map((step, index) => (
+              <div key={step} className="flex items-center gap-2">
+                <span className="rounded-full border border-border bg-card px-3 py-1.5 text-small">
+                  {step}
+                </span>
+                {index < AI.steps.length - 1 ? (
+                  <ChevronRightIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+                ) : null}
+              </div>
+            ))}
+          </Stagger>
+          <div className="mt-10">
+            <AiExplanationCard />
+          </div>
+        </Container>
+      </Section>
+
+      {/* 10. AGENCY WORKFLOW — the product's shape is the agency's shape. */}
+      <Section id="agency" bordered>
+        <Container>
+          <SectionHeading eyebrow={AGENCY.eyebrow} heading={AGENCY.heading} intro={AGENCY.intro} />
+          <Stagger className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+            {AGENCY.steps.map((step, index) => (
+              <div key={step.title} className="rounded-lg border border-border bg-background p-3.5">
+                <span aria-hidden="true" className="text-caption font-semibold text-primary">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 className="mt-1 text-small font-semibold">{step.title}</h3>
+                <p className="mt-1 text-caption text-muted-foreground">{step.body}</p>
+              </div>
+            ))}
+          </Stagger>
+          <p className="mx-auto mt-8 max-w-2xl text-center text-small text-muted-foreground">
+            {AGENCY.revenueCopy}
+          </p>
+        </Container>
+      </Section>
+
+      {/* 11. WHITE-LABEL REPORT + CLIENT PORTAL — side-by-side mock-ups. */}
+      <Section id="white-label">
+        <Container>
+          <div className="grid items-center gap-10 lg:grid-cols-2">
+            <div>
+              <SectionHeading
+                eyebrow={WHITE_LABEL.eyebrow}
+                heading={WHITE_LABEL.heading}
+                intro={WHITE_LABEL.intro}
+                center={false}
+              />
+            </div>
+            <ReportPreview />
+          </div>
+          <div className="mt-16 grid items-center gap-10 lg:grid-cols-2">
+            <div className="order-last lg:order-first">
+              <PortalPreview />
+            </div>
+            <div>
+              <SectionHeading
+                eyebrow={PORTAL.eyebrow}
+                heading={PORTAL.heading}
+                intro={PORTAL.intro}
+                center={false}
+              />
+            </div>
+          </div>
+        </Container>
+      </Section>
+
+      {/* 12. INDUSTRIES — where agencies recognise themselves. */}
+      <Section bordered>
+        <Container>
+          <SectionHeading
+            eyebrow="Industries"
+            heading="Built for the portfolios agencies actually manage"
+            intro="Different stacks, same failure mode: a change nobody made on purpose. Pick your industry for the specific version."
+          />
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {INDUSTRIES.map((industry, index) => (
+              <Reveal key={industry.slug} delay={index * 0.06}>
+                <Link
+                  href={`/solutions/${industry.slug}`}
+                  className="group flex h-full flex-col rounded-lg border border-border bg-card p-5 transition hover:border-primary/40 hover:shadow-sm"
+                >
+                  <h3 className="text-h4">{industry.name}</h3>
+                  <p className="mt-2 flex-1 text-small text-muted-foreground">{industry.pain}</p>
+                  <p className="mt-3 flex items-center gap-1 text-small font-medium text-primary">
+                    How monitoring helps
+                    <ChevronRightIcon
+                      aria-hidden="true"
+                      className="size-3.5 transition-transform group-hover:translate-x-0.5"
+                    />
+                  </p>
+                </Link>
+              </Reveal>
+            ))}
+            <Reveal delay={0.3}>
+              <div className="flex h-full flex-col rounded-lg border border-dashed border-border bg-background p-5">
+                <h3 className="text-h4">Sensitive-data websites</h3>
+                <p className="mt-2 flex-1 text-small text-muted-foreground">{SENSITIVE_DATA_NOTE}</p>
+                <Link
+                  href="/contact"
+                  className="mt-3 text-small font-medium text-primary hover:underline"
+                >
+                  Talk to us
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </Container>
+      </Section>
+
+      {/* 13. SECURITY & PRIVACY — implemented controls only. */}
+      <Section>
+        <Container>
+          <SectionHeading eyebrow={SECURITY_TEASER.eyebrow} heading={SECURITY_TEASER.heading} />
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {SECURITY_TEASER.points.map((point, index) => (
+              <Reveal key={point.title} delay={index * 0.06}>
+                <div className="h-full rounded-lg border border-border bg-card p-5">
+                  <h3 className="text-h4">{point.title}</h3>
+                  <p className="mt-2 text-small text-muted-foreground">{point.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <p className="mt-8 text-center">
+            <Link
+              href={SECURITY_TEASER.cta.href}
+              className="text-small font-medium text-primary hover:underline"
+            >
+              {SECURITY_TEASER.cta.label}
+            </Link>
+          </p>
+        </Container>
+      </Section>
+
+      {/* 14. PRICING PREVIEW — one screen, one click from the real page. */}
+      <Section bordered>
+        <Container>
+          <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
+            <div>
+              <SectionHeading
+                eyebrow={PRICING_PREVIEW.eyebrow}
+                heading={PRICING_PREVIEW.heading}
+                intro={PRICING_PREVIEW.intro}
+                center={false}
+              />
+            </div>
+            <Link href={PRICING_PREVIEW.cta.href} className={buttonClasses("secondary", "md")}>
+              {PRICING_PREVIEW.cta.label}
+            </Link>
+          </div>
+        </Container>
+      </Section>
+
+      {/* 15. FAQ — the highest-intent objections, with FAQPage JSON-LD. */}
+      <Faq eyebrow="FAQ" heading="Questions agencies ask first" items={HOMEPAGE_FAQS} withSchema />
+
+      {/* 16. FINAL CTA. */}
+      <CtaSection
+        title={FINAL_CTA.title}
+        titleAccent={FINAL_CTA.titleAccent}
+        body={FINAL_CTA.body}
+        primary={FINAL_CTA.primary}
+        secondary={FINAL_CTA.secondary}
+      />
     </>
   );
 }

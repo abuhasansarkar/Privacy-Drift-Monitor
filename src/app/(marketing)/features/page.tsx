@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { t } from "@pdm/shared/copy";
+import { Container, Section, SectionHeading, CtaSection } from "@/components/marketing/section";
+import { TechnicalPipeline } from "@/components/marketing/technical-pipeline";
+import { ConsentJourneyDemo } from "@/components/marketing/consent-journey";
+import { DriftTimeline } from "@/components/marketing/drift-timeline";
+import { DemoLabel } from "@/components/marketing/section";
 
 /**
  * FEATURES — §3.2, UI_DESIGN_PROMPTS §4.4.
@@ -17,40 +22,56 @@ export const metadata: Metadata = {
   description: t("app.tagline"),
 };
 
-const FEATURES = [
-  {
-    title: t("features.browserTitle"),
-    body: t("features.browserBody"),
-  },
-  {
-    title: t("features.consentTitle"),
-    body: t("features.consentBody"),
-  },
-  {
-    title: t("features.trackerTitle"),
-    body: t("features.trackerBody"),
-  },
-  {
-    title: t("features.driftTitle"),
-    body: t("features.driftBody"),
-  },
-];
-
 export default function FeaturesPage() {
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-20">
-      <h1 className="text-display tracking-tight text-balance">
-        {t("marketing.featuresTitle")}
-      </h1>
+    <>
+      <Section id="runtime">
+        <Container>
+          <SectionHeading
+            eyebrow={t("features.browserTitle")}
+            heading={t("features.browserTitle")}
+            intro={t("features.browserBody")}
+          />
+          <div className="mt-12">
+            <TechnicalPipeline />
+            <DemoLabel>Illustrative scan pipeline, real evidence structure.</DemoLabel>
+          </div>
+        </Container>
+      </Section>
 
-      <div className="mt-12 flex flex-col gap-10">
-        {FEATURES.map((feature) => (
-          <article key={feature.title}>
-            <h2 className="text-h2 tracking-tight">{feature.title}</h2>
-            <p className="mt-3 text-body-lg text-muted-foreground">{feature.body}</p>
-          </article>
-        ))}
-      </div>
-    </section>
+      <Section id="consent">
+        <Container>
+          <SectionHeading
+            eyebrow="Consent journeys"
+            heading="Four consent states, four isolated recordings"
+            intro={t("features.consentBody")}
+          />
+                    <div className="mt-12">
+            <ConsentJourneyDemo />
+          </div>
+        </Container>
+      </Section>
+
+      <Section id="drift">
+        <Container>
+          <SectionHeading
+            eyebrow={t("features.driftTitle")}
+            heading="Change detection between scans"
+            intro={t("features.driftBody")}
+          />
+          <div className="mt-12">
+            <DriftTimeline />
+            <DemoLabel>Illustrative timeline — your scans produce the real one.</DemoLabel>
+          </div>
+        </Container>
+      </Section>
+
+      <CtaSection
+        title="Ready to see what actually loads on"
+        titleAccent="your clients' sites?"
+        body="Run a free scan. No account, no credit card."
+        primary={{ href: "/free-scanner", label: "Run a free scan" }}
+      />
+    </>
   );
 }

@@ -1,0 +1,20 @@
+﻿npx.cmd : 
+At line:1 char:1
++ npx.cmd tsx scripts/check-terminology.ts 2>&1 | Out-String | Set-Cont ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Ô£û Forbidden terminology found in 2 place(s).
+  Privacy Drift Monitor does not assert legal compliance. See PLAN.md Part I ┬º1.12.
+
+  content/marketing/faqs.ts:6  "compliant"
+    * slip in, because the natural answer to "does this make my client compliant?"
+
+  content/marketing/faqs.ts:84  "compliant"
+    question: "Does the AI decide whether a site is compliant?",
+
+  Use: potential issue ┬À tracker detected before consent ┬À review recommended ┬À
+       detected / not detected / could not be determined
+
+
