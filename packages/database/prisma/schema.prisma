@@ -1208,7 +1208,10 @@ model AlertHistory {
   id             String           @id @default(uuid())
   alertRuleId    String?
   agencyId       String
-  type           NotificationType
+  /// Nullable: transactional mail (team invitations, portal magic links,
+  /// contact acknowledgements, digests) is recorded here too, and is not an
+  /// alert. A non-null value always names the alert trigger that produced it.
+  type           NotificationType?
   channel        String
   /// §9.5: every send is checked against this before dispatch, so a retried job
   /// or a replayed webhook cannot produce a second email.

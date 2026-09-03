@@ -220,6 +220,36 @@ export interface NotificationJobData {
   dedupeKey: string;
 }
 
+/**
+ * ⚠️ MIRRORS THE PRISMA `NotificationType` ENUM (and `@pdm/schemas`'
+ * `notificationType`) — restated here because the scanner package stays
+ * DB-free, the same rule as `AiJobData["feature"]`. This union is what the
+ * email job writes into `AlertHistory.type`, so a value present at a call
+ * site but missing from the DB enum is a runtime Prisma validation error on
+ * a job that has ALREADY SENT — which is how the team-invitation job sent
+ * duplicate emails on every retry before anyone saw a type error. The
+ * queue-contract test fails the build if these lists drift apart.
+ */
+export const QUEUED_NOTIFICATION_TYPES = [
+  "CRITICAL_ISSUE",
+  "NEW_TRACKER",
+  "CONSENT_REGRESSION",
+  "PRIVACY_DRIFT",
+  "SCAN_FAILED",
+  "SCAN_PARTIAL",
+  "WEBSITE_UNREACHABLE",
+  "REPORT_READY",
+  "REPORT_FAILED",
+  "MEMBER_JOINED",
+  "TRIAL_ENDING",
+  "PAYMENT_FAILED",
+  "PLAN_CHANGED",
+  "AI_QUOTA_WARNING",
+  "USAGE_LIMIT_WARNING",
+] as const;
+
+export type QueuedNotificationType = (typeof QUEUED_NOTIFICATION_TYPES)[number];
+
 /** One rendered email. The template payload is validated by `@pdm/email`. */
 export interface EmailJobData {
   agencyId: string;
@@ -228,7 +258,12 @@ export interface EmailJobData {
   to: string;
   userId: string | null;
   alertRuleId: string | null;
-  notificationType: string | null;
+  /**
+   * The alert trigger this send belongs to, or null for transactional mail.
+   * Typed as the restated enum — NOT `string` — so a value the database does
+   * not accept cannot reach the email job.
+   */
+  notificationType: QueuedNotificationType | null;
   entityType: string | null;
   entityId: string | null;
   /** §9.5 — checked against `AlertHistory` before dispatch. */

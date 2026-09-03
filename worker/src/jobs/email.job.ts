@@ -118,13 +118,35 @@ export async function processEmailJob(
       idempotencyKey: data.idempotencyKey,
     });
 
-    await recordStatus(repos, data, result.simulated ? "simulated" : "sent", result.providerId);
+    /*
+     * ⚠️ THE SEND SUCCEEDED. NOTHING AFTER THIS POINT MAY FAIL THE JOB.
+     * `recordStatus` used to throw straight through: when a queued `type` was
+     * not a valid `NotificationType` (the team-invitation job passed one the
+     * enum did not contain, behind an `as never` cast), the Prisma write threw
+     * AFTER the email had left, BullMQ retried, `hasBeenDelivered` found no
+     * outcome row, and the same invitation went out again — eight attempts,
+     * eight identical emails, no history row. The outcome record matters; it
+     * is not worth a duplicate email, so its failure is logged, not rethrown.
+     * (The residual window — a crash between send and record — can still
+     * duplicate once; it is no longer a guaranteed eight.)
+     */
+    await recordStatus(repos, data, result.simulated ? "simulated" : "sent", result.providerId).catch(
+      (err) =>
+        log.error(
+          { err, to: data.to, template: message.template },
+          "could not record the email outcome; the send itself succeeded",
+        ),
+    );
     log.info({ to: data.to, template: message.template }, "email sent");
     return { sent: true, providerId: result.providerId };
   } catch (error) {
-    // ⚠️ The history row is written BEFORE the throw, so a permanently failing
-    // address is visible in the Alerts → History tab rather than only in logs.
-    await recordStatus(repos, data, "failed", null, describe(error));
+    /*
+     * The send itself failed. Recording the failure is best-effort too — a
+     * throw here would mask the provider error the retry decision below needs.
+     */
+    await recordStatus(repos, data, "failed", null, describe(error)).catch((err) =>
+      log.error({ err }, "could not record the email failure"),
+    );
 
     /*
      * ⚠️ A PROVIDER REJECTION IS NOT RETRIED. An unverified sending domain or a
@@ -141,7 +163,9 @@ export async function processEmailJob(
       return { sent: false, skipped: "rejected" };
     }
 
-    // Re-thrown so BullMQ retries — §9.5 gives email roughly two hours.
+    // Re-thrown so BullMQ retries — §9.5 gives email roughly two hours. The
+    // send never happened, so a retry re-attempts it; `hasBeenDelivered`
+    // correctly finds no outcome row.
     throw error;
   }
 }
@@ -155,7 +179,11 @@ async function recordStatus(
 ): Promise<void> {
   await repos.alerts.recordHistory({
     alertRuleId: data.alertRuleId,
-    type: (data.notificationType ?? "REPORT_READY") as never,
+    // Null for transactional mail — a send no alert rule produced. The column
+    // is nullable exactly for this; there is no `?? "REPORT_READY"` fallback,
+    // because a report-ready row that is not a report-ready send is a lie the
+    // History tab would tell.
+    type: data.notificationType,
     channel: "email",
     recipients: [data.to],
     entityType: data.entityType,

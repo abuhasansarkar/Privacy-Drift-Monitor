@@ -37,7 +37,12 @@ export interface AlertRuleInput {
 
 export interface AlertHistoryInput {
   alertRuleId: string | null;
-  type: NotificationType;
+  /**
+   * Null for TRANSACTIONAL mail (invitations, portal links, digests) — a send
+   * no alert rule produced. The column is nullable exactly for this; see the
+   * 20260903000000 migration.
+   */
+  type: NotificationType | null;
   channel: string;
   recipients: string[];
   entityType: string | null;

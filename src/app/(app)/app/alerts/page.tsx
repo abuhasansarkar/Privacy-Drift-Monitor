@@ -115,7 +115,10 @@ async function HistoryTab({
 
   const rows: Row[] = page.items.map((entry) => ({
     id: entry.id,
-    primary: NOTIFICATION_TYPE_LABEL[entry.type],
+    // Transactional mail (invitations, portal links) records a null type —
+    // it is a send, not an alert, and labelling it REPORT_READY would be a
+    // lie this tab would tell.
+    primary: entry.type ? NOTIFICATION_TYPE_LABEL[entry.type] : t("alerts.typeTransactional"),
     secondary: entry.alertRule?.name ?? undefined,
     cells: {
       type: null,

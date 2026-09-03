@@ -183,7 +183,11 @@ export async function inviteMember(
         to: email,
         userId: null,
         alertRuleId: null,
-        notificationType: "TEAM_INVITATION",
+        // Transactional mail, not an alert — `AlertHistory.type` is nullable
+        // for exactly this (see the 20260903000000 migration). A literal the
+        // NotificationType enum did not contain used to sit here and crash the
+        // email job after the send.
+        notificationType: null,
         entityType: "invitation",
         entityId: invitation.id,
         idempotencyKey: `team-invite:${invitation.id}:${Date.now()}`,
@@ -308,7 +312,8 @@ export async function resendInvitation(
         to: invitation.email,
         userId: null,
         alertRuleId: null,
-        notificationType: "TEAM_INVITATION",
+        // Transactional mail, not an alert — see the inviteMember call site.
+        notificationType: null,
         entityType: "invitation",
         entityId: invitation.id,
         idempotencyKey: `team-invite-resend:${invitation.id}:${Date.now()}`,

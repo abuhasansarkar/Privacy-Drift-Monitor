@@ -1876,6 +1876,7 @@ export const en = {
     statusDeferred: "Held for quiet hours",
     statusSuppressed: "Suppressed as a duplicate",
     statusQueued: "Queued",
+    typeTransactional: "Notification",
     noQuietHours: "None",
     floodNote:
       "Repeats of the same alert are suppressed for four hours so one changing website cannot flood your inbox.",
