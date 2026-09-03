@@ -57,11 +57,75 @@ export function teamRepository(db: TenantClient, agencyId: string) {
       });
     },
 
-    async pendingInvitations(now: Date) {
+    async pendingInvitations(now: Date = new Date()) {
       return db.invitation.findMany({
         where: { acceptedAt: null, revokedAt: null, expiresAt: { gt: now } },
         orderBy: { createdAt: "desc" },
       });
+    },
+
+    async createInvitation(data: {
+      email: string;
+      role: AgencyRole;
+      token: string;
+      invitedById: string;
+      expiresAt: Date;
+    }) {
+      const email = data.email.toLowerCase();
+      return db.invitation.upsert({
+        where: {
+          agencyId_email: {
+            agencyId,
+            email,
+          },
+        },
+        create: {
+          agencyId,
+          email,
+          role: data.role,
+          token: data.token,
+          invitedById: data.invitedById,
+          expiresAt: data.expiresAt,
+        },
+        update: {
+          role: data.role,
+          token: data.token,
+          invitedById: data.invitedById,
+          expiresAt: data.expiresAt,
+          revokedAt: null,
+          acceptedAt: null,
+        },
+      });
+    },
+
+    async revokeInvitation(invitationId: string) {
+      return db.invitation.update({
+        where: { id: invitationId },
+        data: { revokedAt: new Date() },
+      });
+    },
+
+    async findPendingInvitation(email: string) {
+      return db.invitation.findFirst({
+        where: {
+          agencyId,
+          email: email.toLowerCase(),
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+    },
+
+    async isMember(email: string): Promise<boolean> {
+      const count = await db.agencyMember.count({
+        where: {
+          agencyId,
+          status: "ACTIVE",
+          user: { email: email.toLowerCase() },
+        },
+      });
+      return count > 0;
     },
 
     /** @returns null when not found, "last-owner" when the guard refuses. */

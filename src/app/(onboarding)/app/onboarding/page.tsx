@@ -56,8 +56,9 @@ export default async function OnboardingPage() {
     repos.db.scan.count(),
   ]);
 
-  // Nothing left to guide. Sending them here again would be a dead end.
-  if (websiteCount > 0 && scanCount > 0) redirect("/app");
+  // Invited team members bypass onboarding and go straight to dashboard.
+  // Owners complete the initial checklist until their first website & scan are active.
+  if (ctx.role !== "OWNER" || (websiteCount > 0 && scanCount > 0)) redirect("/app");
 
   const steps = [
     {

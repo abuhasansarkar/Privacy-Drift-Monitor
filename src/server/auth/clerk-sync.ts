@@ -124,16 +124,38 @@ export async function reconcileAgencyMembership(
         where: { agencyId: agency.id, role: "OWNER" },
       })) > 0;
 
+    // Check if an invitation specified a role for this user
+    const pendingInvitation = await db.invitation.findFirst({
+      where: {
+        agencyId: agency.id,
+        email: email.toLowerCase(),
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const assignedRole =
+      pendingInvitation?.role ?? initialRoleFor(membership.role, agencyHasOwner);
+
     await db.agencyMember.upsert({
       where: { agencyId_userId: { agencyId: agency.id, userId: user.id } },
       create: {
         agencyId: agency.id,
         userId: user.id,
-        role: initialRoleFor(membership.role, agencyHasOwner),
+        role: assignedRole,
       },
       // Never touches `role` — see the header note on where role lives.
       update: { status: "ACTIVE" },
     });
+
+    if (pendingInvitation) {
+      await db.invitation.update({
+        where: { id: pendingInvitation.id },
+        data: { acceptedAt: new Date() },
+      });
+    }
 
     log.info({ agencyId: agency.id }, "provisioned agency membership from clerk");
     return true;

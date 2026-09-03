@@ -5,6 +5,9 @@ import { Card } from "@/components/ui/card";
 import { DataList, type Column, type Row } from "@/components/ui/data-list";
 import { MutedBadge } from "@/components/ui/severity-badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { Can } from "@/components/can";
+import { InviteMemberDialog } from "@/components/team/invite-member-dialog";
+import { PendingInvitations } from "@/components/team/pending-invitations";
 import { MemberRowActions } from "@/components/team/member-row-actions";
 import { formatDate, formatNumber, formatRelative } from "@/lib/format";
 import { requirePermission } from "@/server/auth/context";
@@ -13,17 +16,21 @@ import { requirePermission } from "@/server/auth/context";
  * TEAM — §6.2, Phase 1 task 1.9.
  *
  * ⚠️ MEMBERSHIP IS CLERK'S; ROLE IS OURS. Inviting and removing people from the
- * organization happens in Clerk (and arrives here through the webhook); the
- * five-role matrix has no Clerk equivalent, so it is set here. Building a
- * second invitation flow beside Clerk's would give two places where a person
- * can be added and one of them would drift.
+ * organization happens in Clerk (and arrives here through the webhook or
+ * reconciliation); the five-role matrix has no Clerk equivalent, so it is set
+ * here. Invitations dispatched here send a Clerk org invitation and record
+ * the designated role in the database so that when accepted, the user receives
+ * that role immediately.
  */
 export default async function TeamPage() {
   const ctx = await requirePermission("team:read");
   const repos = repositoriesFor(ctx.agencyId);
 
   const now = new Date();
-  const members = await repos.team.list();
+  const [members, invitations] = await Promise.all([
+    repos.team.list(),
+    repos.team.pendingInvitations(now),
+  ]);
 
   const columns: Column[] = [
     { key: "member", label: t("team.columnMember") },
@@ -81,16 +88,39 @@ export default async function TeamPage() {
       <PageHeader
         title={t("team.title")}
         subtitle={`${formatNumber(members.length)} ${t("team.members")}`}
+        actions={
+          <Can role={ctx.role} permission="team:invite">
+            <InviteMemberDialog />
+          </Can>
+        }
       />
 
       <Card>
         <DataList caption={t("team.title")} columns={columns} rows={rows} />
       </Card>
 
-      {/*
-        Stated plainly rather than left as an absent feature: a Team page with
-        no invite button reads as broken until you know where invitations live.
-      */}
+      <PendingInvitations
+        invitations={invitations.map((inv) => {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+          const inviteUrl = inv.token.includes(":::")
+            ? inv.token.split(":::")[1]!
+            : (inv.token.startsWith("http")
+                ? inv.token
+                : `${appUrl}/signup?invitation=${inv.token}`);
+
+          return {
+            id: inv.id,
+            email: inv.email,
+            role: inv.role,
+            inviteUrl,
+            createdAt: inv.createdAt,
+            expiresAt: inv.expiresAt,
+          };
+        })}
+        canRevoke={can(ctx.role, "team:invite")}
+        timezone={ctx.timezone}
+      />
+
       <Card className="p-4">
         <h2 className="text-h4">{t("team.inviteTitle")}</h2>
         <p className="mt-1 text-small text-muted-foreground">{t("team.inviteBody")}</p>

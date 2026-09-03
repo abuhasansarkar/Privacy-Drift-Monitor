@@ -236,17 +236,39 @@ export async function POST(req: NextRequest) {
             where: { agencyId: agency.id, role: OWNER },
           })) > 0;
 
+        // Check if an invitation specified a role for this user
+        const pendingInvitation = await db.invitation.findFirst({
+          where: {
+            agencyId: agency.id,
+            email: user.email.toLowerCase(),
+            acceptedAt: null,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        const assignedRole =
+          pendingInvitation?.role ?? initialRoleFor(role, hasOwner);
+
         await db.agencyMember.upsert({
           where: { agencyId_userId: { agencyId: agency.id, userId: user.id } },
           create: {
             agencyId: agency.id,
             userId: user.id,
-            role: initialRoleFor(role, hasOwner),
+            role: assignedRole,
           },
           // Deliberately role-less: the database is authoritative for the
           // five-role matrix once a membership exists. See the header note.
           update: { status: "ACTIVE" },
         });
+
+        if (pendingInvitation) {
+          await db.invitation.update({
+            where: { id: pendingInvitation.id },
+            data: { acceptedAt: new Date() },
+          });
+        }
         break;
       }
 

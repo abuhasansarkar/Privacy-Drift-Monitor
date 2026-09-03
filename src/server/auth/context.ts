@@ -102,7 +102,39 @@ export const requireAgencyContext = cache(async (): Promise<AgencyContext> => {
   if (impersonated) return impersonated;
 
   const { clerkUserId, clerkOrgId } = await requireUser();
-  if (!clerkOrgId) {
+  let activeOrgId = clerkOrgId;
+
+  if (!activeOrgId) {
+    // 1. Check if the user is already an active member of an agency in our database
+    const existingMembership = await prisma.agencyMember.findFirst({
+      where: {
+        user: { clerkUserId },
+        status: "ACTIVE",
+      },
+      include: { agency: true },
+    });
+
+    if (existingMembership?.agency.clerkOrgId) {
+      activeOrgId = existingMembership.agency.clerkOrgId;
+    } else {
+      // 2. Check Clerk Backend API: does Clerk list any organization membership for this user?
+      try {
+        const { clerkClient } = await import("@clerk/nextjs/server");
+        const clerk = await clerkClient();
+        const { data: memberships } = await clerk.users.getOrganizationMembershipList({
+          userId: clerkUserId,
+          limit: 10,
+        });
+        if (memberships.length > 0 && memberships[0]?.organization.id) {
+          activeOrgId = memberships[0].organization.id;
+        }
+      } catch {
+        // Clerk API unavailable or network failure
+      }
+    }
+  }
+
+  if (!activeOrgId) {
     throw new NoAgencyError("Set up your agency to continue.", {
       reason: `NO_ACTIVE_ORG:${clerkUserId}`,
     });
@@ -112,7 +144,7 @@ export const requireAgencyContext = cache(async (): Promise<AgencyContext> => {
     prisma.agencyMember.findFirst({
       where: {
         user: { clerkUserId },
-        agency: { clerkOrgId },
+        agency: { clerkOrgId: activeOrgId },
         status: "ACTIVE",
       },
       include: { user: true, agency: true },
@@ -126,13 +158,13 @@ export const requireAgencyContext = cache(async (): Promise<AgencyContext> => {
     // membership exists and provision from its answer; a session claim alone
     // is never enough. Returns false if Clerk says there is no membership,
     // and the 403 below then stands.
-    const provisioned = await reconcileAgencyMembership(clerkUserId, clerkOrgId);
+    const provisioned = await reconcileAgencyMembership(clerkUserId, activeOrgId);
     if (provisioned) member = await findMembership();
   }
 
   if (!member) {
     throw new NotAMemberError("You don't have access to this agency.", {
-      reason: `NO_ACTIVE_MEMBERSHIP:${clerkUserId}@${clerkOrgId}`,
+      reason: `NO_ACTIVE_MEMBERSHIP:${clerkUserId}@${activeOrgId}`,
     });
   }
 

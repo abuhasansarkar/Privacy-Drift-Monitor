@@ -346,3 +346,40 @@ describe("audit repository", () => {
     expect(rows.every((r) => r.agencyId === agencyA.id)).toBe(true);
   });
 });
+
+describe("team repository invitations", () => {
+  it("creates, queries, and revokes pending invitations scoped to agency", async () => {
+    const repos = repositoriesFor(agencyA.id);
+    const testEmail = "invitee@example.test";
+
+    expect(await repos.team.isMember(testEmail)).toBe(false);
+
+    const invite = await repos.team.createInvitation({
+      email: testEmail,
+      role: "DEVELOPER",
+      token: "tok-" + Math.random().toString(36).slice(2),
+      invitedById: agencyA.ownerId,
+      expiresAt: new Date(Date.now() + 86400000),
+    });
+
+    expect(invite.email).toBe(testEmail);
+    expect(invite.role).toBe("DEVELOPER");
+    expect(invite.agencyId).toBe(agencyA.id);
+
+    const pending = await repos.team.findPendingInvitation(testEmail);
+    expect(pending).not.toBeNull();
+    expect(pending?.id).toBe(invite.id);
+
+    const pendingList = await repos.team.pendingInvitations();
+    expect(pendingList.some((i) => i.id === invite.id)).toBe(true);
+
+    // Another tenant cannot see this invitation
+    const reposB = repositoriesFor(agencyB.id);
+    const pendingB = await reposB.team.findPendingInvitation(testEmail);
+    expect(pendingB).toBeNull();
+
+    // Revoking removes from pending list
+    await repos.team.revokeInvitation(invite.id);
+    expect(await repos.team.findPendingInvitation(testEmail)).toBeNull();
+  });
+});
