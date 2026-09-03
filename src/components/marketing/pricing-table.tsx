@@ -296,7 +296,19 @@ const ROWS: Array<{ label: string; render: (plan: CataloguePlan) => React.ReactN
   },
   {
     label: t("pricing.rowIntegrations"),
-    render: (p) => yesNo(p.entitlements.slackIntegration && p.entitlements.webhooks),
+    /*
+     * ⚠️ RENDERS "Planned", NOT A TICK, AND DELIBERATELY IGNORES THE
+     * ENTITLEMENT. `slackIntegration` and `webhooks` resolve to true on Growth
+     * and above, so this row used to show a green check on a paid plan for two
+     * things that do not exist: Slack has no delivery code at all, and the
+     * webhook dispatcher is called from nothing but its own test.
+     *
+     * The entitlement flags are left alone on purpose — whether these stay
+     * inside the paid tiers is a pricing decision. What is not a decision is
+     * whether we may put a tick next to them on the page a customer buys from.
+     * Restore `yesNo(...)` the day both actually deliver.
+     */
+    render: () => planned(),
   },
   { label: t("pricing.rowApi"), render: (p) => yesNo(p.entitlements.apiAccess) },
   {
@@ -310,6 +322,13 @@ const ROWS: Array<{ label: string; render: (plan: CataloguePlan) => React.ReactN
 
 function count(value: number): string {
   return isUnlimited(value) ? t("billing.unlimited") : formatNumber(value);
+}
+
+/** A capability that is specified but not yet delivered. Never a tick. */
+function planned(): React.ReactNode {
+  return (
+    <span className="text-caption text-muted-foreground">{t("pricing.planned")}</span>
+  );
 }
 
 function yesNo(value: boolean): React.ReactNode {

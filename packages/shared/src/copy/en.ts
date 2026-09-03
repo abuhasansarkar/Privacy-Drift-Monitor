@@ -1072,6 +1072,8 @@ export const en = {
     reportTypesAll: "All five",
     included: "Included",
     notIncluded: "Not included",
+    /** Specified, not yet delivered. See the integrations row in pricing-table.tsx. */
+    planned: "Planned",
     portalUsers: "users",
     compareFeature: "Feature",
     cardWebsites: "websites",
