@@ -43,7 +43,14 @@ export function AdminShell({
         <nav aria-label={t("admin.title")} className="flex flex-col gap-4">
           {ADMIN_GROUPS.map((group) => (
             <div key={group.key} className="flex flex-col gap-0.5">
-              <p className="px-2 py-1 text-caption uppercase tracking-wide text-neutral-500">
+              {/*
+                ⚠️ `neutral-400`, NOT `neutral-500`. Measured on this sidebar's
+                own `bg-neutral-900` (#171717): #737373 gives 3.78:1, under the
+                4.5:1 WCAG AA threshold for normal text. #a3a3a3 gives 7.11:1.
+                Same class of defect as the seven design tokens in AGENTS.md
+                #9 — a palette checked by eye rather than measured.
+              */}
+              <p className="px-2 py-1 text-caption uppercase tracking-wide text-neutral-400">
                 {group.label}
               </p>
               {ADMIN_NAV.filter((item) => item.group === group.key).map((item) => (

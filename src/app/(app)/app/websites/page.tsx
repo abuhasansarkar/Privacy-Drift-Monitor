@@ -121,8 +121,18 @@ export default async function WebsitesPage({
             {site.criticalIssueCount > 0 ? (
               <SeverityBadge severity="CRITICAL" count={site.criticalIssueCount} />
             ) : null}
+            {/*
+              ⚠️ THIS CHIP COUNTS THE NON-CRITICAL REMAINDER, which is not
+              something anyone could work out from a bare "1" sitting next to a
+              "1 Critical" badge. Two numbers in one column with one label
+              between them is a puzzle, not a summary.
+            */}
             {site.openIssueCount > site.criticalIssueCount ? (
-              <MutedBadge>
+              <MutedBadge
+                label={`${formatNumber(
+                  site.openIssueCount - site.criticalIssueCount,
+                )} ${t("websites.otherIssuesLabel")}`}
+              >
                 {formatNumber(site.openIssueCount - site.criticalIssueCount)}
               </MutedBadge>
             ) : null}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { t } from "@pdm/shared/copy";
 import { can } from "@pdm/shared/permissions";
+import { IssueEvidenceList } from "@/components/issues/issue-evidence-list";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SeverityBadge, StatusBadge } from "@/components/ui/severity-badge";
@@ -208,16 +209,32 @@ export default async function IssueDetailPage({
 
       <Section label={t("issues.evidence")}>
         {/*
-          The recorded rows live on the scan. Linking rather than duplicating
-          them keeps ONE rendering of the evidence — a second, summarised copy
-          here is a second thing that can disagree with what was recorded.
+          ⚠️ THE ROWS THEMSELVES, NOT JUST A LINK TO THEM. This section used to
+          render only "View the scan that recorded this →", so the one screen
+          where an agency reads a finding — and from which they explain it to
+          their client — showed no evidence at all, on a product whose entire
+          claim is that every finding traces to something a browser observed.
+
+          `IssueEvidenceList` renders `issue.evidence`, the same array already
+          loaded above for `evidenceLinks` and the vendor-name derivation, so
+          the old concern about "a second copy that can disagree" does not
+          apply: there is no second source and nothing is summarised.
+
+          The scan link stays — this list is the subset attached to THIS
+          finding, and the scan holds everything else that was recorded.
         */}
-        <Link
-          href={`/app/websites/${issue.website.id}/scans/${issue.lastScanId}`}
-          className="text-small text-primary underline-offset-2 hover:underline"
-        >
-          {t("issues.viewScan")} →
-        </Link>
+        <div className="flex flex-col gap-3">
+          <IssueEvidenceList
+            rows={issue.evidence}
+            unknownSubjectLabel={t("issues.evidenceSubjectUnknown")}
+          />
+          <Link
+            href={`/app/websites/${issue.website.id}/scans/${issue.lastScanId}`}
+            className="text-small text-primary underline-offset-2 hover:underline"
+          >
+            {t("issues.viewScan")} →
+          </Link>
+        </div>
       </Section>
 
       <Section label={t("issues.recommendedAction")}>

@@ -59,6 +59,7 @@ export function IssueExplanationSection({
       feature="EXPLAIN_ISSUE"
       title={t("ai.explanation")}
       generateLabel={t("ai.generate")}
+      emptyMessage={t("ai.notGeneratedYet")}
       initial={initial}
       canGenerate={canGenerate}
       evidenceLinks={evidenceLinks}
@@ -84,6 +85,13 @@ export function IssueFixSection({
       feature="RECOMMEND_FIX"
       title={t("ai.recommendedFix")}
       generateLabel={t("ai.generateFix")}
+      /*
+       * ⚠️ ITS OWN MESSAGE. Both cards used to share one string, so this card
+       * — headed "Recommended fix" — told the reader "No AI EXPLANATION has
+       * been generated for this yet", which is a sentence about the card
+       * above it.
+       */
+      emptyMessage={t("ai.noFixYet")}
       initial={initial}
       canGenerate={canGenerate}
       evidenceLinks={evidenceLinks}
@@ -97,6 +105,7 @@ function AiSection({
   feature,
   title,
   generateLabel,
+  emptyMessage,
   initial,
   canGenerate,
   evidenceLinks,
@@ -106,6 +115,8 @@ function AiSection({
   feature: IssueFeature;
   title: string;
   generateLabel: string;
+  /** What this specific card says when nothing has been generated. */
+  emptyMessage: string;
   initial: StoredAiOutput | null;
   canGenerate: boolean;
   evidenceLinks: readonly EvidenceLink[];
@@ -163,7 +174,7 @@ function AiSection({
     return (
       <AiUnavailable
         title={title}
-        message={t("ai.notGeneratedYet")}
+        message={emptyMessage}
         action={generateButton}
       />
     );

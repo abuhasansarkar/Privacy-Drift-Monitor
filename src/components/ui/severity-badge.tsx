@@ -68,10 +68,28 @@ export function SeverityBadge({
   );
 }
 
-/** A neutral chip for counts and secondary facts — carries no severity meaning. */
-export function MutedBadge({ children }: { children: ReactNode }) {
+/**
+ * A neutral chip for counts and secondary facts — carries no severity meaning.
+ *
+ * ⚠️ `label` IS NOT OPTIONAL POLISH WHEREVER THE NUMBER IS AMBIGUOUS. A bare
+ * chip reading "1" beside a "1 Critical" badge tells a sighted reader nothing
+ * about what the second number counts, and tells a screen-reader user even
+ * less — it announces "one". Pass `label` and the chip carries it as both a
+ * tooltip and its accessible name.
+ */
+export function MutedBadge({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label?: string;
+}) {
   return (
-    <span className={cn(CHIP, "bg-muted text-muted-foreground font-medium")}>
+    <span
+      className={cn(CHIP, "bg-muted text-muted-foreground font-medium")}
+      title={label}
+      aria-label={label}
+    >
       {children}
     </span>
   );

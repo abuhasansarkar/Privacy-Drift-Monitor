@@ -242,3 +242,21 @@ export const PORTAL_STATUS_LABEL: Record<IssueStatus, string> = {
   IGNORED: t("portal.statusResolved"),
   UNVERIFIED: t("portal.statusInProgress"),
 };
+
+/**
+ * EvidenceKind → label.
+ *
+ * ⚠️ LIVES HERE, NOT IN `src/lib`, for the reason at the top of this file: the
+ * report renderer runs in the worker and cannot import from `@/`. A finding
+ * that reads "Network request" on screen and "NETWORK_REQUEST" in the PDF the
+ * client receives is the exact defect this module exists to prevent.
+ */
+export const EVIDENCE_KIND_LABEL: Record<string, string> = {
+  NETWORK_REQUEST: "Network request",
+  COOKIE: "Cookie",
+  STORAGE_ENTRY: "Storage write",
+  SCREENSHOT: "Screenshot",
+  CONSOLE_ERROR: "Console error",
+  CONSENT_ACTION: "Consent action",
+  DRIFT_DIFF: "Change since last scan",
+};

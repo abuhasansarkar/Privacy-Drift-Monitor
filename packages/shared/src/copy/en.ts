@@ -377,6 +377,8 @@ export const en = {
     whenDetected: "When detected",
     recommendedAction: "Recommended action",
     evidence: "Evidence",
+    /** A recorded row whose payload carries no identifying string. Never a guess. */
+    evidenceSubjectUnknown: "No identifier recorded",
     viewScan: "View the scan that recorded this",
     ruleLabel: "Rule",
   },
@@ -455,8 +457,17 @@ export const en = {
     rejected:
       "An AI response was generated but did not meet our accuracy checks, so it was discarded. The technical details above are complete.",
     noDriftToSummarise: "There are no recorded changes in this period to summarise.",
-    /** §11.8 — AI is additive and absent here; say so rather than leaving a gap. */
+    /**
+     * §11.8 — AI is additive and absent here; say so rather than leaving a gap.
+     *
+     * ⚠️ ONE STRING PER FEATURE. A single generic message was reused for both
+     * cards on the issue page, so the "Recommended fix" card read "No AI
+     * explanation has been generated for this yet." — telling the reader about
+     * a different card than the one they were looking at.
+     */
     notGeneratedYet: "No AI explanation has been generated for this yet.",
+    noFixYet: "No suggested fix has been generated for this yet.",
+    noDriftSummaryYet: "No AI summary has been generated for this period yet.",
   },
 
   /** §3.9 — `/app/ai`, the task panel. Flagged `AI_ASSISTANT_PAGE`. */
@@ -1620,6 +1631,8 @@ export const en = {
       "This website is archived. Monitoring is stopped, and its scan history is kept.",
     settingsTitle: "Monitoring settings",
     originalUrlLabel: "Address as entered",
+    /** Names the unlabelled count chip beside the critical badge. */
+    otherIssuesLabel: "other potential issues",
     registrableDomainLabel: "Registrable domain",
     monitoredPathsLabel: "Monitored paths",
     nextScanLabel: "Next check",

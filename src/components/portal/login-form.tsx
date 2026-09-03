@@ -51,10 +51,22 @@ export function PortalLoginForm() {
           className="h-11 w-full rounded-md border border-border bg-background px-3 text-[16px]"
         />
       </label>
+      {/*
+        ⚠️ DISABLED ONLY WHILE SENDING, NEVER BECAUSE THE FIELD IS EMPTY. This
+        carried `disabled={email.trim() === ""}` with `disabled:opacity-50`, so
+        the only button on the page rendered greyed-out to every visitor who
+        had not yet typed. That page is where an agency's CLIENT arrives from
+        an emailed link — a dead-looking control is the first impression the
+        agency's own brand makes.
+
+        The `required` + `type="email"` input already gives the browser's
+        native validation on submit, which also says WHAT is wrong, where a
+        disabled button says nothing at all.
+      */}
       <button
         type="submit"
-        disabled={pending || email.trim() === ""}
-        className="inline-flex h-11 items-center justify-center rounded-md border border-transparent bg-primary px-4 text-[15px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        disabled={pending}
+        className="inline-flex h-11 items-center justify-center rounded-md border border-transparent bg-primary px-4 text-[15px] font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
       >
         {pending ? t("portal.sending") : t("portal.sendLink")}
       </button>

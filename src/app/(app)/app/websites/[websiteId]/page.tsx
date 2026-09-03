@@ -101,11 +101,20 @@ export default async function WebsiteDetailPage({
           <Detail label={t("addWebsite.urlLabel")}>
             <span className="font-mono text-mono break-all">{website.url}</span>
           </Detail>
-          <Detail label={t("websites.originalUrlLabel")}>
-            <span className="font-mono text-mono break-all">
-              {website.originalUrl}
-            </span>
-          </Detail>
+          {/*
+            ⚠️ ONLY WHEN IT DIFFERS. "Address as entered" exists to show what
+            normalization changed — a missing scheme, a stripped `www.`, a
+            trailing slash. When nothing changed it printed the SAME string
+            under a second label, which does not inform anyone and makes the
+            reader look for a difference that is not there.
+          */}
+          {website.originalUrl !== website.url ? (
+            <Detail label={t("websites.originalUrlLabel")}>
+              <span className="font-mono text-mono break-all">
+                {website.originalUrl}
+              </span>
+            </Detail>
+          ) : null}
           <Detail label={t("websites.registrableDomainLabel")}>
             <span className="font-mono text-mono">{website.registrableDomain}</span>
           </Detail>

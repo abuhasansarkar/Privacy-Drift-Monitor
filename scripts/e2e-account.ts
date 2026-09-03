@@ -21,6 +21,25 @@
  *
  * Run: npx tsx scripts/e2e-account.ts
  */
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { config as loadEnv } from "dotenv";
+
+/*
+ * ⚠️ `.env` IS LOADED HERE, THE WAY `worker/src/index.ts` DOES IT. Without
+ * this, `npm run e2e:account` exits with "CLERK_SECRET_KEY is required" even
+ * on a machine where `.env` holds a perfectly good key — the script is run by
+ * `tsx`, which does not read `.env` on its own. CI never noticed because it
+ * injects secrets as real environment variables; a developer following the
+ * README hit it on the first command.
+ */
+for (const envPath of [resolve(process.cwd(), ".env"), resolve(process.cwd(), "../.env")]) {
+  if (existsSync(envPath)) {
+    loadEnv({ path: envPath, quiet: true });
+    break;
+  }
+}
+
 import { createClerkClient } from "@clerk/backend";
 
 const EMAIL = process.env.E2E_EMAIL ?? "pdm.e2e+clerk_test@example.com";

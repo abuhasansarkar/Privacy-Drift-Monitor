@@ -60,6 +60,23 @@ test.describe("public pages", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   /*
+   * ⚠️ THE PORTAL SIGN-IN PAGE BELONGS IN THE SIGNED-OUT SUITE, and it had no
+   * coverage at all. It is the only surface an agency's CLIENT ever sees, it
+   * carries no Clerk session, and it is reached from an email link — so it is
+   * simultaneously the least-visited page by us and the most consequential
+   * first impression the product makes on somebody else's customer.
+   *
+   * The authenticated portal pages need a magic-link session, which this suite
+   * cannot mint; they remain uncovered and are listed in UI_Func.md §3.
+   */
+  test("no WCAG AA violations on /portal/login", async ({ page }) => {
+    const results = await scan(page, "/portal/login");
+    expect(
+      results.violations.map((v) => `${v.id}: ${v.nodes.length} node(s) — ${v.help}`),
+    ).toEqual([]);
+  });
+
+  /*
    * ⚠️ THE WHOLE PUBLIC SURFACE, NOT THREE PAGES OF IT. This list was
    * "/", "/pricing", "/free-scanner" — so /features shipped with NO `<h1>` at
    * all (it opened on a section `<h2>`) and nothing noticed. These are the

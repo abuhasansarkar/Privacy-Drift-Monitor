@@ -29,6 +29,24 @@ const isPortalRoute = createRouteMatcher(["/portal(.*)", "/api/portal(.*)"]);
 const isStaticMarketingRoute = createRouteMatcher(STATIC_MARKETING_PATTERNS);
 
 /**
+ * The Sentry ingest origin, taken from the configured DSN.
+ *
+ * A DSN looks like `https://<key>@<org>.ingest.<region>.sentry.io/<project>`;
+ * the browser POSTs envelopes to that ORIGIN, so that is what `connect-src`
+ * has to allow. Parsed rather than pattern-matched so a malformed DSN yields
+ * nothing instead of a broken directive.
+ */
+const SENTRY_INGEST_ORIGIN = (() => {
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN;
+  if (!dsn) return "";
+  try {
+    return new URL(dsn).origin;
+  } catch {
+    return "";
+  }
+})();
+
+/**
  * SHA-256 of the one inline script the app ships, derived from the SAME
  * constant `theme-provider.tsx` renders — so the policy cannot drift from the
  * script. Editing the script changes both together.
@@ -128,9 +146,23 @@ function contentSecurityPolicy(nonce: string | null): string {
     "img-src 'self' data: blob: https://*.s3.amazonaws.com https://img.clerk.com",
     // Self-hosted fonts only (§11.2) — `data:` covers the inlined subset.
     "font-src 'self' data:",
+    /*
+     * ⚠️ SENTRY IS IN THIS LIST BECAUSE IT WAS MISSING, AND ITS ABSENCE WAS
+     * SILENT. `@sentry/nextjs` was installed, configured and given a DSN — so
+     * everything looked wired — while the browser refused every single
+     * `/envelope/` POST under this policy. Client-side error reporting was
+     * therefore dead on every authenticated page, and the only evidence was a
+     * console line nobody reads in production. An observability tool that
+     * cannot report is worse than none: it makes silence look like health.
+     *
+     * The host is derived from `NEXT_PUBLIC_SENTRY_DSN` rather than hardcoded,
+     * so rotating the DSN or moving org/region cannot re-break this the same
+     * way. No DSN configured means no origin is added — the policy does not
+     * widen for a feature that is switched off.
+     */
     `connect-src 'self' https://*.clerk.accounts.dev https://api.stripe.com wss://*.clerk.accounts.dev${
-      isDev ? " ws://localhost:* http://localhost:*" : ""
-    }`,
+      SENTRY_INGEST_ORIGIN ? ` ${SENTRY_INGEST_ORIGIN}` : ""
+    }${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
     "frame-src https://js.stripe.com https://challenges.cloudflare.com",
     /*
      * ⚠️ `worker-src` IS NOT IN §10.1's LIST AND IS REQUIRED ANYWAY. Without
