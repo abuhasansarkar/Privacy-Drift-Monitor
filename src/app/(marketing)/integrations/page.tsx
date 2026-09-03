@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
 import { Container, CtaSection, Eyebrow, Section } from "@/components/marketing/section";
-import { buttonClasses } from "@/components/ui/button";
 import { INTEGRATIONS } from "@content/marketing/pages";
 
 /**

@@ -91,14 +91,21 @@ export function Counter({
   const reduced = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-48px" });
-  const [display, setDisplay] = useState(0);
+  const [counted, setCounted] = useState(0);
+
+  /*
+   * ⚠️ THE REDUCED-MOTION VALUE IS DERIVED, NOT STORED. This used to be a
+   * `setDisplay(value)` inside the effect, which React's `set-state-in-effect`
+   * rule rejects — and rightly: a reader who has asked for reduced motion got
+   * a render showing 0 followed by a second render showing the real number,
+   * which is a flash of wrong data produced by the very branch meant to remove
+   * animation. Reading it straight from the prop renders the final number
+   * first time, and the effect below never runs for those readers at all.
+   */
+  const display = reduced ? value : counted;
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
+    if (!inView || reduced) return;
     let raf: number;
     const start = performance.now();
     const duration = 900;
@@ -106,7 +113,7 @@ export function Counter({
       const progress = Math.min((now - start) / duration, 1);
       // easeOutCubic
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(eased * value));
+      setCounted(Math.round(eased * value));
       if (progress < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { t } from "@pdm/shared/copy";
-import Link from "next/link";
 import { Container, Section, SectionHeading, CtaSection } from "@/components/marketing/section";
 import { TechnicalPipeline } from "@/components/marketing/technical-pipeline";
 

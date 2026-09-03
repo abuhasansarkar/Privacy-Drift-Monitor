@@ -1,5 +1,11 @@
+import { createHash } from "node:crypto";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  PUBLIC_ROUTE_PATTERNS,
+  STATIC_MARKETING_PATTERNS,
+} from "@/lib/public-routes";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 
 /**
  * Next.js 16 renamed `middleware.ts` to `proxy.ts`. Do NOT add a `runtime`
@@ -12,34 +18,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * defence, never the only one.
  */
 
-/** Routes reachable without a session. Everything else requires auth. */
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/features(.*)",
-  "/how-it-works",
-  "/pricing",
-  "/free-scanner(.*)",
-  "/blog(.*)",
-  "/guides(.*)",
-  "/resources",
-  "/about",
-  "/contact",
-  "/legal(.*)",
-  "/bot",
-  "/login(.*)",
-  "/signup(.*)",
-  "/api/webhooks(.*)",
-  "/api/public(.*)",
-  // Liveness and readiness probes are called by the platform with no session.
-  // Gating these behind auth makes every deploy fail its health check.
-  "/api/health(.*)",
-  /*
-   * A shared report link is a bearer credential handed to someone outside the
-   * agency — the token IS the authorisation (§6.8). It resolves exactly one
-   * report and lives outside every authenticated route group.
-   */
-  "/reports/shared(.*)",
-]);
+const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
 /**
  * The client portal uses its own magic-link session scheme (PLAN.md §6.10),
@@ -47,25 +26,16 @@ const isPublicRoute = createRouteMatcher([
  */
 const isPortalRoute = createRouteMatcher(["/portal(.*)", "/api/portal(.*)"]);
 
+const isStaticMarketingRoute = createRouteMatcher(STATIC_MARKETING_PATTERNS);
+
 /**
- * ⚠️ THE STATICALLY PRERENDERED MARKETING PAGES. §3.2 requires them to be
- * static and they are (`○` in the build output) — which is exactly why they
- * cannot take a nonce. See `contentSecurityPolicy` below.
+ * SHA-256 of the one inline script the app ships, derived from the SAME
+ * constant `theme-provider.tsx` renders — so the policy cannot drift from the
+ * script. Editing the script changes both together.
  */
-const isStaticMarketingRoute = createRouteMatcher([
-  "/",
-  "/features(.*)",
-  "/how-it-works",
-  "/pricing",
-  "/free-scanner",
-  "/blog(.*)",
-  "/guides(.*)",
-  "/resources",
-  "/about",
-  "/contact",
-  "/legal(.*)",
-  "/bot",
-]);
+export const THEME_SCRIPT_HASH = `sha256-${createHash("sha256")
+  .update(THEME_INIT_SCRIPT, "utf8")
+  .digest("base64")}`;
 
 /**
  * CONTENT SECURITY POLICY — PLAN.md Part X §10.1, Phase 7 task 7.1.
@@ -94,6 +64,23 @@ const isStaticMarketingRoute = createRouteMatcher([
  *   renders data derived from a third-party website, is dynamic and gets the
  *   strict policy.
  *
+ * ⚠️ **THE SPLIT ONLY BUYS ANYTHING IF THE STATIC PAGES ARE ACTUALLY STATIC**,
+ * and for a while they were not. The root layout read `x-nonce` for the inline
+ * theme script, which made every route in the app dynamic — so this whole
+ * function was choosing between two policies for a set of pages that no longer
+ * existed, and handing the weaker one to pages that were being rendered per
+ * request anyway. The theme script is now allowed by HASH (below), the root
+ * layout reads nothing, and the marketing pages prerender again.
+ *
+ * ⚠️ **THE HASH GOES IN THE STRICT POLICY ONLY, AND THAT IS A CSP RULE RATHER
+ * THAN A PREFERENCE.** `'unsafe-inline'` is IGNORED by any browser that sees a
+ * nonce or a hash in the same directive. Adding `'sha256-…'` to the static
+ * policy would therefore switch `'unsafe-inline'` off and block Next's own
+ * inline bootstrap scripts — which are baked into the prerendered HTML and can
+ * carry neither a nonce nor a stable hash. The static policy keeps
+ * `'unsafe-inline'` alone; the strict policy carries nonce + hash and never
+ * `'unsafe-inline'`.
+ *
  * ⚠️ `'unsafe-eval'` IN DEVELOPMENT ONLY. React uses `eval` in development to
  * reconstruct server-side error stacks in the browser; production does not.
  * Leaving it on in production would remove most of the value of `script-src`.
@@ -104,6 +91,12 @@ function contentSecurityPolicy(nonce: string | null): string {
   const scriptSrc = [
     "'self'",
     nonce ? `'nonce-${nonce}'` : "'unsafe-inline'",
+    /*
+     * The pre-hydration theme script. Present ONLY on the strict policy — see
+     * the `'unsafe-inline'` note in this file's header for why adding it to the
+     * static policy would break that policy instead of tightening it.
+     */
+    nonce ? `'${THEME_SCRIPT_HASH}'` : "",
     /*
      * ⚠️ NO `'strict-dynamic'`, AND THAT IS §10.1's OWN POLICY RATHER THAN AN
      * OMISSION. Next's CSP example includes it; adding it here broke sign-in

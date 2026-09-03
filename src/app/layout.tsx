@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { en } from "@pdm/shared/copy";
@@ -79,20 +78,22 @@ export const metadata: Metadata = {
  * remaining half of task 0.11 is moving `page.tsx` into `(marketing)/`, which
  * needs a file move (`git mv`) — creating the new file while the old one exists
  * is a duplicate-route build error.
+ *
+ * ⚠️ NOTHING IN THIS FUNCTION MAY READ THE REQUEST. No `headers()`, no
+ * `cookies()`, no `draftMode()`, no server-side Clerk helper.
+ *
+ * This layout wraps EVERY route in the app, so one `headers()` call here opts
+ * the whole product out of static prerendering — silently, with no error. That
+ * is exactly what happened: this function read `x-nonce` for the inline theme
+ * script, and the result was that §3.2's "statically prerendered marketing
+ * pages" were not prerendered at all (a build produced `_global-error.html` and
+ * nothing else), while `/solutions/[industry]`, which asserts its own
+ * staticness with `dynamic = "error"`, failed the build outright.
+ *
+ * The theme script is now allowed by SHA-256 in `src/proxy.ts` instead of by
+ * nonce, so no request state is needed here. Keep it that way.
  */
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  /*
-   * ⚠️ THE NONCE COMES FROM THE REQUEST HEADER `src/proxy.ts` SETS, and reading
-   * it makes this layout dynamic — which is why the STATIC marketing pages get
-   * a nonce-free policy (see the long note in `proxy.ts`). On those routes the
-   * proxy sets no `x-nonce`, `headers()` returns null, and no attribute is
-   * rendered. On every dynamic route it is present and the inline theme script
-   * carries it.
-   *
-   * `headers()` is a Promise in Next 16 (AGENTS.md).
-   */
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
@@ -112,7 +113,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           ThemeProvider applies the stored `.dark` class before hydration (its
           inline script) and exposes useTheme() for the §3.3 user-menu toggle.
         */}
-        <ThemeProvider nonce={nonce}>
+        <ThemeProvider>
           <ClerkProvider>{children}</ClerkProvider>
         </ThemeProvider>
       </body>
