@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,10 @@ import {
 } from "@/server/actions/api-settings";
 import type { ApiKeySummary } from "@/server/services/api-keys";
 import type { WebhookEndpointSummary } from "@/server/services/webhook-service";
+import {
+  WEBHOOK_EVENT_TYPES,
+  type WebhookEventType,
+} from "@pdm/shared";
 import { toast } from "sonner";
 
 interface Props {
@@ -49,13 +53,31 @@ export function ApiSettingsView({ apiKeys, webhooks }: Props) {
   const [isCreateWebhookOpen, setIsCreateWebhookOpen] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookDescription, setWebhookDescription] = useState("");
+  const [webhookEvents, setWebhookEvents] = useState<WebhookEventType[]>([
+    "website.scan.completed",
+    "privacy_drift.detected",
+  ]);
   const [createdWebhook, setCreatedWebhook] = useState<{ url: string; secret: string } | null>(null);
+
+  const toggleWebhookEvent = (event: WebhookEventType) => {
+    setWebhookEvents((prev) =>
+      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
+    );
+  };
 
   // Copy helper
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
   };
+
+  /** Deliveries need time-of-day precision a bare date cannot give (UTC, §11.11). */
+  const formatDeliveryTime = (value: string | Date) =>
+    new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }).format(new Date(value));
 
   const handleCreateKey = () => {
     if (!newKeyName.trim()) {
@@ -105,7 +127,7 @@ export function ApiSettingsView({ apiKeys, webhooks }: Props) {
       const res = await createWebhookAction({
         url: webhookUrl.trim(),
         description: webhookDescription.trim() || undefined,
-        events: ["website.scan.completed", "privacy_drift.detected"],
+        events: webhookEvents,
       });
 
       if (res.ok) {
@@ -335,50 +357,90 @@ export function ApiSettingsView({ apiKeys, webhooks }: Props) {
                 </TableHeader>
                 <TableBody>
                   {webhooks.map((wh) => (
-                    <TableRow key={wh.id}>
-                      <TableCell className="font-medium">
-                        <div>
-                          <p className="font-mono text-small">{wh.url}</p>
-                          {wh.description && (
-                            <p className="text-xs text-muted-foreground">{wh.description}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {wh.events.map((ev) => (
-                            <Badge key={ev} variant="secondary" className="font-mono text-xs">
-                              {ev}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={wh.isActive ? "default" : "secondary"}>
-                          {wh.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="font-mono text-xs"
-                          onClick={() => copyToClipboard(wh.secret, "Signing secret")}
-                        >
-                          Copy Secret
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() => handleDeleteWebhook(wh.id, wh.url)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={wh.id}>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          <div>
+                            <p className="font-mono text-small">{wh.url}</p>
+                            {wh.description && (
+                              <p className="text-xs text-muted-foreground">{wh.description}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {wh.events.map((ev) => (
+                              <Badge key={ev} variant="secondary" className="font-mono text-xs">
+                                {ev}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={wh.isActive ? "default" : "secondary"}>
+                            {wh.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="font-mono text-xs"
+                            onClick={() => copyToClipboard(wh.secret, "Signing secret")}
+                          >
+                            Copy Secret
+                          </Button>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => handleDeleteWebhook(wh.id, wh.url)}
+                          >
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {wh.recentDeliveries && wh.recentDeliveries.length > 0 && (
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={5}>
+                            <p className="mb-2 text-xs font-medium text-muted-foreground">
+                              Recent deliveries (latest {wh.recentDeliveries.length})
+                            </p>
+                            <ul className="space-y-1.5">
+                              {wh.recentDeliveries.map((delivery) => (
+                                <li
+                                  key={delivery.id}
+                                  className="flex flex-wrap items-center gap-2 text-xs"
+                                >
+                                  <Badge
+                                    variant={
+                                      delivery.status === "SUCCESS"
+                                        ? "default"
+                                        : delivery.status === "FAILED"
+                                          ? "destructive"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {delivery.status}
+                                  </Badge>
+                                  <span className="font-mono text-foreground">{delivery.event}</span>
+                                  {delivery.statusCode !== null && (
+                                    <span className="text-muted-foreground">
+                                      HTTP {delivery.statusCode}
+                                    </span>
+                                  )}
+                                  <span className="text-muted-foreground">
+                                    {formatDeliveryTime(delivery.createdAt)} UTC
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -413,7 +475,21 @@ export function ApiSettingsView({ apiKeys, webhooks }: Props) {
           </div>
 
           <div className="rounded-md bg-muted/60 p-3">
-            <p className="font-semibold text-foreground">4. Download Audit Report</p>
+            <p className="font-semibold text-foreground">4. List Detected Findings</p>
+            <code className="mt-1 block overflow-x-auto font-mono text-xs text-foreground">
+              curl -H &quot;Authorization: Bearer pdm_live_...&quot; &quot;https://your-domain.com/api/v1/issues?severity=CRITICAL&amp;status=NEW&quot;
+            </code>
+          </div>
+
+          <div className="rounded-md bg-muted/60 p-3">
+            <p className="font-semibold text-foreground">5. List Generated Reports</p>
+            <code className="mt-1 block overflow-x-auto font-mono text-xs text-foreground">
+              curl -H &quot;Authorization: Bearer pdm_live_...&quot; &quot;https://your-domain.com/api/v1/reports?status=READY&amp;type=SUMMARY&quot;
+            </code>
+          </div>
+
+          <div className="rounded-md bg-muted/60 p-3">
+            <p className="font-semibold text-foreground">6. Download Audit Report (signed URL or redirect)</p>
             <code className="mt-1 block overflow-x-auto font-mono text-xs text-foreground">
               curl -H &quot;Authorization: Bearer pdm_live_...&quot; https://your-domain.com/api/v1/reports/REPORT_ID/download?json=true
             </code>
@@ -512,13 +588,37 @@ export function ApiSettingsView({ apiKeys, webhooks }: Props) {
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <label className="text-small font-medium text-foreground">Events</label>
+              <div className="mt-2 space-y-2">
+                {WEBHOOK_EVENT_TYPES.map((event) => (
+                  <label key={event} className="flex items-center gap-2 text-small">
+                    <input
+                      type="checkbox"
+                      checked={webhookEvents.includes(event)}
+                      onChange={() => toggleWebhookEvent(event)}
+                    />
+                    <span className="font-mono text-xs">{event}</span>
+                  </label>
+                ))}
+              </div>
+              {webhookEvents.length === 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Select at least one event to subscribe to.
+                </p>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="secondary" onClick={() => setIsCreateWebhookOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateWebhook} disabled={isPending || !webhookUrl.trim()}>
+            <Button
+              onClick={handleCreateWebhook}
+              disabled={isPending || !webhookUrl.trim() || webhookEvents.length === 0}
+            >
               Save Endpoint
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 # Phase 16 — Public REST API v1 & Outbound Webhooks Mesh (Module 24)
 
 > **Goal:** Expose an agency-grade Public REST API (`/api/v1/*`) secured by scoped API keys and an outbound webhook engine featuring HMAC-SHA256 signatures, exponential backoff retries, dead-letter queuing, and real-time Slack/Discord alerts.  
-> **Status:** 🟡 Ready for Dev  
+> **Status:** 🟢 Complete
 > **Target Packages:** `src/app/api/v1`, `packages/database`, `worker`
 
 ---
@@ -103,15 +103,15 @@ enum DeliveryStatus {
 
 ## 3. Implementation Tasks
 
-| # | Task | File / Path | Description |
+| # | Task | File / Path | Status |
 |---|---|---|---|
-| **16.1** | API Key Generator & Hasher | `src/server/services/api-keys.ts` | Generates `pdm_live_<32_random_bytes>`, hashes via SHA-256, stores prefix + hash. |
-| **16.2** | API Authentication Helper | `src/server/auth/api-auth.ts` | Validates `Bearer pdm_live_...`, checks expiry, retrieves agency context. |
-| **16.3** | REST Route Handlers | `src/app/api/v1/websites/route.ts`<br>`src/app/api/v1/scans/[id]/route.ts` | CRUD operations on websites, on-demand scan triggers, and evidence export. |
-| **16.4** | Webhook HMAC Signer | `packages/shared/src/security/webhook-signer.ts` | Generates header `X-PDM-Signature: t=<timestamp>,v1=<hmac_sha256>`. |
-| **16.5** | Webhook Queue & Worker | `worker/src/jobs/webhook.job.ts` | BullMQ worker executing HTTP POSTs with exponential retry logic (5 attempts). |
-| **16.6** | Real Slack Delivery | `packages/notifications/src/slack.ts` | Replaces dormant flag with real Slack Block Kit payload delivery to incoming webhook URLs. |
-| **16.7** | Agency Settings UI | `src/app/(app)/app/settings/api/page.tsx` | UI page to generate/revoke API keys and manage outbound webhook endpoints. |
+| **16.1** | API Key Generator & Hasher | `src/server/services/api-keys.ts` | ✅ Done |
+| **16.2** | API Authentication Helper | `src/server/auth/api-auth.ts` | ✅ Done |
+| **16.3** | REST Route Handlers | `src/app/api/v1/websites/route.ts`<br>`src/app/api/v1/scans/[id]/route.ts`<br>`src/app/api/v1/issues/route.ts`<br>`src/app/api/v1/reports/route.ts`<br>`src/app/api/v1/reports/[id]/download/route.ts` | ✅ Done |
+| **16.4** | Webhook HMAC Signer | `packages/shared/src/security/webhook-signer.ts` | ✅ Done |
+| **16.5** | Webhook Queue & Worker | `worker/src/jobs/webhook.job.ts` | ✅ Done |
+| **16.6** | Real Slack Delivery | `packages/notifications/src/slack.ts` | ✅ Done |
+| **16.7** | Agency Settings UI | `src/app/(app)/app/settings/api/api-settings-view.tsx` | ✅ Done |
 
 ---
 
@@ -160,10 +160,13 @@ export function verifyWebhookSignature(payload: string, header: string, secret: 
 npx.cmd vitest run src/server/__tests__/api-keys.test.ts
 
 # 2. Test HMAC webhook signing & verification
-npx.cmd vitest run packages/shared/src/__tests__/webhook-signer.test.ts
+npx.cmd vitest run packages/shared/src/__tests__/webhooks.test.ts
 
-# 3. Test API v1 route handlers
+# 3. Test API v1 route handlers (all endpoints)
 npx.cmd vitest run src/app/api/v1/__tests__/websites-api.test.ts
+npx.cmd vitest run src/app/api/v1/__tests__/issues-api.test.ts
+npx.cmd vitest run src/app/api/v1/__tests__/scans-api.test.ts
+npx.cmd vitest run src/app/api/v1/__tests__/reports-api.test.ts
 
 # 4. Master gate
 npm run verify

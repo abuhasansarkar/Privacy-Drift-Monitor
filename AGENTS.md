@@ -21,10 +21,13 @@ client reports.
 
 ## Current state — read this before claiming anything exists
 
-**Phases 0–13 have landed.** `npm run verify` runs lint, typecheck, terminology,
-`test:coverage` and `next build` — see the table below for what each gate
-actually reported on the last full run, and `OVERVIEW.md` for the audit that
-produced it.
+**Phases 0–18 have landed.** `npm run verify` runs lint, typecheck, terminology,
+`test:coverage` and `next build`. Phases 14–18 live in `dev-doc3/phases/`:
+14 policy-to-code auditor, 15 reserved-rules activation, 16 public API v1 &
+outbound webhooks, 17 deep crawl/auth/cookie classifier, 18 MCP server +
+WordPress plugin + GitHub Action + UI findings. See the table below for what
+each gate actually reported on the last full run, and `OVERVIEW.md` for the
+audit that produced it.
 
 ⚠️ **THIS SECTION HAS BEEN WRONG BEFORE, IN THE DIRECTION THAT COSTS MOST.** It
 claimed `verify` passed while `build` was failing and two lint errors were
@@ -38,7 +41,7 @@ run the gate.
 | Built and exercised | Every `packages/*` (including **`billing`**), `worker/` (scan + analysis + notification + email + report + digest + ai + free-scan + schedulers, with a scan pool and a **separate** report browser), the `(marketing)` / `(auth)` / `(app)` / `(portal)` / `(admin)` / `(onboarding)` route groups, the scan pipeline, the F01–F30 fixture matrix, drift, scoring, alerts, the five report types, the client portal, the free public scanner, Stripe billing, the admin surface, and the AI layer |
 | Built, **never run against the real dependency** | The Resend delivery webhook (`RESEND_WEBHOOK_SECRET` unset — the handler fails closed with 401, which is correct), the Clerk webhook, the Stripe webhook, CI |
 | Exercised against the real dependency | Resend: a live `portal-magic-link` went through `processEmailJob` and Resend reported `delivered`. With no verified domain, `EMAIL_FROM` points at `onboarding@resend.dev` and delivery is restricted — production needs a verified domain. **OpenAI**: both tiers produce validated, grounded output — `gpt-4o-mini` (standard) and `gpt-5-nano` (advanced) — via `worker/src/ai.smoke.ts` |
-| Specified but **NOT wired** | **Outbound webhooks** — `dispatchWebhook` is correct and tested and is called from nothing; there is no endpoint model, signing secret or producer. **Slack** — a feature flag defaulting to false with no delivery code; `policy.ts` routes `email` and nothing else. **Public API v1** and the **WordPress plugin** (dev-doc2 Modules 24, 25) do not exist. **Policy extraction** (Module 23) does not exist, which is why `PDM-R034` and `PDM-R049` are dormant. Do not describe any of these as shipped |
+| Specified but **NOT wired** | *Nothing currently on this list.* Everything previously recorded here has since shipped — verify each before relying on it: **Outbound webhooks** are wired (`triggerWorkerWebhooks` fires `website.scan.completed` and `privacy_drift.detected` from the scan pipeline in `worker/src/index.ts`; `webhook.job.ts` delivers with HMAC-SHA256 signatures and exponential-backoff retries; `webhook-service.ts` manages endpoints; `/app/settings/api` renders recent deliveries). **Slack** delivers (`packages/notifications/src/slack.ts` via `sendSlackAlert` in `notification.job.ts`, driven by `SLACK_WEBHOOK_URL`). **Public API v1** is live under `src/app/api/v1` with scoped `pdm_live_` keys (websites, scans, reports download, issues). The **WordPress plugin** is at `plugins/wordpress/privacy-drift-monitor/`, the **MCP server** at `packages/mcp`, the **GitHub Action** at `plugins/github-action/`. **Policy extraction** (Module 23, Phase 14) runs as `runPolicyAudit` in the scan pipeline; `PDM-R034` and `PDM-R049` are active and `DORMANT_RULE_IDS`/`RESERVED_RULE_IDS` in `rules.ts` are both empty. |
 | Does **not** exist | shadcn. `/app/ai` EXISTS but is behind `AI_ASSISTANT_PAGE`, which defaults off |
 
 ### The rule inventory is three lists, not one number
