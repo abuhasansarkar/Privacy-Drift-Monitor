@@ -51,6 +51,7 @@ import { dispatchNotification } from "./jobs/notification.job";
 import { generateReport } from "./jobs/report.job";
 import { closeAiRedis, processAiJob } from "./jobs/ai.job";
 import { enqueueAutoExplain } from "./jobs/auto-explain";
+import { runPolicyAudit } from "./jobs/policy-audit.job";
 import { startScheduler } from "./scheduler";
 import { startDigestScheduler } from "./schedulers/digest-scheduler";
 
@@ -150,6 +151,17 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
    * rows — which is the whole reason the two are separate steps.
    */
   if (result.status !== "FAILED") {
+    try {
+      await runPolicyAudit({
+        agencyId: job.data.agencyId,
+        websiteId: job.data.websiteId,
+        scanId: result.scanId,
+        url: job.data.url,
+      });
+    } catch (err) {
+      log.warn({ err }, "policy audit skipped or failed; continuing scan analysis");
+    }
+
     try {
       await analyseScan(job.data.agencyId, result.scanId);
     } catch (error) {
@@ -337,6 +349,19 @@ async function persist(
         canonicalHost: entry.canonicalHost,
         isCloaked: entry.isCloaked,
       })),
+      consentModeAudit: result.consentModeAudit
+        ? {
+            isConsentModeDetected: result.consentModeAudit.isConsentModeDetected,
+            preConsentAdStorage: result.consentModeAudit.preConsentAdStorage,
+            preConsentAnalytics: result.consentModeAudit.preConsentAnalytics,
+            postRejectAdStorage: result.consentModeAudit.postRejectAdStorage,
+            postRejectAnalytics: result.consentModeAudit.postRejectAnalytics,
+            postRejectUserData: result.consentModeAudit.postRejectUserData,
+            postRejectPersonalize: result.consentModeAudit.postRejectPersonalize,
+            issuesDetected: result.consentModeAudit.issuesDetected,
+            rawEvents: result.consentModeAudit.rawEvents as never,
+          }
+        : undefined,
     },
   );
 }

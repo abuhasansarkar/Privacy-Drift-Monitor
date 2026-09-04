@@ -55,7 +55,13 @@ export const R034: Rule = {
     return context.detections.flatMap((detection) => {
       if (!detection.vendorId) return [];
       const vendor = context.vendorsById.get(detection.vendorId);
-      if (!vendor || !undisclosed.has(vendor.slug.toLowerCase())) return [];
+      if (
+        !vendor ||
+        (!undisclosed.has(vendor.slug.toLowerCase()) &&
+          !undisclosed.has(vendor.name.toLowerCase()))
+      ) {
+        return [];
+      }
       if (seen.has(vendor.slug)) return [];
       seen.add(vendor.slug);
 
@@ -67,12 +73,12 @@ export const R034: Rule = {
           severity: "HIGH" as Severity,
           fingerprint: fingerprint(["PDM-R034", vendor.slug, "policy-diff"]),
           title: `${name} was detected but is not named in the published privacy policy`,
-          subject: name,
+          subject: `${name} (Policy Disclosure)`,
           consentPhase: detection.consentPhase,
           evidenceRefs: {
-            requestUrls: [],
-            cookieNames: [],
-            storageKeys: [],
+            requestUrls: detection.evidenceSummary.hosts,
+            cookieNames: detection.evidenceSummary.cookies,
+            storageKeys: detection.evidenceSummary.storageKeys,
           },
           rationale:
             `${name} was observed loading on the website. The privacy policy at ` +
@@ -179,7 +185,7 @@ export const R049: Rule = {
       {
         ruleId: "PDM-R049",
         category: "POLICY",
-        severity: "LOW" as Severity,
+        severity: "INFO" as Severity,
         fingerprint: fingerprint(["PDM-R049", context.policy.policyUrl]),
         title: `Privacy policy states an effective date ${ageDays} days ago`,
         subject: context.policy.policyUrl,

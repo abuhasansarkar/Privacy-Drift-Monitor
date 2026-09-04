@@ -49,6 +49,7 @@ const ga: VendorPattern = {
 const meta: VendorPattern = {
   ...ga,
   id: "vendor-meta",
+  slug: "meta",
   name: "Meta Pixel",
   category: "MARKETING",
 };
@@ -56,6 +57,7 @@ const meta: VendorPattern = {
 const cookiebot: VendorPattern = {
   ...ga,
   id: "vendor-cookiebot",
+  slug: "cookiebot",
   name: "Cookiebot",
   category: "CONSENT",
   isEssentialCandidate: true,

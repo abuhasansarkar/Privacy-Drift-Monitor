@@ -61,4 +61,26 @@ export {
   type ScanResult,
   type ScreenshotKind,
   type SnapshotPoint,
+  type ConsentModeFact,
+  type RecordedConsentEvent,
 } from "./types";
+
+export {
+  CONSENT_MODE_INIT_SCRIPT,
+  parseConsentModeEvents,
+} from "./instrumentation/consent-mode";
+
+export {
+  extractPolicyLinksFromHtml,
+  selectBestPolicyLink,
+  discoverPolicyFromPage,
+  resolveSafePolicyUrl,
+  COMMON_POLICY_PATHS,
+  type DiscoveredLink,
+} from "./policy/discovery";
+
+export {
+  decodeHtmlEntities,
+  extractCleanText,
+} from "./policy/extractor";
+

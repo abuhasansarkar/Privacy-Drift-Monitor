@@ -6,6 +6,7 @@ import { GENERIC_ADAPTER } from "./consent/generic-adapter";
 import { DEFAULT_BUDGET, type NavigationBudget, type UrlGuard } from "./navigate";
 import { runPhase, type ConsentAction } from "./phase-runner";
 import { checkCnameCloaking, type CnameResolutionResult } from "./net/cname";
+import { parseConsentModeEvents } from "./instrumentation/consent-mode";
 import {
   deriveScanStatus,
   type CmpDetectionResult,
@@ -279,6 +280,15 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
       )
     : [];
 
+  const consentModeAudit = navigationSucceeded
+    ? parseConsentModeEvents(
+        phases.map((p) => ({
+          phase: p.phase,
+          events: p.consentEvents ?? [],
+        })),
+      )
+    : undefined;
+
   const finishedAt = new Date();
 
   return {
@@ -299,5 +309,6 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
     errorMessage,
     errorPhase,
     cnameResolutions,
+    consentModeAudit,
   };
 }

@@ -277,7 +277,7 @@ export async function analyseScan(
   const scan = await repos.scans.withPhases(scanId);
   if (!scan) throw new Error(`scan ${scanId} not found`);
 
-  const [vendors, requests, cookies, storage, cnames] = await Promise.all([
+  const [vendors, requests, cookies, storage, cnames, consentModeAudit, policyAudit] = await Promise.all([
     loadVendors(),
     repos.db.networkRequest.findMany({ where: { scanId } }),
     repos.db.cookieRecord.findMany({ where: { scanId } }),
@@ -285,7 +285,19 @@ export async function analyseScan(
     // Recorded by the scanner at scan time (Module 22). Read, never derived —
     // resolving DNS here would make analysis non-replayable.
     repos.db.cnameResolution.findMany({ where: { scanId } }),
+    repos.db.consentModeAudit.findUnique({ where: { scanId } }),
+    repos.db.policyAudit.findFirst({
+      where: { scanId },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
+
+  const resolvedPolicyAudit =
+    policyAudit ??
+    (await repos.db.policyAudit.findFirst({
+      where: { websiteId: scan.website.id },
+      orderBy: { createdAt: "desc" },
+    }));
 
   const detections = classify({
     vendors,
@@ -351,10 +363,28 @@ export async function analyseScan(
       isCloaked: row.isCloaked,
     })),
     /*
-     * Policy extraction (Module 23) is not built, so this stays undefined and
-     * PDM-R034 / PDM-R049 emit nothing. Deliberate: see `PolicyFacts`.
+     * Policy extraction (Module 23 / Phase 14).
      */
-    policy: undefined,
+    policy: resolvedPolicyAudit
+      ? {
+          policyUrl: resolvedPolicyAudit.policyUrl,
+          effectiveDate: resolvedPolicyAudit.effectiveDate,
+          declaredVendors: resolvedPolicyAudit.declaredVendors,
+          undisclosedVendors: resolvedPolicyAudit.undisclosedVendors,
+        }
+      : undefined,
+    consentMode: consentModeAudit
+      ? {
+          isConsentModeDetected: consentModeAudit.isConsentModeDetected,
+          preConsentAdStorage: consentModeAudit.preConsentAdStorage,
+          preConsentAnalytics: consentModeAudit.preConsentAnalytics,
+          postRejectAdStorage: consentModeAudit.postRejectAdStorage,
+          postRejectAnalytics: consentModeAudit.postRejectAnalytics,
+          postRejectUserData: consentModeAudit.postRejectUserData,
+          postRejectPersonalize: consentModeAudit.postRejectPersonalize,
+          issuesDetected: consentModeAudit.issuesDetected,
+        }
+      : undefined,
   };
 
   const findings = evaluateRules(ruleContext);

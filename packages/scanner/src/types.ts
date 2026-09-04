@@ -10,6 +10,9 @@
  * silently disagree.
  */
 
+import type { ConsentModeFact, RecordedConsentEvent } from "./instrumentation/consent-mode";
+export type { ConsentModeFact, RecordedConsentEvent };
+
 /** The consent journeys. Every recorded artifact carries one. */
 export type ConsentPhase =
   | "NO_CONSENT"
@@ -221,6 +224,7 @@ export interface PhaseResult {
   storage: RecordedStorageEntry[];
   consoleLogs: RecordedConsoleLog[];
   screenshots: RecordedScreenshot[];
+  consentEvents?: RecordedConsentEvent[];
 }
 
 export interface CmpDetectionResult {
@@ -305,6 +309,7 @@ export interface ScanResult {
    * empty array means "not determined", never "not cloaked".
    */
   cnameResolutions: readonly CnameFact[];
+  consentModeAudit?: ConsentModeFact;
 }
 
 /**

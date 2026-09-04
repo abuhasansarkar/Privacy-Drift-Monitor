@@ -16,6 +16,7 @@ import {
   R048,
   R050,
 } from "./rules/advanced";
+import { CONSENT_MODE_RULES, R051, R052 } from "./rules/consent-mode";
 import type { Finding, Rule, RuleContext } from "./rules/types";
 
 /**
@@ -70,6 +71,7 @@ export const ADVANCED_RULES: readonly Rule[] = [
   R048,
   R050,
 ];
+export { CONSENT_MODE_RULES, R051, R052 };
 
 /**
  * Ids that are DELIBERATELY NOT IMPLEMENTED, and the evidence each one would
@@ -103,14 +105,10 @@ export const RESERVED_RULE_IDS: Readonly<Record<string, string>> = {
 /**
  * Rules that are implemented but cannot fire until a fact SOURCE exists.
  *
- * Different from `RESERVED_RULE_IDS`: the predicate is real and correct, and it
- * starts producing findings the moment its input is populated. Listed so that
- * "how many rules can fire against a scan today" stays an answerable question.
+ * Phase 14 activates Module 23 (Policy-to-Code Auditor), un-dormanting PDM-R034
+ * and PDM-R049. There are currently 0 dormant rules.
  */
-export const DORMANT_RULE_IDS: Readonly<Record<string, string>> = {
-  "PDM-R034": "Policy-to-code vendor mismatch — needs policy extraction (Module 23)",
-  "PDM-R049": "Stale privacy policy date — needs policy extraction (Module 23)",
-} as const;
+export const DORMANT_RULE_IDS: Readonly<Record<string, string>> = {} as const;
 
 /** Everything that can be decided from one scan's evidence. */
 export const SCAN_RULES: readonly Rule[] = [
@@ -122,6 +120,7 @@ export const SCAN_RULES: readonly Rule[] = [
   ...POLICY_RULES,
   ...CIPA_WIRETAP_RULES,
   ...ADVANCED_RULES,
+  ...CONSENT_MODE_RULES,
 ];
 
 /** Everything that needs the drift engine to have run first. */

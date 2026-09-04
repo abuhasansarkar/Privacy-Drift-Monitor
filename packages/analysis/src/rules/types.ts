@@ -164,6 +164,20 @@ export interface PolicyFacts {
   undisclosedVendors: readonly string[];
 }
 
+/**
+ * Facts extracted from Google Consent Mode v2 and dataLayer instrumentation (Phase 13).
+ */
+export interface ConsentModeFacts {
+  isConsentModeDetected: boolean;
+  preConsentAdStorage: string | null;
+  preConsentAnalytics: string | null;
+  postRejectAdStorage: string | null;
+  postRejectAnalytics: string | null;
+  postRejectUserData: string | null;
+  postRejectPersonalize: string | null;
+  issuesDetected: readonly string[];
+}
+
 export interface RuleContext {
   phases: readonly PhaseResult[];
   detections: readonly Detection[];
@@ -178,6 +192,8 @@ export interface RuleContext {
   cnames?: readonly CnameFact[];
   /** Absent until policy extraction exists — see `PolicyFacts`. */
   policy?: PolicyFacts;
+  /** Recorded at scan time for Google Consent Mode v2 (Phase 13). */
+  consentMode?: ConsentModeFacts;
 }
 
 export interface Rule {

@@ -23,6 +23,7 @@ const TABS = [
   { segment: "trackers", label: t("websiteTabs.trackers") },
   { segment: "cookies", label: t("websiteTabs.cookies") },
   { segment: "consent", label: t("websiteTabs.consent") },
+  { segment: "policy", label: t("websiteTabs.policy") },
   { segment: "changes", label: t("websiteTabs.changes") },
   { segment: "scans", label: t("websiteTabs.scans") },
   { segment: "evidence", label: t("evidence.title") },

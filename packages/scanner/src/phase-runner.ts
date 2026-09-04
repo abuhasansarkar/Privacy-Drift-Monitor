@@ -24,6 +24,10 @@ import type {
   RecordedCookie,
   RecordedScreenshot,
 } from "./types";
+import {
+  CONSENT_MODE_INIT_SCRIPT,
+  type RecordedConsentEvent,
+} from "./instrumentation/consent-mode";
 
 /**
  * PHASE RUNNER — PLAN.md Part IV §4.3, Phase 2 task 2.9 (single-phase half).
@@ -120,6 +124,7 @@ export async function runPhase(
 
     const cookies: RecordedCookie[] = [];
     const screenshots: RecordedScreenshot[] = [];
+    let consentEvents: RecordedConsentEvent[] = [];
     const shot = {
       policy: input.screenshotPolicy ?? "ON_CHANGE",
       changed: input.screenshotChanged,
@@ -144,6 +149,8 @@ export async function runPhase(
           blockedUrl = `${reason}:${url}`;
         },
       });
+
+      await page.addInitScript(CONSENT_MODE_INIT_SCRIPT);
 
       const outcome = await navigate(page, input.url, budget, {
         guard: input.urlGuard ?? assertSafeUrl,
@@ -176,6 +183,11 @@ export async function runPhase(
           // the scan becomes PARTIAL. This is the branch P5 exists for.
           errorCode = action.errorCode;
           errorMessage = action.errorMessage;
+          consentEvents = await page
+            .evaluate<RecordedConsentEvent[]>(
+              `(() => Array.isArray(window.__pdm_consent_events) ? window.__pdm_consent_events : [])()`,
+            )
+            .catch(() => []);
           cookies.push(
             ...(await snapshotCookies(context, recorderCtx, "phase_end")),
           );
@@ -191,6 +203,11 @@ export async function runPhase(
         if (after) screenshots.push(after);
       }
 
+      consentEvents = await page
+        .evaluate<RecordedConsentEvent[]>(
+          `(() => Array.isArray(window.__pdm_consent_events) ? window.__pdm_consent_events : [])()`,
+        )
+        .catch(() => []);
       cookies.push(...(await snapshotCookies(context, recorderCtx, "phase_end")));
       return finish("EXECUTED", action, await snapshotStorage(page, recorderCtx), null);
     } catch (error) {
@@ -243,6 +260,7 @@ export async function runPhase(
         storage: storage ?? [],
         consoleLogs: consoleRecorder.drain(),
         screenshots,
+        consentEvents,
       };
     }
   }, contextOptions);

@@ -1241,12 +1241,33 @@ export const en = {
     trackers: "Trackers",
     cookies: "Cookies",
     consent: "Consent",
+    policy: "Privacy Policy",
     changes: "Changes",
     scans: "Scans",
     fromScan: "Showing the scan from",
     /** A PARTIAL scan's tabs are incomplete — the reader has to be told. */
     fromPartialScan:
       "Showing an incomplete scan from",
+  },
+
+  policyTab: {
+    title: "Privacy Policy Alignment",
+    subtitle: "Reconciles written privacy policy disclosures against observed browser tracking evidence.",
+    policyUrl: "Published Policy",
+    effectiveDate: "Stated Effective Date",
+    freshDate: "Updated recently",
+    staleDate: "Older than 12 months",
+    alignmentScore: "Disclosure Alignment",
+    undisclosedTitle: "Undisclosed Trackers",
+    undisclosedDesc: "Observed in technical scanner evidence but absent from the published privacy policy.",
+    declaredTitle: "Declared Third-Party Vendors",
+    declaredDesc: "Vendors and tracking networks explicitly named in the written document.",
+    detectedTitle: "Observed Trackers",
+    detectedDesc: "Vendors detected executing network requests or setting storage entries during scans.",
+    staleVendorsTitle: "Unobserved Disclosures",
+    staleVendorsDesc: "Vendors named in the policy that were not observed loading in recent scans.",
+    emptyTitle: "No policy audit recorded yet",
+    emptyDescription: "Run a full scan to discover and audit the target website's privacy policy disclosures.",
   },
 
   trackers: {

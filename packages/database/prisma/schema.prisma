@@ -92,6 +92,7 @@ model Agency {
   driftSuppressions    DriftSuppression[]
   featureFlagOverrides FeatureFlagOverride[]
   portalUsers          PortalUser[]
+  consentModeAudits    ConsentModeAudit[]
 
   @@index([clerkOrgId])
   @@index([slug])
@@ -464,6 +465,7 @@ model Scan {
   sessionReplayAudits SessionReplayAudit[]
   policyAudits        PolicyAudit[]
   cnameResolutions    CnameResolution[]
+  consentModeAudit    ConsentModeAudit?
 
   @@index([agencyId, createdAt(sort: Desc)])
   @@index([websiteId, createdAt(sort: Desc)])
@@ -1781,5 +1783,27 @@ model GpcAuditRecord {
   @@index([agencyId])
   @@index([scanId])
   @@map("gpc_audit_records")
+}
+
+model ConsentModeAudit {
+  id                    String   @id @default(uuid())
+  agencyId              String
+  scanId                String   @unique
+  isConsentModeDetected Boolean  @default(false)
+  preConsentAdStorage   String?  // 'denied' | 'granted'
+  preConsentAnalytics   String?  // 'denied' | 'granted'
+  postRejectAdStorage   String?
+  postRejectAnalytics   String?
+  postRejectUserData    String?
+  postRejectPersonalize String?
+  issuesDetected        String[] // ["PDM-R051", "PDM-R052"]
+  rawEvents             Json?    // Array of recorded consent calls
+  createdAt             DateTime @default(now())
+
+  agency                Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  scan                  Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@map("consent_mode_audits")
 }
 

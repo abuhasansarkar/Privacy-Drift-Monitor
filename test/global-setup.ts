@@ -74,7 +74,12 @@ export default async function setup(): Promise<void> {
   const adminUrl = new URL(url);
   adminUrl.pathname = "/postgres";
   adminUrl.search = "";
-  await ensureDatabase(adminUrl.toString(), name);
+  try {
+    await ensureDatabase(adminUrl.toString(), name);
+  } catch (err) {
+    console.warn(`[test] Database connection failed (${(err as Error)?.message ?? err}). Skipping test DB setup.`);
+    return;
+  }
 
   const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 

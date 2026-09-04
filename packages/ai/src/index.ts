@@ -82,6 +82,15 @@ export {
 export type { PromptFeature, PromptTemplate } from "./prompts/index";
 export { PROMPTS, SYSTEM_PREAMBLE_V1, renderPrompt } from "./prompts/index";
 
+export type { PolicyExtractOutput } from "./prompts/policy-extract";
+export {
+  POLICY_EXTRACT_V1,
+  PolicyExtractOutputSchema,
+  filterGroundedVendors,
+  extractPolicyVendorsHeuristic,
+  extractEffectiveDate,
+} from "./prompts/policy-extract";
+
 export type {
   ValidationFailure,
   ValidationResult,

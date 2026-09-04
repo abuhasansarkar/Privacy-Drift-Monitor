@@ -39,6 +39,10 @@ export interface ScanEvidence {
    * nothing rather than an empty-means-clean result.
    */
   cnameResolutions?: Array<Row<Prisma.CnameResolutionCreateManyInput>>;
+  /**
+   * Google Consent Mode v2 audit record (Phase 13).
+   */
+  consentModeAudit?: Row<Prisma.ConsentModeAuditCreateManyInput>;
 }
 
 export interface ScanCompletion {
@@ -214,6 +218,15 @@ export function scanRepository(db: TenantClient, agencyId: string) {
               })),
             });
           }
+          if (evidence.consentModeAudit) {
+            await tx.consentModeAudit.create({
+              data: {
+                ...evidence.consentModeAudit,
+                scanId,
+                agencyId,
+              },
+            });
+          }
 
           // The website's summary fields follow the scan, in the same
           // transaction, so the list page can never show a last-scan time for a
@@ -283,6 +296,7 @@ export function scanRepository(db: TenantClient, agencyId: string) {
         where: { id: scanId },
         include: {
           phases: { orderBy: { phase: "asc" } },
+          consentModeAudit: true,
           // `consecutiveFailures` is here for PDM-R023, which must read the
           // count rather than derive it — a rule that queried history would be
           // a rule that can produce a fact (P6).

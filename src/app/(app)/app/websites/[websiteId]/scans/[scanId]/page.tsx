@@ -13,6 +13,7 @@ import {
   ScanPhaseGrid,
   ScanStatusBadge,
 } from "@/components/scans/scan-phases";
+import { ConsentModeCard } from "@/components/scans/consent-mode-card";
 import { formatDateTime, formatDuration, formatNumber } from "@/lib/format";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getScanDetail, getScanRequests } from "@/server/queries/scans";
@@ -147,6 +148,10 @@ export default async function ScanDetailPage({
             ) : null}
           </p>
         </Card>
+      ) : null}
+
+      {scan.consentModeAudit ? (
+        <ConsentModeCard audit={scan.consentModeAudit} />
       ) : null}
 
       {scan.status === "QUEUED" || scan.status === "RUNNING" ? null : (
