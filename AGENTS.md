@@ -22,19 +22,25 @@ client reports.
 ## Current state — read this before claiming anything exists
 
 **Phases 0–18 have landed.** `npm run verify` runs lint, typecheck, terminology,
-`test:coverage` and `next build`. Phases 14–18 live in `dev-doc3/phases/`:
-14 policy-to-code auditor, 15 reserved-rules activation, 16 public API v1 &
-outbound webhooks, 17 deep crawl/auth/cookie classifier, 18 MCP server +
-WordPress plugin + GitHub Action + UI findings. See the table below for what
-each gate actually reported on the last full run, and `OVERVIEW.md` for the
-audit that produced it.
+**env drift** and `next build`.
+
+⚠️ **IT DOES NOT RUN TESTS, BECAUSE THERE ARE NONE.** Commit `2a192cf` deleted 105 test
+files (18,380 lines) and `vitest.config.ts`; vitest is not installed. What survives is three
+Playwright specs in `e2e/`. The four contracts listed below therefore have **nothing
+enforcing them** — restoring that is `dev-doc/tasks/T01` and `T02`, and it blocks everything
+else. See `NEW-PLAN.md` for the measured state and `OVERVIEW.md` for the 2026-09-03 audit.
 
 ⚠️ **THIS SECTION HAS BEEN WRONG BEFORE, IN THE DIRECTION THAT COSTS MOST.** It
 claimed `verify` passed while `build` was failing and two lint errors were
 committed; it claimed 25 rules when 50 were registered, six of which could never
 fire; it listed `packages/billing` and `/admin` as non-existent long after both
-shipped. Everything below is dated. If you are about to rely on a line here,
+shipped; and it claimed `verify` ran a coverage gate for a suite that had been
+deleted. Everything below is dated. If you are about to rely on a line here,
 run the gate.
+
+**Measured 2026-09-04:** 58 Prisma models · 52 registered rules (`PDM-R001`–`R052`,
+`PDM-X01`–`X02`) · 8 BullMQ queues, all with workers · 89 pages · 33 API route handlers ·
+~82,400 lines · **0 unit tests**.
 
 | | |
 |---|---|
@@ -129,8 +135,8 @@ All fixed, all worth knowing before you write similar code:
    most-used pair in the product — every caption and neutral chip. All are now
    darkened with the measured ratio recorded beside them in `globals.css`; dark
    mode already passed and is unchanged. **A design system reviewed by eye is
-   not a design system that passes**, and none of the 930 unit tests could have
-   caught this.
+   not a design system that passes**, and none of the unit tests could have
+   caught this (that suite has since been deleted — see `dev-doc/tasks/T01`).
 10. **`server-only` throws in vitest**, because outside a bundler it resolves to
    the client entry whose job is to throw. `test/server-only-stub.ts` is aliased
    in `vitest.config.ts` so `src/server/**` can be tested directly.
@@ -173,7 +179,7 @@ All fixed, all worth knowing before you write similar code:
    happens **at scan time** (a CNAME changes without notice, so resolving during
    analysis would break replayability) and is stored in `CnameResolution`.
 
-`pnpm-workspace.yaml` is an inert tombstone awaiting deletion; the workspace is npm.
+The workspace is npm. `pnpm-workspace.yaml` has been deleted.
 
 ## Repository layout — read this before writing a path
 
@@ -191,45 +197,28 @@ drift-monitor/
 **module map and public interfaces remain binding** — only strip the `apps/web/` prefix.
 So: `src/proxy.ts`, not `apps/web/src/proxy.ts`.
 
-## PLAN.md is the source of truth
+## Where the plan lives
 
-~402 KB, ~7,800 lines. It exceeds the 256 KB single-read limit, so **read it in ranges,
-never whole**.
+**`PLAN.md` does not exist.** It was deleted in `6f6059c` together with `PLAN-V2.md`,
+`PLAN-V3.md`, `UI_Func.md`, `UI_DESIGN_PROMPTS.md` and the `dev-doc*/` trees. It is not
+coming back. Read these instead:
 
-Build a live index first, then read only the part you need:
-
-```bash
-grep -n "^#\{1,3\} " PLAN.md          # full heading index with line numbers
-grep -n "^# Part" PLAN.md             # part boundaries only
-```
-
-| Part | Covers |
+| File | What it is |
 |---|---|
-| Part 0 | How to read the doc, non-negotiable principles, **verified Next.js 16.3.3 baseline**, deployment posture |
-| Part I | Vision, ICP, the five personas, JTBD, differentiators, non-goals, **approved terminology** |
-| Part II | MVP boundary, feature inventory with priorities, roadmap, moat |
-| Part III | Information architecture, **every page spec**, admin, client portal, page inventory |
-| Part IV | The scanner: Playwright engine, consent adapters, tracker/cookie/network engines, drift, risk, score, evidence, rules |
-| Part V | Prisma schema, indexes, tenancy, retention |
-| Part VI | Auth, RBAC, API architecture and inventory, validation, issues, alerts, reports, white-label, portal |
-| Part VII | Redis, BullMQ, scan pipeline, scheduler, retries, scaling |
-| Part VIII | `AIProvider`, prompts, output contracts, safety, cost control |
-| Part IX | Stripe, entitlements, pricing, unit economics, email, analytics |
-| Part X | Security, SSRF, abuse, errors, observability, Docker, CI/CD, env, backups, DR, performance budgets |
-| Part XI | Design tokens, component inventory, responsive, a11y, states, onboarding |
-| Part XII | File map, phases 0–7, acceptance criteria, risk register, checklists |
+| `NEW-PLAN.md` | Measured current state, gap register `G-01`…`G-12`, roadmap phases 19–23 |
+| `dev-doc/README.md` | Task index — one small file per task under `dev-doc/tasks/` |
+| `OVERVIEW.md` | The 2026-09-03 audit. Historical record, **not** a forward plan |
 
-**Rule:** before implementing a feature, read the part that specifies it. Do not invent a
-design the plan already fixes. If this file and `PLAN.md` disagree, `PLAN.md` wins. If the
-code and `PLAN.md` disagree, say so explicitly rather than silently diverging.
+⚠️ **THE `PLAN.md §x.y` CITATIONS IN THE SOURCE CANNOT BE RESOLVED.** There are ~1,730 of
+them. The deleted `PLAN.md` contained 41 sections; 1,315 citations named a section number it
+never had, and where numbers collided the topics did not — code cites `§7.1` for BullMQ
+queues while `§7.1` was "Consent State Machine", and `§3.2` for the free-scanner blocklist
+while `§3.2` was the rule catalogue. The document in the repo was never the document the
+code was written against.
 
-`dev-doc/` reorganizes the plan into build order: `dev-doc/phases/` is the step-by-step
-sequence (Phase 0 → 7) and `dev-doc/features/` holds one working sheet per feature with build
-steps, acceptance criteria and failure modes. Start there to find *what to do next*; go to
-`PLAN.md` for the full specification of *how*. Tick the checkboxes as work lands.
-
-`UI_DESIGN_PROMPTS.md` is the companion image-generation prompt pack for the visual design;
-it encodes the same tokens as Part XI and must stay in sync with them.
+**Treat every `§` citation as a hint about intent, never as an authority. Do not add new
+ones.** When you need to point at a decision, point at the file and symbol that implements
+it — those can be checked.
 
 ## Non-negotiable product rules
 
@@ -304,7 +293,7 @@ often in this codebase:
 - Removed entirely: AMP, `serverRuntimeConfig`/`publicRuntimeConfig`, `experimental.dynamicIO`,
   `experimental.useCache`, `experimental.ppr`. Do not reference these.
 
-The full verified table is `PLAN.md` Part 0 §0.4 and is binding.
+The authority is `node_modules/next/dist/docs/` — read it before writing framework code.
 
 ## Clerk v7 (Core 3) — what differs from training data
 
@@ -376,7 +365,7 @@ Two known defects inherited from `create-next-app`, both specified in Part XI §
 ## Commands
 
 Package manager is **npm**, using **npm workspaces** (`package-lock.json`, lockfileVersion 3).
-Never use pnpm or yarn here — `pnpm-workspace.yaml` is an inert tombstone pending deletion.
+Never use pnpm or yarn here.
 
 ```bash
 npm install
@@ -398,10 +387,14 @@ uses `npm ci`, which fails if the lockfile has drifted.
 
 ## Definition of done
 
-A change is done when: it matches the relevant `PLAN.md` part; inputs are Zod-validated;
-tenant resources are `agencyId`-scoped; loading, empty, error and partial states exist;
-no banned terminology appears in any user-visible string; `npm run lint` and `npm run build`
-both pass; and any new user-facing claim traces to recorded evidence.
+A change is done when: it satisfies the acceptance criterion in its `dev-doc/tasks/` file
+**and that criterion was run**; inputs are Zod-validated; tenant resources are
+`agencyId`-scoped; loading, empty, error and partial states exist; no banned terminology
+appears in any user-visible string; `npm run verify` passes; and any new user-facing claim
+traces to recorded evidence.
+
+⚠️ `BUILT` (code exists, gates pass) is not `DONE` (acceptance was run, evidence written).
+Conflating the two is the specific failure this repo has repeated.
 
 ## Do not
 

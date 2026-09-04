@@ -325,7 +325,7 @@ async function loadScans(
   setScans: (scans: ScanOption[]) => void,
 ): Promise<void> {
   try {
-    const response = await fetch(`/api/websites/${websiteId}/scans`);
+    const response = await fetch(`/api/v1/websites/${websiteId}/scans`);
     if (!response.ok) return;
     const body = (await response.json()) as { scans: ScanOption[] };
     setScans(body.scans);

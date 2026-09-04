@@ -3,6 +3,7 @@ import type { UrlValidationResult } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { requirePermission } from "@/server/auth/context";
 import { validateWebsiteUrl } from "@/server/services/website-validation";
+import { withApiErrors } from "../../_lib/with-errors";
 
 /**
  * URL VALIDATION — §6.4, Phase 1 task 1.7, feature 04.
@@ -19,7 +20,7 @@ import { validateWebsiteUrl } from "@/server/services/website-validation";
 
 const bodySchema = z.object({ url: z.string().trim().min(1).max(2048) });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   // Authorization is re-checked here and not inherited from the proxy — this is
   // a route handler, but the same rule that governs Server Actions applies:
   // the gate lives with the thing being protected (§6.1).
@@ -42,3 +43,5 @@ export async function POST(request: Request) {
   const outcome = await validateWebsiteUrl(ctx, parsed.data.url);
   return Response.json(outcome.result);
 }
+
+export const POST = withApiErrors(handlePOST);

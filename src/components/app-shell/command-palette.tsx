@@ -6,7 +6,7 @@ import { t } from "@pdm/shared/copy";
 import { cn } from "@/lib/cn";
 import { Loader2 } from "lucide-react";
 import { GlobeIcon, SearchIcon, UsersIcon, AlertCircleIcon } from "@/components/ui/icons";
-import type { SearchResult } from "@/app/api/search/route";
+import type { SearchResult } from "@/app/api/v1/search/route";
 
 /**
  * COMMAND PALETTE — §3.3, UI_DESIGN_PROMPTS §2, Phase 1 task 1.3.
@@ -68,7 +68,7 @@ export function CommandPalette({
     const id = ++sequence.current;
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
+        const response = await fetch(`/api/v1/search?q=${encodeURIComponent(term)}`);
         if (!response.ok) return;
         const body = (await response.json()) as { results: SearchResult[] };
         // Stale answer — a newer query has already been sent.

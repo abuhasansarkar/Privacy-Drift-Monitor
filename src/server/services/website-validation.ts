@@ -15,7 +15,7 @@ import { canAddWebsite } from "@/server/entitlements";
  * URL VALIDATION SERVICE — §6.4, §10.3, feature 04.
  *
  * The single implementation of the pre-flight, shared by the wizard's
- * `POST /api/websites/validate` and by `createWebsite()`.
+ * `POST /api/v1/websites/validate` and by `createWebsite()`.
  *
  * ⚠️ IT IS SHARED ON PURPOSE, AND THE ACTION MUST RE-RUN IT. The wizard sends
  * a URL it has already had validated, and the obvious shortcut — trust the

@@ -1,6 +1,7 @@
 import { repositoriesFor } from "@pdm/database/repositories";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getEvidence, parseEvidenceFilters } from "@/server/queries/evidence";
+import { withApiErrors } from "../../../../_lib/with-errors";
 
 /**
  * EVIDENCE EXPORT — §3.8 ("Export as JSON/CSV, permission-gated, audit-logged").
@@ -28,11 +29,11 @@ function csvCell(value: unknown): string {
   return `"${guarded.replace(/"/g, '""')}"`;
 }
 
-export async function GET(
+async function handleGET(
   request: Request,
-  context: RouteContext<"/api/websites/[websiteId]/evidence/export">,
+  context: RouteContext<"/api/v1/websites/[id]/evidence/export">,
 ) {
-  const { websiteId } = await context.params;
+  const { id: websiteId } = await context.params;
   const ctx = await requireWebsiteAccess(websiteId, "evidence:export");
 
   const url = new URL(request.url);
@@ -143,3 +144,5 @@ async function collect(
       ).items;
   }
 }
+
+export const GET = withApiErrors(handleGET);

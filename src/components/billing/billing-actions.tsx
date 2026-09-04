@@ -54,7 +54,7 @@ export function PortalButton({
         onClick={() =>
           start(async () => {
             setError(null);
-            const url = await openStripe("/api/billing/portal", null);
+            const url = await openStripe("/api/v1/billing/portal", null);
             if (url) window.location.assign(url);
             else setError(t("billing.portalFailed"));
           })
@@ -95,7 +95,7 @@ export function CheckoutButton({
         onClick={() =>
           start(async () => {
             setError(null);
-            const url = await openStripe("/api/billing/checkout", {
+            const url = await openStripe("/api/v1/billing/checkout", {
               planKey,
               interval,
               currency,

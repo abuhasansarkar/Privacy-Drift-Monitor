@@ -22,7 +22,7 @@ import { getReportList } from "@/server/queries/reports";
  * alone leaves the agency assuming they paid for nothing.
  *
  * ⚠️ NO DOWNLOAD LINK IS RENDERED HERE. Download goes through
- * `/api/reports/[reportId]/download`, which re-asserts the tenant and mints a
+ * `/api/v1/reports/[id]/download`, which re-asserts the tenant and mints a
  * short-lived signed URL per click (§10.7). Embedding twenty signed URLs in a
  * list would hand the browser twenty live credentials.
  */

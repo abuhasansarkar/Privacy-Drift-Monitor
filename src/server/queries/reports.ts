@@ -9,7 +9,7 @@ import type { AgencyContext } from "@/server/auth/context";
  * ⚠️ NO SIGNED URL IS ISSUED HERE. §10.7: a signed URL is generated per request
  * and never stored or embedded in a list payload — a list of twenty reports
  * would otherwise hand the browser twenty live download links, each valid long
- * after the page was closed. `/api/reports/[reportId]/download` mints one, per
+ * after the page was closed. `/api/v1/reports/[id]/download` mints one, per
  * click, after re-asserting the tenant.
  */
 

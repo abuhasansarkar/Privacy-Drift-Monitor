@@ -79,6 +79,14 @@ const SEVERITY_LABEL: Record<Severity, string> = {
  * The ceiling is not a penalty — no finding justifies it — so it is a separate
  * component with its own reason, and it is what stops an accept-only banner
  * (fixture F10) from scoring 100 because the Reject-All rules found nothing.
+ *
+ * ⚠️ ZERO PHASES IS THE WORST CASE, NOT THE BEST ONE. `phases.filter(...)`
+ * returns an empty array both when every journey succeeded and when no journey
+ * ran at all, so a naive `incomplete.length > 0` test reports FULL confidence
+ * for a scan that recorded nothing — a clean 100 for a site nobody looked at.
+ * That is precisely the silent failure P4 exists to forbid, and it is invisible
+ * in review because the expression reads correctly. The empty case is handled
+ * separately below and is always PARTIAL.
  */
 const PARTIAL_CEILING = 75;
 
@@ -127,8 +135,10 @@ export function computeScore(input: ScoreInput): ScoreResult {
     });
   }
 
+  const noPhases = input.phases.length === 0;
   const incomplete = input.phases.filter((phase) => phase.status !== "EXECUTED");
-  const confidence: ScoreConfidence = incomplete.length > 0 ? "PARTIAL" : "FULL";
+  const confidence: ScoreConfidence =
+    noPhases || incomplete.length > 0 ? "PARTIAL" : "FULL";
 
   let score = 100 - breakdown.reduce((total, item) => total + item.penalty, 0);
 
@@ -137,11 +147,13 @@ export function computeScore(input: ScoreInput): ScoreResult {
     // the header note. The reason names the journeys, not a number.
     const ceiling = score - PARTIAL_CEILING;
     breakdown.push({
-      component: "incomplete-scan",
+      component: noPhases ? "no-phases" : "incomplete-scan",
       penalty: ceiling,
-      reason: `${incomplete
-        .map((phase) => phase.phase)
-        .join(", ")} could not be completed, so this score is capped.`,
+      reason: noPhases
+        ? "No consent journey was recorded for this scan, so this score is capped."
+        : `${incomplete
+            .map((phase) => phase.phase)
+            .join(", ")} could not be completed, so this score is capped.`,
       findingRefs: [],
     });
     score = PARTIAL_CEILING;

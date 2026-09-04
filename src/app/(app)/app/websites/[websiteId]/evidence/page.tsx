@@ -81,14 +81,14 @@ export default async function EvidencePage({
           can(ctx.role, "evidence:export") ? (
             <div className="flex flex-wrap gap-2">
               <a
-                href={`/api/websites/${websiteId}/evidence/export?${exportParams}&format=csv`}
+                href={`/api/v1/websites/${websiteId}/evidence/export?${exportParams}&format=csv`}
                 download
                 className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-small font-medium hover:bg-muted max-sm:h-11"
               >
                 {t("evidence.exportCsv")}
               </a>
               <a
-                href={`/api/websites/${websiteId}/evidence/export?${exportParams}&format=json`}
+                href={`/api/v1/websites/${websiteId}/evidence/export?${exportParams}&format=json`}
                 download
                 className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-small font-medium hover:bg-muted max-sm:h-11"
               >

@@ -9,7 +9,7 @@ import { ClockIcon } from "@/components/ui/icons";
 /**
  * THE POST-CHECKOUT WAITING STATE — §9.1, Phase 6 task 6.3.
  *
- * ⚠️ IT GRANTS NOTHING AND ASSERTS NOTHING. It polls `/api/billing/confirmation`
+ * ⚠️ IT GRANTS NOTHING AND ASSERTS NOTHING. It polls `/api/v1/billing/confirmation`
  * until OUR projection — written only by the signature-verified webhook — says
  * the subscription is live, then refreshes the page so the plan card re-renders
  * from the server. `?checkout=success` in the address bar is not evidence, and
@@ -41,7 +41,7 @@ export function CheckoutConfirming() {
         return;
       }
 
-      const response = await fetch("/api/billing/confirmation").catch(() => null);
+      const response = await fetch("/api/v1/billing/confirmation").catch(() => null);
       if (!response?.ok) return;
       const data: unknown = await response.json().catch(() => null);
       if ((data as { confirmed?: unknown } | null)?.confirmed === true) {

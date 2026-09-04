@@ -241,6 +241,223 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
+/* ── Evidence ─────────────────────────────────────────────────────────────── */
+
+/**
+ * The four journeys every demo scan records.
+ *
+ * GPC and INTERACTIVE_ACTION are deliberately absent: they are opt-in phases in
+ * the real scanner, and a demo that always runs them would make the UI's
+ * "this journey was not run" state unreachable.
+ */
+const DEMO_PHASES = ["NO_CONSENT", "REJECT_ALL", "ACCEPT_ALL", "WITHDRAW"] as const;
+
+/** First-party requests every page makes. Not trackers — the contrast matters. */
+const FIRST_PARTY_PATHS = [
+  { path: "/", type: "document" },
+  { path: "/assets/app.css", type: "stylesheet" },
+  { path: "/assets/app.js", type: "script" },
+  { path: "/assets/logo.svg", type: "image" },
+  { path: "/api/session", type: "xhr" },
+] as const;
+
+/** Fixed per asset, so the same file is the same size in every journey. */
+const ASSET_SIZE_BYTES: Record<string, number> = {
+  "/": 34_120,
+  "/assets/app.css": 18_640,
+  "/assets/app.js": 96_300,
+  "/assets/logo.svg": 4_210,
+  "/api/session": 780,
+};
+
+/**
+ * Writes the evidence a scan is supposed to leave behind, and returns the
+ * counters DERIVED from it.
+ *
+ * ⚠️ THE COUNTERS ON `Scan` ARE NOT INDEPENDENT NUMBERS. An earlier version of
+ * this seed set `requestCount: 40 + random()*60` and wrote no `NetworkRequest`
+ * rows at all, so every scan detail page advertised "73 requests" above an
+ * empty evidence table, every Cookies tab was blank, and — because no
+ * `ScanPhase` rows existed either — the Consent tab could not say which
+ * journeys had run. A scan carrying a score and an empty request list is
+ * indistinguishable from a broken one, which is exactly what the schema comment
+ * on `evidencePrunedAt` warns about. The counters are now counted, never
+ * invented, so the two can no longer disagree.
+ *
+ * ⚠️ REQUESTS ARE TAGGED WITH THE CONSENT PHASE THEY HAPPENED UNDER. That tag
+ * is the product's entire thesis — a request is not interesting, a request
+ * *before consent* is. Writing them all under one phase would make the demo
+ * look populated while teaching the UI nothing.
+ */
+async function writeScanEvidence(params: {
+  scanId: string;
+  agencyId: string;
+  host: string;
+  startedAt: Date;
+  /** Vendors this site fires, already narrowed by the caller. */
+  vendors: ReadonlyArray<{ id: string; name: string; domainPatterns: string[] }>;
+  /** The one journey that did not complete, if this scan is PARTIAL. */
+  failedPhase: (typeof DEMO_PHASES)[number] | null;
+  random: () => number;
+}): Promise<{ requestCount: number; cookieCount: number; thirdPartyDomainCount: number }> {
+  const { scanId, agencyId, host, startedAt, vendors, failedPhase, random } = params;
+  const pageUrl = `https://${host}/`;
+
+  const phaseRows: Prisma.ScanPhaseCreateManyInput[] = [];
+  const requestRows: Prisma.NetworkRequestCreateManyInput[] = [];
+  const cookieRows: Prisma.CookieRecordCreateManyInput[] = [];
+  const storageRows: Prisma.StorageEntryCreateManyInput[] = [];
+  const thirdPartyDomains = new Set<string>();
+
+  for (const [phaseIndex, phase] of DEMO_PHASES.entries()) {
+    const failed = phase === failedPhase;
+    const phaseStart = new Date(startedAt.getTime() + phaseIndex * 30_000);
+
+    phaseRows.push({
+      scanId,
+      agencyId,
+      phase,
+      status: failed ? "FAILED" : "EXECUTED",
+      startedAt: phaseStart,
+      finishedAt: failed ? null : new Date(phaseStart.getTime() + 24_000),
+      durationMs: failed ? null : 24_000,
+      actionMethod: phase === "NO_CONSENT" ? null : "selector",
+      actionConfidence: phase === "NO_CONSENT" ? null : 0.94,
+      bannerDismissed: phase === "NO_CONSENT" ? false : !failed,
+      errorCode: failed ? "CMP_ACTION_FAILED" : null,
+      errorMessage: failed ? "Reject control did not respond within the budget." : null,
+    });
+
+    // A failed phase records nothing. That is the point of a failed phase.
+    if (failed) continue;
+
+    for (const [i, fp] of FIRST_PARTY_PATHS.entries()) {
+      requestRows.push({
+        scanId,
+        agencyId,
+        pageUrl,
+        consentPhase: phase,
+        url: `${pageUrl.slice(0, -1)}${fp.path}`,
+        method: "GET",
+        resourceType: fp.type,
+        host,
+        registrableDomain: host,
+        isThirdParty: false,
+        status: 200,
+        initiatorType: i === 0 ? "navigation" : "parser",
+        timestampMs: 120 + i * 90,
+        /*
+         * ⚠️ SIZE IS A PROPERTY OF THE ASSET, NOT OF THE ROW. Drawing it from
+         * `random()` per row made the same `/assets/app.css` appear as 31 kB,
+         * 14 kB, 2.9 kB and 21 kB across the four journeys of one scan — side
+         * by side in the evidence table, where comparing a request across
+         * consent states is the entire point of the screen. A reader who
+         * notices that stops trusting the table, and they are right to.
+         */
+        transferSize: ASSET_SIZE_BYTES[fp.path],
+      });
+    }
+
+    /*
+     * ⚠️ ACCEPT_ALL FIRES EVERY VENDOR; THE OTHER JOURNEYS DO NOT.
+     * NO_CONSENT firing a subset is the finding the product exists to make.
+     * REJECT_ALL and WITHDRAW firing nothing is correct behaviour, and the UI
+     * needs a scan where the right thing happened to be worth trusting on the
+     * scans where it did not.
+     */
+    const firing =
+      phase === "ACCEPT_ALL"
+        ? vendors
+        : phase === "NO_CONSENT"
+          ? vendors.slice(0, 1)
+          : [];
+
+    for (const [i, vendor] of firing.entries()) {
+      const vendorHost = vendor.domainPatterns[0] ?? "tracker.example";
+      thirdPartyDomains.add(vendorHost);
+      requestRows.push({
+        scanId,
+        agencyId,
+        pageUrl,
+        consentPhase: phase,
+        url: `https://${vendorHost}/collect?v=2&tid=G-DEMO${i}`,
+        method: "POST",
+        resourceType: "xhr",
+        host: vendorHost,
+        registrableDomain: vendorHost,
+        isThirdParty: true,
+        status: 204,
+        initiatorType: "script",
+        initiatorUrl: `${pageUrl.slice(0, -1)}/assets/app.js`,
+        timestampMs: 900 + i * 240,
+        transferSize: 120,
+        setCookieCount: 1,
+        trackerVendorId: vendor.id,
+      });
+
+      cookieRows.push({
+        scanId,
+        agencyId,
+        consentPhase: phase,
+        snapshotPoint: "after_settle",
+        name: `_demo_${i}`,
+        domain: `.${vendorHost}`,
+        path: "/",
+        isSession: false,
+        durationDays: 400,
+        secure: true,
+        httpOnly: false,
+        sameSite: "None",
+        isThirdParty: true,
+        valueLength: 24,
+        trackerVendorId: vendor.id,
+        category: "ADVERTISING",
+      });
+
+      storageRows.push({
+        scanId,
+        agencyId,
+        consentPhase: phase,
+        storageType: "localStorage",
+        key: `_demo_id_${i}`,
+        valueLength: 36,
+        origin: pageUrl,
+        trackerVendorId: vendor.id,
+      });
+    }
+
+    // A necessary first-party cookie exists under every journey — including
+    // REJECT_ALL, where it is the ONLY cookie that may legitimately remain.
+    cookieRows.push({
+      scanId,
+      agencyId,
+      consentPhase: phase,
+      snapshotPoint: "after_settle",
+      name: "session_id",
+      domain: host,
+      path: "/",
+      isSession: true,
+      secure: true,
+      httpOnly: true,
+      sameSite: "Lax",
+      isThirdParty: false,
+      valueLength: 32,
+      category: "NECESSARY",
+    });
+  }
+
+  await prisma.scanPhase.createMany({ data: phaseRows });
+  await prisma.networkRequest.createMany({ data: requestRows });
+  await prisma.cookieRecord.createMany({ data: cookieRows });
+  await prisma.storageEntry.createMany({ data: storageRows });
+
+  return {
+    requestCount: requestRows.length,
+    cookieCount: cookieRows.length,
+    thirdPartyDomainCount: thirdPartyDomains.size,
+  };
+}
+
 async function main() {
   assertLocalDatabase();
 
@@ -332,6 +549,7 @@ async function main() {
   let totalScans = 0;
   let totalIssues = 0;
   let totalDrift = 0;
+  let totalRequests = 0;
 
   for (const [index, site] of SITES.entries()) {
     const random = makeRandom(index + 1);
@@ -359,8 +577,17 @@ async function main() {
      * line and prove nothing about whether the chart works. Site 0 degrades
      * (a tracker is added mid-history), site 1 improves (an issue is fixed),
      * the rest drift mildly. That is what makes the dashboard demonstrable.
+     *
+     * ⚠️ THE DIRECTIONS MUST NOT SUM TO ZERO. They used to be [-1, +1, 0, 0, 0]:
+     * one site degrading and one improving by the same amount, which is a fine
+     * per-site story and a useless portfolio one. The dashboard's headline
+     * chart averages across sites, so the two cancelled exactly and it drew a
+     * flat line at 77 for twelve weeks — the precise failure this comment was
+     * written to prevent, reintroduced one level up. A demo has to move the
+     * number the front page actually plots.
      */
-    const direction = index === 0 ? -1 : index === 1 ? 1 : 0;
+    const DIRECTIONS = [-2, 1, -1, 0, 0] as const;
+    const direction = DIRECTIONS[index] ?? 0;
     let previousScanId: string | null = null;
 
     for (let week = WEEKS; week >= 1; week--) {
@@ -378,6 +605,8 @@ async function main() {
        */
       const isPartial = week === 4 && index === 2;
 
+      const siteVendors = vendors.slice(0, 2 + (index % 3));
+
       const scan = await prisma.scan.create({
         data: {
           agencyId: agency.id,
@@ -385,6 +614,21 @@ async function main() {
           status: isPartial ? "PARTIAL" : "COMPLETED",
           trigger: "SCHEDULED",
           scannerVersion: "1.0.0",
+          /*
+           * ⚠️ `queuedAt` AND `createdAt` ARE SET EXPLICITLY, NOT LEFT TO
+           * `@default(now())`. Both default to the moment the seed runs, so a
+           * twelve-week history was being written with every row stamped
+           * "today". The dashboard counts scans by `createdAt`, which made its
+           * headline tile read "Scans today: 60" beside an activity feed whose
+           * newest entry said "7 days ago", and collapsed the whole health
+           * trend onto a single x-position so the chart drew a flat line.
+           *
+           * A demo dataset that disagrees with itself is worse than none: it
+           * makes a real query bug and a seeding artefact indistinguishable,
+           * which is exactly the confusion this file's header warns about.
+           */
+          queuedAt: at,
+          createdAt: at,
           startedAt: at,
           finishedAt: new Date(at.getTime() + 145_000),
           durationMs: 145_000,
@@ -392,16 +636,29 @@ async function main() {
           scoreConfidence: isPartial ? "PARTIAL" : "FULL",
           detectedCmpName: index % 2 === 0 ? "Cookiebot" : "Complianz",
           pagesScanned: 1,
-          requestCount: 40 + Math.round(random() * 60),
-          thirdPartyDomainCount: 4 + Math.round(random() * 6),
-          cookieCount: 8 + Math.round(random() * 10),
-          trackerCount: 2 + Math.round(random() * 3),
+          trackerCount: siteVendors.length,
         },
       });
       totalScans += 1;
 
+      /*
+       * Evidence FIRST, then the counters it produced. Writing the counters at
+       * create time is what let them drift from the rows in the first place.
+       */
+      const counts = await writeScanEvidence({
+        scanId: scan.id,
+        agencyId: agency.id,
+        host: site.host,
+        startedAt: at,
+        vendors: siteVendors,
+        failedPhase: isPartial ? "REJECT_ALL" : null,
+        random,
+      });
+      await prisma.scan.update({ where: { id: scan.id }, data: counts });
+      totalRequests += counts.requestCount;
+
       // Tracker detections — what the Trackers tab reads.
-      for (const vendor of vendors.slice(0, 2 + (index % 3))) {
+      for (const vendor of siteVendors) {
         await prisma.trackerDetection.create({
           data: {
             scanId: scan.id,
@@ -595,6 +852,7 @@ async function main() {
   console.log(`  ✓ clients       ${clients.size}`);
   console.log(`  ✓ websites      ${SITES.length}`);
   console.log(`  ✓ scans         ${totalScans} (${WEEKS} weeks of history, 1 PARTIAL)`);
+  console.log(`  ✓ evidence      ${totalRequests} network requests, plus phases, cookies and storage`);
   console.log(`  ✓ issues        ${totalIssues} (with IssueEvidence attached)`);
   console.log(`  ✓ drift events  ${totalDrift}`);
   console.log("");

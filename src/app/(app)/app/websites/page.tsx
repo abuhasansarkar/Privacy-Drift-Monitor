@@ -78,7 +78,7 @@ export default async function WebsitesPage({
   })) {
     if (value) exportParams.set(key, String(value));
   }
-  const exportHref = `/api/websites/export${
+  const exportHref = `/api/v1/websites/export${
     exportParams.size > 0 ? `?${exportParams}` : ""
   }`;
 

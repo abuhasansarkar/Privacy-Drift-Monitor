@@ -60,7 +60,7 @@ export default async function AuditLogPage({
   })) {
     if (value) params.set(key, value);
   }
-  const exportHref = `/api/settings/audit/export${params.size > 0 ? `?${params}` : ""}`;
+  const exportHref = `/api/v1/settings/audit/export${params.size > 0 ? `?${params}` : ""}`;
   const olderParams = new URLSearchParams(params);
   if (page.nextCursor) olderParams.set("cursor", page.nextCursor);
   const olderHref = `/app/settings/audit?${olderParams}`;

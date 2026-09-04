@@ -45,7 +45,7 @@ export async function createWebsite(
 
     /*
      * Re-run the FULL validation chain, including the SSRF guard. The wizard
-     * has already called `/api/websites/validate` and holds a normalized URL,
+     * has already called `/api/v1/websites/validate` and holds a normalized URL,
      * and trusting it here is exactly the hole that would make the guard
      * decorative: an action is a public POST endpoint, so anything reaching it
      * is caller-supplied no matter what the UI did first.

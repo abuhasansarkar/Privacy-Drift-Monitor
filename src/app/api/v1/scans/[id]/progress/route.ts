@@ -1,6 +1,7 @@
 import { repositoriesFor } from "@pdm/database/repositories";
 import type { ConsentPhase, PhaseStatus, ScanStatus } from "@pdm/schemas";
 import { requirePermission } from "@/server/auth/context";
+import { withApiErrors } from "../../../_lib/with-errors";
 
 /**
  * SCAN PROGRESS — §3.9, Phase 2 task 2.16.
@@ -31,14 +32,14 @@ export interface ScanProgressPayload {
   }>;
 }
 
-export async function GET(
+async function handleGET(
   _request: Request,
-  context: RouteContext<"/api/scans/[scanId]/progress">,
+  context: RouteContext<"/api/v1/scans/[id]/progress">,
 ) {
   // Re-checked here: a route handler is not covered by the page's gate, and
   // this one returns tenant data (§6.1).
   const ctx = await requirePermission("scan:read");
-  const { scanId } = await context.params;
+  const { id: scanId } = await context.params;
 
   const repos = repositoriesFor(ctx.agencyId);
   const scan = await repos.scans.withPhases(scanId);
@@ -60,3 +61,5 @@ export async function GET(
 
   return Response.json(payload);
 }
+
+export const GET = withApiErrors(handleGET);

@@ -58,7 +58,7 @@ export default async function ReportDetailPage({
             {report.status === "READY" ? (
               <iframe
                 title={report.name}
-                src={`/api/reports/${report.id}/download?disposition=inline`}
+                src={`/api/v1/reports/${report.id}/download?disposition=inline`}
                 className="h-[70vh] w-full rounded-sm border border-border bg-[#F8FAFC]"
               />
             ) : (

@@ -16,15 +16,27 @@ import IORedis from "ioredis";
  * startup. Dashes keep the namespacing readable without colliding with the
  * key scheme.
  */
+/*
+ * ⚠️ EVERY NAME HERE MUST HAVE A WORKER. `pdm-analysis` and `pdm-cleanup` were
+ * declared here and listed on /admin/queue, but nothing ever produced or
+ * consumed either one: analysis runs inline in the scan pipeline
+ * (`analyseScan` in worker/src/index.ts) and retention runs on the scheduler
+ * tick (`runRetention`). An operator therefore saw two queues sitting at depth
+ * zero forever — and "queue is empty" and "queue does not exist" are different
+ * facts that must not look identical on an operations screen, because the first
+ * one is reassuring and the second one means your dashboard is lying to you.
+ *
+ * Both were removed rather than wired up: inline analysis shares the scan's
+ * transaction boundary deliberately, and retention belongs on the scheduler.
+ * The work was right; only the declaration was wrong.
+ */
 export const QUEUE_NAMES = {
   scan: "pdm-scan",
-  analysis: "pdm-analysis",
   report: "pdm-report",
   notification: "pdm-notification",
   email: "pdm-email",
   digest: "pdm-digest",
   ai: "pdm-ai",
-  cleanup: "pdm-cleanup",
   /*
    * ⚠️ §7.2 CALLS THIS QUEUE `scan:free`. IT CANNOT BE. A colon in a BullMQ
    * queue name collides with BullMQ's own Redis key separator — the trap this

@@ -45,7 +45,7 @@ export function ReportActions({
       <div className="flex flex-wrap gap-2">
         {status === "READY" ? (
           <a
-            href={`/api/reports/${reportId}/download`}
+            href={`/api/v1/reports/${reportId}/download`}
             className="inline-flex h-9 items-center justify-center rounded-md border border-transparent bg-primary px-3.5 text-small font-medium text-primary-foreground hover:opacity-90 max-sm:h-11"
           >
             {t("reports.download")}

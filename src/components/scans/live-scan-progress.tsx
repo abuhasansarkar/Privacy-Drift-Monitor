@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { ConsentPhase } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ScanProgress, type ProgressStage } from "./scan-progress";
-import type { ScanProgressPayload } from "@/app/api/scans/[scanId]/progress/route";
+import type { ScanProgressPayload } from "@/app/api/v1/scans/[id]/progress/route";
 
 /**
  * LIVE SCAN PROGRESS — §3.9, Phase 2 task 2.16.
@@ -64,7 +64,7 @@ export function LiveScanProgress({
 
     async function poll() {
       try {
-        const response = await fetch(`/api/scans/${scanId}/progress`, {
+        const response = await fetch(`/api/v1/scans/${scanId}/progress`, {
           cache: "no-store",
         });
         if (!response.ok || cancelled) return;

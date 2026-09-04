@@ -31,17 +31,29 @@ function connection() {
   return globalForAdminQueues.pdmAdminQueueConnection;
 }
 
-/** Every queue the platform runs, in the order an operator scans them. */
+/**
+ * Every queue the platform runs, in the order an operator scans them.
+ *
+ * ⚠️ THIS LIST IS AN OPERATIONS SCREEN, SO BOTH KINDS OF ERROR COST SOMETHING.
+ * It used to include `analysis` and `cleanup`, which had no worker at all, and
+ * to omit `webhook`, which has one — so an operator was shown two queues that
+ * could never move and was NOT shown the one whose backlog means customer
+ * webhooks are not being delivered. A queue missing from here is invisible
+ * during an incident; a queue here that does not exist trains people to ignore
+ * a depth of zero.
+ *
+ * Derived from `QUEUE_NAMES` rather than retyped: the two drifted apart once
+ * already, and a second list of the same thing is how that happens.
+ */
 export const ADMIN_QUEUES: readonly string[] = [
   QUEUE_NAMES.scan,
   QUEUE_NAMES.freeScan,
-  QUEUE_NAMES.analysis,
   QUEUE_NAMES.ai,
   QUEUE_NAMES.notification,
   QUEUE_NAMES.email,
   QUEUE_NAMES.report,
   QUEUE_NAMES.digest,
-  QUEUE_NAMES.cleanup,
+  QUEUE_NAMES.webhook,
 ];
 
 function queueFor(name: string): Queue {

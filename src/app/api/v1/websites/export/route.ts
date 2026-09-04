@@ -2,6 +2,7 @@ import { websiteSchemas } from "./schema";
 import { repositoriesFor } from "@pdm/database/repositories";
 import { FREQUENCY_LABEL, MONITORING_LABEL } from "@pdm/shared/copy/labels";
 import { requirePermission } from "@/server/auth/context";
+import { withApiErrors } from "../../_lib/with-errors";
 
 /**
  * WEBSITE CSV EXPORT — §3.5 ("Entry points: Add Website · Import CSV · Export
@@ -44,7 +45,7 @@ function csvCell(value: unknown): string {
   return `"${guarded.replace(/"/g, '""')}"`;
 }
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const ctx = await requirePermission("website:read");
   const repos = repositoriesFor(ctx.agencyId);
 
@@ -108,3 +109,5 @@ export async function GET(request: Request) {
     },
   });
 }
+
+export const GET = withApiErrors(handleGET);

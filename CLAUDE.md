@@ -7,17 +7,22 @@
 `AGENTS.md` above carries the project rules and is shared with every agent tool. This file
 only adds what is specific to working here with Claude Code.
 
-## Reading PLAN.md
+## Where the plan lives
 
-`PLAN.md` is ~402 KB, which exceeds the Read tool's 256 KB limit — a bare `Read` on it fails.
+**`PLAN.md` no longer exists.** It was deleted in `6f6059c`, along with `PLAN-V2.md`,
+`PLAN-V3.md`, `UI_Func.md` and the `dev-doc*/` trees, and it is not coming back.
 
-1. `Grep` for `^#\{1,3\} ` (or `^# Part`) with `-n` to get a heading index with line numbers.
-2. `Read` with `offset` and `limit` for just the part you need.
-3. For a question that spans several parts, dispatch an `Explore` subagent over `PLAN.md`
-   rather than pulling 100k tokens of plan into the main context.
+- **`NEW-PLAN.md`** — current state, gap register (`G-01`…`G-12`) and roadmap.
+- **`dev-doc/`** — one small file per task, with acceptance criteria you can run.
+  Start at `dev-doc/README.md`.
+- **`OVERVIEW.md`** — the 2026-09-03 audit. Historical record, not a forward plan.
 
-The part-to-topic map is in `AGENTS.md`. Cite sections as `Part IV §4.12` so they stay
-findable after line numbers shift.
+⚠️ **Source comments cite `PLAN.md §x.y` about 1,700 times. Those references cannot be
+resolved and must not be trusted.** The deleted `PLAN.md` had 41 sections; 1,315 of the
+citations named a section it never contained, and where the numbers did collide the topics
+did not — code cites `§7.1` for BullMQ queues while `§7.1` was "Consent State Machine".
+The file in the repo was never the document the code was written against. Treat a `§`
+citation as a hint about intent, never as an authority, and do not add new ones.
 
 ## Before writing framework code
 
@@ -32,7 +37,7 @@ Turbopack-only builds, two-argument `revalidateTag`. Do not rely on memory for t
 |---|---|
 | `/security-review` | Any change touching the SSRF guard, tenant scoping, the free public scanner, portal auth, or evidence redaction. This product accepts arbitrary URLs from anonymous users and drives a browser at them — that surface deserves a review every time it moves. |
 | `/code-review` | Before merging any scanner, rule-engine or billing change. |
-| `dataviz` | Before writing any chart — health-trend line, tracker donut, drift timeline, admin cost charts. Part XI §11.3 already fixes the palette; keep the two consistent. |
+| `dataviz` | Before writing any chart — health-trend line, tracker donut, drift timeline, admin cost charts. The palette is fixed by the design tokens in `src/app/globals.css`; keep the two consistent. |
 | `artifact-design` | Before publishing any artifact page. |
 
 ## Package manager
@@ -52,6 +57,12 @@ the registry. Local packages depend on each other with `"*"`.
 
 ## Scope discipline
 
-This plan is large and every part is tempting. Build the part that was asked for, at the
-depth `PLAN.md` specifies, and flag adjacent gaps in prose instead of silently expanding the
-diff. Phases and acceptance criteria are in Part XII.
+Build the task that was asked for, at the depth its `dev-doc/tasks/` file specifies, and
+flag adjacent gaps in prose instead of silently expanding the diff. Phases and acceptance
+criteria are in `NEW-PLAN.md` §6; per-task acceptance is in `dev-doc/tasks/`.
+
+## Reporting
+
+A task is `DONE` only when its acceptance was **run** and the evidence is written into its
+`dev-doc/tasks/` file. Code that exists and typechecks is `BUILT`, not `DONE`. This
+distinction is the one the repo has broken before, in the direction that costs most.

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { repositoriesFor } from "@pdm/database/repositories";
 import { requireAgencyContext } from "@/server/auth/context";
+import { withApiErrors } from "../_lib/with-errors";
 
 /**
  * COMMAND PALETTE SEARCH — §3.3, Phase 1 task 1.3.
@@ -27,7 +28,7 @@ export interface SearchResult {
   href: string;
 }
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const ctx = await requireAgencyContext();
 
   const parsed = querySchema.safeParse({
@@ -85,3 +86,5 @@ export async function GET(request: Request) {
 
   return Response.json({ results });
 }
+
+export const GET = withApiErrors(handleGET);

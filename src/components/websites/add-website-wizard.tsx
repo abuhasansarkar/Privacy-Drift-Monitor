@@ -21,7 +21,7 @@ import { createWebsite } from "@/server/actions/websites";
  * server-side: `normalizeWebsiteUrl()` for the canonical form and the
  * registrable domain, then `assertSafeUrl()` — the SSRF boundary — before any
  * navigation and on every redirect hop (§10.3). This component only renders
- * what `POST /api/websites/validate` returns.
+ * what `POST /api/v1/websites/validate` returns.
  *
  * ⚠️ EVERY FAILURE CODE GETS ITS OWN MESSAGE (M2), except that URL_NOT_ALLOWED
  * is deliberately vague — "We can't monitor this address." Naming which check
@@ -101,7 +101,7 @@ export function AddWebsiteWizard({ clients }: { clients: Array<{ id: string; nam
 
   async function validate() {
     setState({ phase: "checking" });
-    const response = await fetch("/api/websites/validate", {
+    const response = await fetch("/api/v1/websites/validate", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ url }),

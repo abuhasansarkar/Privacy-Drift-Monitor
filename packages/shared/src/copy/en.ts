@@ -169,8 +169,17 @@ export const en = {
   empty: {
     noClients:
       "Clients group websites together for reporting and portal access.",
+    /*
+     * ⚠️ "IN THIS PERIOD", NOT "SINCE MONITORING BEGAN". Both call sites are
+     * WINDOWED — the dashboard card looks back 7 days and `/app/drift` 30 — so
+     * the old wording told an agency that nothing had ever changed on a site
+     * whose Changes tab was listing changes from last month. In a product whose
+     * entire claim is that it reports only what it observed, an empty state
+     * that overstates its own coverage is the same defect class as a rule that
+     * invents a fact: it asserts something the evidence does not support.
+     */
     noDrift:
-      "No changes detected since monitoring began. We'll tell you the moment something changes.",
+      "No changes recorded in this period. We'll tell you the moment something changes.",
     noIssuesFiltered: "No issues match these filters.",
     /** Generic filtered-empty. Distinct from the never-had-any states above. */
     noMatches: "Nothing matches these filters. Try clearing them.",

@@ -1,5 +1,6 @@
 import { repositoriesFor } from "@pdm/database/repositories";
 import { requirePermission } from "@/server/auth/context";
+import { withApiErrors } from "../../../_lib/with-errors";
 
 /**
  * AUDIT LOG CSV EXPORT — §3.11 ("audit log viewer with filters and CSV export").
@@ -44,7 +45,7 @@ function csvCell(value: unknown): string {
   return `"${guarded.replace(/"/g, '""')}"`;
 }
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   // Same gate as the viewer: the trail shows who did what across the whole
   // agency, so it is a settings capability rather than a general read.
   const ctx = await requirePermission("settings:read");
@@ -118,3 +119,5 @@ export async function GET(request: Request) {
     },
   });
 }
+
+export const GET = withApiErrors(handleGET);
