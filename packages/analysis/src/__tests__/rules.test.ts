@@ -254,6 +254,14 @@ describe("§4.11 coverage", () => {
     expect(missing, `missing rules: ${missing.join(", ")}`).toEqual([]);
   });
 
+  it("implements all 50 planned rules in the registry (0 reserved, 0 dormant)", () => {
+    const implemented = new Set(RULES.map((rule) => rule.id));
+    const missing = PLANNED.filter((id) => !implemented.has(id));
+    expect(missing, `missing rules: ${missing.join(", ")}`).toEqual([]);
+    expect(Object.keys(RESERVED_RULE_IDS).length).toBe(0);
+    expect(Object.keys(DORMANT_RULE_IDS).length).toBe(0);
+  });
+
   /*
    * ⚠️ EVERY PLANNED ID IS EITHER IMPLEMENTED OR EXPLICITLY RESERVED.
    *

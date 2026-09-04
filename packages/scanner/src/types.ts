@@ -11,7 +11,18 @@
  */
 
 import type { ConsentModeFact, RecordedConsentEvent } from "./instrumentation/consent-mode";
-export type { ConsentModeFact, RecordedConsentEvent };
+import type { DomGatingFact, ButtonGeometryFact } from "./instrumentation/dom-gating";
+import type { FingerprintFact } from "./instrumentation/fingerprint-trap";
+import type { FormSubmissionFact } from "./consent/interactive-runner";
+
+export type {
+  ConsentModeFact,
+  RecordedConsentEvent,
+  DomGatingFact,
+  ButtonGeometryFact,
+  FingerprintFact,
+  FormSubmissionFact,
+};
 
 /** The consent journeys. Every recorded artifact carries one. */
 export type ConsentPhase =
@@ -158,6 +169,8 @@ export interface RecordedRequest {
   redirectChain: string[];
   /** Count only. Header values are never stored (§10.6). */
   setCookieCount: number;
+  /** ISO 3166-1 alpha-2 destination country resolved via GeoIP lookup */
+  destinationCountry?: string | null;
 }
 
 export interface RecordedCookie {
@@ -225,6 +238,10 @@ export interface PhaseResult {
   consoleLogs: RecordedConsoleLog[];
   screenshots: RecordedScreenshot[];
   consentEvents?: RecordedConsentEvent[];
+  domGating?: DomGatingFact | null;
+  buttonGeometry?: ButtonGeometryFact | null;
+  fingerprint?: FingerprintFact | null;
+  formSubmission?: FormSubmissionFact | null;
 }
 
 export interface CmpDetectionResult {
@@ -310,6 +327,10 @@ export interface ScanResult {
    */
   cnameResolutions: readonly CnameFact[];
   consentModeAudit?: ConsentModeFact;
+  domGating?: DomGatingFact | null;
+  buttonGeometry?: ButtonGeometryFact | null;
+  fingerprint?: FingerprintFact | null;
+  formSubmission?: FormSubmissionFact | null;
 }
 
 /**

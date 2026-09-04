@@ -63,12 +63,36 @@ export {
   type SnapshotPoint,
   type ConsentModeFact,
   type RecordedConsentEvent,
+  type DomGatingFact,
+  type ButtonGeometryFact,
+  type FingerprintFact,
+  type FormSubmissionFact,
 } from "./types";
 
 export {
   CONSENT_MODE_INIT_SCRIPT,
   parseConsentModeEvents,
 } from "./instrumentation/consent-mode";
+
+export {
+  FINGERPRINT_TRAP_SCRIPT,
+  parseFingerprintCalls,
+  type RecordedFingerprintCall,
+} from "./instrumentation/fingerprint-trap";
+
+export {
+  measureDomGating,
+  measureConsentButtonAsymmetry,
+} from "./instrumentation/dom-gating";
+
+export {
+  resolveDestinationCountry,
+  COUNTRY_CODE_MAP,
+} from "./net/geoip";
+
+export {
+  runSyntheticFormInteraction,
+} from "./consent/interactive-runner";
 
 export {
   extractPolicyLinksFromHtml,
@@ -83,4 +107,5 @@ export {
   decodeHtmlEntities,
   extractCleanText,
 } from "./policy/extractor";
+
 

@@ -324,3 +324,200 @@ export const R050: Rule = {
     return [];
   },
 };
+
+/** PDM-R029 — Cookie Wall / Forcible Gating Detected. */
+export const R029: Rule = {
+  id: "PDM-R029",
+  category: "CONSENT_FAILURE",
+  precedence: 90,
+  evaluate(context: RuleContext): Finding[] {
+    const gating = context.domGating;
+    if (!gating || !gating.isCookieWall) return [];
+
+    return [
+      {
+        ruleId: "PDM-R029",
+        category: "CONSENT_FAILURE",
+        severity: "HIGH" as Severity,
+        fingerprint: fingerprint(["PDM-R029", "DOM_GATING"]),
+        title: "Cookie wall detected: site access gated without consent",
+        subject: "Cookie Wall Gating",
+        consentPhase: "NO_CONSENT",
+        evidenceRefs: {
+          requestUrls: [],
+          cookieNames: [],
+          storageKeys: [],
+        },
+        rationale:
+          `Site navigation and document scrolling are forcibly gated behind a modal backdrop ` +
+          `(${gating.backdropCoveragePct}% viewport coverage) with no dismissal option, ` +
+          `preventing free access prior to consent choice.`,
+        recommendedAction:
+          "Provide an accessible dismiss mechanism or allow page browsing without mandatory consent choice.",
+      } satisfies Finding,
+    ];
+  },
+};
+
+/** PDM-R040 — Cross-Border Data Transfer to Non-EEA Destination. */
+export const R040: Rule = {
+  id: "PDM-R040",
+  category: "TRANSPORT_SECURITY",
+  precedence: 80,
+  evaluate(context: RuleContext): Finding[] {
+    const preConsentRequests = context.requests.filter(
+      (r) =>
+        r.consentPhase === "NO_CONSENT" &&
+        r.isThirdParty &&
+        r.destinationCountry &&
+        !["DE", "FR", "IE", "NL", "IT", "ES", "SE", "DK", "FI", "BE", "AT", "PL", "PT"].includes(
+          r.destinationCountry,
+        ),
+    );
+
+    if (preConsentRequests.length === 0) return [];
+
+    // Group by destinationCountry
+    const byCountry = new Map<string, typeof preConsentRequests>();
+    for (const r of preConsentRequests) {
+      const c = r.destinationCountry!;
+      const list = byCountry.get(c) ?? [];
+      list.push(r);
+      byCountry.set(c, list);
+    }
+
+    return Array.from(byCountry.entries()).map(([country, reqs]) => {
+      const hosts = Array.from(new Set(reqs.map((r) => r.host)));
+      const firstReq = reqs[0];
+
+      return {
+        ruleId: "PDM-R040",
+        category: "TRANSPORT_SECURITY",
+        severity: "MEDIUM" as Severity,
+        fingerprint: fingerprint(["PDM-R040", country, firstReq.consentPhase]),
+        title: `Third-party request sends data to non-EEA destination (${country})`,
+        subject: `Cross-Border Transfer (${country})`,
+        consentPhase: firstReq.consentPhase,
+        evidenceRefs: {
+          requestUrls: reqs.map((r) => r.url),
+          cookieNames: [],
+          storageKeys: [],
+        },
+        rationale:
+          `Observed third-party network requests (${hosts.slice(0, 3).join(", ")}) ` +
+          `resolving to servers located in ${country} before consent was granted.`,
+        recommendedAction:
+          "Review international data transfer safeguards and ensure non-EEA vendor endpoints are gated behind consent.",
+      } satisfies Finding;
+    });
+  },
+};
+
+/** PDM-R041 — Asymmetric Consent Button Sizing / Dark Pattern. */
+export const R041: Rule = {
+  id: "PDM-R041",
+  category: "CONSENT_MISSING",
+  precedence: 74,
+  evaluate(context: RuleContext): Finding[] {
+    const geom = context.buttonGeometry;
+    if (!geom || !geom.isAsymmetric) return [];
+
+    return [
+      {
+        ruleId: "PDM-R041",
+        category: "CONSENT_MISSING",
+        severity: "MEDIUM" as Severity,
+        fingerprint: fingerprint(["PDM-R041", String(geom.areaRatio)]),
+        title: `Asymmetric consent choice: Accept button is ${geom.areaRatio}x larger than Reject`,
+        subject: "Consent Button Geometry",
+        consentPhase: "NO_CONSENT",
+        evidenceRefs: {
+          requestUrls: [],
+          cookieNames: [],
+          storageKeys: [],
+        },
+        rationale:
+          `The Accept All button occupies ${geom.acceptArea}px² while Reject All occupies only ` +
+          `${geom.rejectArea}px² (${geom.areaRatio}x area ratio), creating an asymmetric visual hierarchy.`,
+        recommendedAction:
+          "Ensure Accept All and Reject All buttons share equal visual prominence, size, and styling.",
+      } satisfies Finding,
+    ];
+  },
+};
+
+/** PDM-R043 — Unconsented Tracking Beacons Triggered on Form Submission. */
+export const R043: Rule = {
+  id: "PDM-R043",
+  category: "INTERACTION",
+  precedence: 85,
+  evaluate(context: RuleContext): Finding[] {
+    const formFact = context.formSubmission;
+    if (!formFact || formFact.burstRequestsDetected <= 0) return [];
+
+    const domains = formFact.burstTrackerDomains.length > 0
+      ? formFact.burstTrackerDomains.join(", ")
+      : "external endpoints";
+
+    return [
+      {
+        ruleId: "PDM-R043",
+        category: "INTERACTION",
+        severity: "HIGH" as Severity,
+        fingerprint: fingerprint(["PDM-R043", domains]),
+        title: "Unconsented tracker burst triggered upon synthetic form submission",
+        subject: "Form Submission Tracking",
+        consentPhase: "INTERACTIVE_ACTION",
+        evidenceRefs: {
+          requestUrls: [],
+          cookieNames: [],
+          storageKeys: [],
+        },
+        rationale:
+          `Submitting a page form triggered ${formFact.burstRequestsDetected} unconsented tracking requests ` +
+          `to ${domains} prior to explicit user consent.`,
+        recommendedAction:
+          "Ensure form submission handlers and conversion tracking pixels respect consent state before firing.",
+      } satisfies Finding,
+    ];
+  },
+};
+
+/** PDM-R045 — Browser Fingerprinting via Canvas, Audio or WebGL. */
+export const R045: Rule = {
+  id: "PDM-R045",
+  category: "FINGERPRINT",
+  precedence: 95,
+  evaluate(context: RuleContext): Finding[] {
+    const fp = context.fingerprint;
+    if (!fp || !fp.hasFingerprinting) return [];
+
+    const details: string[] = [];
+    if (fp.canvasAttempts > 0) details.push(`${fp.canvasAttempts} canvas data reads`);
+    if (fp.audioAttempts > 0) details.push(`${fp.audioAttempts} audio oscillator operations`);
+    if (fp.webglAttempts > 0) details.push(`${fp.webglAttempts} WebGL buffer extractions`);
+
+    return [
+      {
+        ruleId: "PDM-R045",
+        category: "FINGERPRINT",
+        severity: "CRITICAL" as Severity,
+        fingerprint: fingerprint(["PDM-R045", details.join("_")]),
+        title: "Browser fingerprinting technique detected (Canvas/Audio/WebGL)",
+        subject: "Browser Fingerprinting Trap",
+        consentPhase: "NO_CONSENT",
+        evidenceRefs: {
+          requestUrls: [],
+          cookieNames: [],
+          storageKeys: [],
+        },
+        rationale:
+          `Client-side script invoked browser fingerprinting APIs without prior consent: ` +
+          `${details.join(", ")}. Stack origin snippets: ${fp.stackSnippets.slice(0, 2).join("; ") || "inline"}.`,
+        recommendedAction:
+          "Remove script libraries performing device/browser canvas and hardware fingerprinting.",
+      } satisfies Finding,
+    ];
+  },
+};
+

@@ -178,6 +178,35 @@ export interface ConsentModeFacts {
   issuesDetected: readonly string[];
 }
 
+export interface DomGatingFacts {
+  hasScrollLock: boolean;
+  backdropCoveragePct: number;
+  hasCloseOrDismiss: boolean;
+  isCookieWall: boolean;
+}
+
+export interface ButtonGeometryFacts {
+  acceptArea: number;
+  rejectArea: number;
+  areaRatio: number;
+  isAsymmetric: boolean;
+}
+
+export interface FingerprintFacts {
+  hasFingerprinting: boolean;
+  canvasAttempts: number;
+  audioAttempts: number;
+  webglAttempts: number;
+  stackSnippets: readonly string[];
+}
+
+export interface FormSubmissionFacts {
+  formFound: boolean;
+  formSubmitted: boolean;
+  burstRequestsDetected: number;
+  burstTrackerDomains: readonly string[];
+}
+
 export interface RuleContext {
   phases: readonly PhaseResult[];
   detections: readonly Detection[];
@@ -194,6 +223,14 @@ export interface RuleContext {
   policy?: PolicyFacts;
   /** Recorded at scan time for Google Consent Mode v2 (Phase 13). */
   consentMode?: ConsentModeFacts;
+  /** Recorded at scan time for DOM gating and cookie wall evaluation (Phase 15). */
+  domGating?: DomGatingFacts;
+  /** Recorded at scan time for consent button asymmetry evaluation (Phase 15). */
+  buttonGeometry?: ButtonGeometryFacts;
+  /** Recorded at scan time for canvas/webgl/audio fingerprinting (Phase 15). */
+  fingerprint?: FingerprintFacts;
+  /** Recorded at scan time for synthetic form conversion pixel bursts (Phase 15). */
+  formSubmission?: FormSubmissionFacts;
 }
 
 export interface Rule {

@@ -28,6 +28,18 @@ import {
   CONSENT_MODE_INIT_SCRIPT,
   type RecordedConsentEvent,
 } from "./instrumentation/consent-mode";
+import {
+  FINGERPRINT_TRAP_SCRIPT,
+  parseFingerprintCalls,
+  type RecordedFingerprintCall,
+} from "./instrumentation/fingerprint-trap";
+import {
+  measureDomGating,
+  measureConsentButtonAsymmetry,
+  type DomGatingFact,
+  type ButtonGeometryFact,
+} from "./instrumentation/dom-gating";
+import type { FingerprintFact } from "./instrumentation/fingerprint-trap";
 
 /**
  * PHASE RUNNER — PLAN.md Part IV §4.3, Phase 2 task 2.9 (single-phase half).
@@ -151,6 +163,7 @@ export async function runPhase(
       });
 
       await page.addInitScript(CONSENT_MODE_INIT_SCRIPT);
+      await page.addInitScript(FINGERPRINT_TRAP_SCRIPT);
 
       const outcome = await navigate(page, input.url, budget, {
         guard: input.urlGuard ?? assertSafeUrl,
@@ -171,6 +184,13 @@ export async function runPhase(
       await observe(page, budget);
       cookies.push(...(await snapshotCookies(context, recorderCtx, "after_settle")));
 
+      let domGating: DomGatingFact | null = null;
+      let buttonGeometry: ButtonGeometryFact | null = null;
+      if (input.phase === "NO_CONSENT" || input.phase === "REJECT_ALL") {
+        domGating = await measureDomGating(page).catch(() => null);
+        buttonGeometry = await measureConsentButtonAsymmetry(page).catch(() => null);
+      }
+
       // The banner as the visitor first sees it — the corroboration a human
       // checks a pre-consent finding against.
       const initial = await capture(page, input.phase, "banner-initial", shot);
@@ -188,10 +208,16 @@ export async function runPhase(
               `(() => Array.isArray(window.__pdm_consent_events) ? window.__pdm_consent_events : [])()`,
             )
             .catch(() => []);
+          const rawFp = await page
+            .evaluate<RecordedFingerprintCall[]>(
+              `(() => Array.isArray(window.__pdm_fingerprint_calls) ? window.__pdm_fingerprint_calls : [])()`,
+            )
+            .catch(() => []);
+          const fingerprint = parseFingerprintCalls(rawFp);
           cookies.push(
             ...(await snapshotCookies(context, recorderCtx, "phase_end")),
           );
-          return finish("UNDETERMINED", action, null, null);
+          return finish("UNDETERMINED", action, null, null, { domGating, buttonGeometry, fingerprint });
         }
 
         cookies.push(...(await snapshotCookies(context, recorderCtx, "after_action")));
@@ -208,8 +234,18 @@ export async function runPhase(
           `(() => Array.isArray(window.__pdm_consent_events) ? window.__pdm_consent_events : [])()`,
         )
         .catch(() => []);
+      const rawFp = await page
+        .evaluate<RecordedFingerprintCall[]>(
+          `(() => Array.isArray(window.__pdm_fingerprint_calls) ? window.__pdm_fingerprint_calls : [])()`,
+        )
+        .catch(() => []);
+      const fingerprint = parseFingerprintCalls(rawFp);
       cookies.push(...(await snapshotCookies(context, recorderCtx, "phase_end")));
-      return finish("EXECUTED", action, await snapshotStorage(page, recorderCtx), null);
+      return finish("EXECUTED", action, await snapshotStorage(page, recorderCtx), null, {
+        domGating,
+        buttonGeometry,
+        fingerprint,
+      });
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : String(error);
       return finish("FAILED", action, null, null);
@@ -237,6 +273,11 @@ export async function runPhase(
       actionResult: ConsentActionResult | null,
       storage: Awaited<ReturnType<typeof snapshotStorage>> | null,
       navReason: string | null,
+      extraFacts?: {
+        domGating?: DomGatingFact | null;
+        buttonGeometry?: ButtonGeometryFact | null;
+        fingerprint?: FingerprintFact | null;
+      },
     ): PhaseResult {
       const finishedAt = new Date();
       if (navReason && !errorMessage) errorMessage = navReason;
@@ -261,6 +302,9 @@ export async function runPhase(
         consoleLogs: consoleRecorder.drain(),
         screenshots,
         consentEvents,
+        domGating: extraFacts?.domGating ?? null,
+        buttonGeometry: extraFacts?.buttonGeometry ?? null,
+        fingerprint: extraFacts?.fingerprint ?? null,
       };
     }
   }, contextOptions);

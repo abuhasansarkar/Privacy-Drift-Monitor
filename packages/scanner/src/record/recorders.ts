@@ -14,6 +14,7 @@ import type {
   RecordedStorageEntry,
   SnapshotPoint,
 } from "../types";
+import { resolveDestinationCountry } from "../net/geoip";
 /**
  * EVIDENCE RECORDERS — PLAN.md Part IV §4.4/§4.5, Phase 2 task 2.3.
  *
@@ -186,6 +187,13 @@ export class NetworkRecorder {
       previous = previous.redirectedFrom();
     }
     record.redirectChain = chain;
+
+    const server = await response.serverAddr().catch(() => null);
+    if (server?.ipAddress) {
+      record.destinationCountry = await resolveDestinationCountry(server.ipAddress).catch(() => null);
+    } else if (record.host) {
+      record.destinationCountry = await resolveDestinationCountry(record.host).catch(() => null);
+    }
   }
 
   private onFailed(request: Request) {
