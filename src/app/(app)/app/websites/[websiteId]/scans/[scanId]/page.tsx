@@ -5,6 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { DataList, type Column, type Row } from "@/components/ui/data-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { MutedBadge, StatusBadge } from "@/components/ui/severity-badge";
 import { LiveScanProgress } from "@/components/scans/live-scan-progress";
@@ -80,6 +81,29 @@ export default async function ScanDetailPage({
 
   return (
     <div className="flex w-full flex-col gap-5">
+      {/*
+        A scan is three levels deep and reachable from an emailed link, so the
+        browser's Back button is not a reliable way up — the reader may have no
+        history at all. The trail names each level and links it.
+      */}
+      <Breadcrumbs
+        items={[
+          { label: t("websites.title"), href: "/app/websites" },
+          {
+            label: scan.website.url.replace(/^https?:\/\//, "").replace(/\/$/, ""),
+            href: `/app/websites/${websiteId}`,
+          },
+          {
+            label: t("websiteTabs.scans"),
+            href: `/app/websites/${websiteId}/scans`,
+          },
+          {
+            label: scan.startedAt
+              ? formatDateTime(scan.startedAt, ctx.timezone)
+              : t("scans.title"),
+          },
+        ]}
+      />
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-2.5">

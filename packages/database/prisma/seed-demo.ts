@@ -298,9 +298,8 @@ async function writeScanEvidence(params: {
   vendors: ReadonlyArray<{ id: string; name: string; domainPatterns: string[] }>;
   /** The one journey that did not complete, if this scan is PARTIAL. */
   failedPhase: (typeof DEMO_PHASES)[number] | null;
-  random: () => number;
 }): Promise<{ requestCount: number; cookieCount: number; thirdPartyDomainCount: number }> {
-  const { scanId, agencyId, host, startedAt, vendors, failedPhase, random } = params;
+  const { scanId, agencyId, host, startedAt, vendors, failedPhase } = params;
   const pageUrl = `https://${host}/`;
 
   const phaseRows: Prisma.ScanPhaseCreateManyInput[] = [];
@@ -652,7 +651,6 @@ async function main() {
         startedAt: at,
         vendors: siteVendors,
         failedPhase: isPartial ? "REJECT_ALL" : null,
-        random,
       });
       await prisma.scan.update({ where: { id: scan.id }, data: counts });
       totalRequests += counts.requestCount;

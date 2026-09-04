@@ -580,6 +580,18 @@ model NetworkRequest {
   redirectChain     String[] @default([])
   /// Count only. Header values are never stored.
   setCookieCount    Int      @default(0)
+  /// ISO-3166 alpha-2 of the IP this request actually reached, resolved at scan
+  /// time by `net/geoip.ts` and read by `PDM-R040` (cross-border transfer).
+  ///
+  /// ⚠️ RESOLVED AT SCAN TIME AND STORED, NOT LOOKED UP DURING ANALYSIS. An IP
+  /// can be re-homed between the recording and the reading, so resolving it
+  /// later would make identical evidence produce different findings on
+  /// different days — the replayability P6 rests on.
+  ///
+  /// ⚠️ NULLABLE BECAUSE RESOLUTION LEGITIMATELY FAILS. A blocked, aborted or
+  /// cached request has no peer IP, and `PDM-R040` reads absent as "not
+  /// established" rather than as "domestic".
+  destinationCountry String?
   trackerVendorId   String?
 
   createdAt DateTime @default(now())

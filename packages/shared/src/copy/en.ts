@@ -320,6 +320,13 @@ export const en = {
     alreadyRunning: "A scan is already running for this website.",
     running: "Running",
     queued: "Queued",
+    /*
+     * ⚠️ IT REPORTS ELAPSED TIME, IT DOES NOT DIAGNOSE. The page knows how long
+     * the scan has been going and nothing else; claiming it is stuck would be
+     * asserting a fact about the worker that the browser cannot observe.
+     */
+    takingLonger:
+      "This scan is taking longer than most. It will keep going, and this page updates on its own.",
     statusCompleted: "Completed",
     statusPartial: "Partial",
     statusFailed: "Failed",
@@ -1253,6 +1260,7 @@ export const en = {
     policy: "Privacy Policy",
     changes: "Changes",
     scans: "Scans",
+    crawl: "Crawl & Auth",
     fromScan: "Showing the scan from",
     /** A PARTIAL scan's tabs are incomplete — the reader has to be told. */
     fromPartialScan:
@@ -1828,6 +1836,9 @@ export const en = {
   a11y: {
     loading: "Loading",
     mainNavigation: "Main navigation",
+    secondaryNavigation: "Secondary navigation",
+    /** Landmark for the trail back up from a detail page. */
+    breadcrumb: "Breadcrumb",
     /** Severity is never colour alone — the icon carries a label too (§11.6). */
     severityLabel: "Severity",
     sortBy: "Sort by",

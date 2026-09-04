@@ -418,6 +418,45 @@
   }
 }
 
+/*
+ * A sweep across a filled progress bar.
+ *
+ * ⚠️ IT CONVEYS LIVENESS, NEVER AMOUNT. A scan's four journeys advance the bar
+ * in steps, so between two steps the width is legitimately still for tens of
+ * seconds — and a motionless bar beside a running spinner reads as a hung job.
+ * The sweep says "still working"; the width says "this much is done". Keeping
+ * those two signals separate is what stops the animation from implying progress
+ * the scanner has not reported.
+ *
+ * ⚠️ MOTION-SAFE ONLY. The bar's width and its `aria-valuenow` already carry the
+ * whole meaning, so a reader with reduced motion loses nothing by not seeing it.
+ */
+@utility animate-shimmer {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklab, var(--color-primary-foreground) 45%, transparent) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+      content: none;
+    }
+  }
+}
+
 @utility animate-in {
   animation-name: enter;
   animation-duration: 150ms;

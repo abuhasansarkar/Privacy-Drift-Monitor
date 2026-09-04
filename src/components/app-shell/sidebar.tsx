@@ -21,6 +21,7 @@ import {
   UsersIcon,
 } from "@/components/ui/icons";
 import { isActive, NAV_ITEMS, type NavItem } from "./nav-items";
+import { ActiveHighlight, LinkPending, NavGroup } from "./nav-motion";
 
 /**
  * SIDEBAR — §3.3.
@@ -91,56 +92,83 @@ export function Sidebar({
       </div>
 
       {/* Main Top Navigation */}
-      <nav aria-label={t("a11y.mainNavigation")} className="flex flex-col gap-0.5 overflow-y-auto">
-        {mainItems.map((item) => {
-          const Glyph = ICONS[item.icon];
-          const active = isActive(item, pathname);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-small font-medium transition-colors max-sm:py-2.5",
-                active
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Glyph />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <NavGroup id="sidebar-main">
+        <nav
+          aria-label={t("a11y.mainNavigation")}
+          className="flex flex-col gap-0.5 overflow-y-auto"
+        >
+          {mainItems.map((item) => {
+            const Glyph = ICONS[item.icon];
+            const active = isActive(item, pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  // `relative` and `isolate` scope the travelling highlight to
+                  // this row: it is positioned absolutely and sits at -z-10, so
+                  // without a stacking context of its own it would slide behind
+                  // the sidebar background instead of behind the label.
+                  "relative isolate flex items-center gap-2.5 rounded-md px-2.5 py-2 text-small font-medium transition-colors max-sm:py-2.5",
+                  active
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                {active ? <ActiveHighlight layoutId="sidebar-main-active" /> : null}
+                <Glyph />
+                {item.label}
+                <LinkPending />
+              </Link>
+            );
+          })}
+        </nav>
+      </NavGroup>
 
       {/* Bottom Pinned Navigation & Usage Meter */}
       <div className="mt-auto flex flex-col gap-2 pt-3">
         {bottomItems.length > 0 ? (
-          <nav aria-label="Secondary navigation" className="flex flex-col gap-0.5 border-t border-border/80 pt-2.5">
-            {bottomItems.map((item) => {
-              const Glyph = ICONS[item.icon];
-              const active = isActive(item, pathname);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-small font-medium transition-colors max-sm:py-2.5",
-                    active
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Glyph />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          /*
+           * ⚠️ ITS OWN GROUP AND ITS OWN `layoutId`. Sharing the main nav's id
+           * would make the highlight fly the full height of the sidebar when
+           * moving between Dashboard and Settings — a long diagonal journey
+           * across a visual divider that reads as a glitch rather than a
+           * transition. Two regions, two indicators.
+           */
+          <NavGroup id="sidebar-bottom">
+            <nav
+              aria-label={t("a11y.secondaryNavigation")}
+              className="flex flex-col gap-0.5 border-t border-border/80 pt-2.5"
+            >
+              {bottomItems.map((item) => {
+                const Glyph = ICONS[item.icon];
+                const active = isActive(item, pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "relative isolate flex items-center gap-2.5 rounded-md px-2.5 py-2 text-small font-medium transition-colors max-sm:py-2.5",
+                      active
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    {active ? (
+                      <ActiveHighlight layoutId="sidebar-bottom-active" />
+                    ) : null}
+                    <Glyph />
+                    {item.label}
+                    <LinkPending />
+                  </Link>
+                );
+              })}
+            </nav>
+          </NavGroup>
         ) : null}
 
         {websiteLimit !== null ? (

@@ -114,13 +114,31 @@ export function scanRepository(db: TenantClient, agencyId: string) {
       });
     },
 
-    /** Marks a scan RUNNING as the worker picks it up (§4.11 state machine). */
-    async markRunning(scanId: string, workerId: string): Promise<void> {
+    /**
+     * Marks a scan RUNNING as the worker picks it up (§4.11 state machine).
+     *
+     * Returns `false` when the scan row no longer exists.
+     *
+     * ⚠️ A MISSING ROW IS AN ORDINARY OUTCOME, NOT AN ERROR. A queued job
+     * outlives its scan whenever the website is deleted, the agency is removed,
+     * or retention sweeps the row — the job is still sitting in Redis holding a
+     * `scanId` that resolves to nothing. This used to be a bare `update()`, so
+     * that case threw Prisma's P2025 ("No record was found for an update"),
+     * BullMQ treated it as a transient failure, and the job retried its full
+     * backoff schedule. Eight attempts, eight stack traces in the log, and
+     * every one of them describing a database row that is never coming back.
+     *
+     * `updateMany` reports a count instead of throwing, which lets the caller
+     * distinguish "could not start" from "nothing to start" and discard the
+     * job once rather than retrying a decision that cannot change.
+     */
+    async markRunning(scanId: string, workerId: string): Promise<boolean> {
       const startedAt = new Date();
-      await db.scan.update({
+      const { count } = await db.scan.updateMany({
         where: { id: scanId },
         data: { status: "RUNNING", startedAt, workerId },
       });
+      return count > 0;
     },
 
     /**

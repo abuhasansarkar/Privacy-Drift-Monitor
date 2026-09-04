@@ -132,8 +132,32 @@ export function LiveScanProgress({
     };
   });
 
+  /*
+   * ⚠️ A JOURNEY IN FLIGHT IS PROGRESS, AND COUNTING ONLY FINISHED ONES MADE
+   * THE BAR LIE BY STANDING STILL. The worker writes a phase row when the
+   * journey ENDS, so `recorded.size` is 0 for the whole of the first journey —
+   * the bar read "0% · 42 s elapsed" while the scanner was demonstrably working,
+   * which is indistinguishable from a stuck job and is exactly the reading a
+   * user reported.
+   *
+   * Half a unit for the running journey keeps the bar derived from phase STATE,
+   * never from elapsed time: it moves 12.5 → 25 → 37.5 … on real transitions
+   * the scanner reported, and still cannot creep to 90% and sit there. A
+   * half-finished journey is genuinely half-known, and the bar now says so.
+   */
   const done = recorded.size;
-  const percent = Math.round((done / PHASE_ORDER.length) * 100);
+  const inFlight = !TERMINAL.has(status);
+  const running = status === "RUNNING" && runningIndex >= 0 ? 0.5 : 0;
+  const raw = Math.round(((done + running) / PHASE_ORDER.length) * 100);
+  /*
+   * ⚠️ THE 99% CAP APPLIES ONLY WHILE THE SCAN IS IN FLIGHT. All four journeys
+   * can be recorded a moment before the scan itself reaches a terminal status,
+   * and showing a confident 100% there would claim the run is finished while
+   * the worker is still committing evidence. Once the status IS terminal the
+   * cap must lift, or a completed scan reads 99% forever in the window before
+   * `router.refresh()` swaps this widget out for the recorded evidence.
+   */
+  const percent = inFlight ? Math.min(99, raw) : raw;
   const currentLabel =
     status === "QUEUED"
       ? t("scans.queued")

@@ -101,7 +101,25 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
   // client — a cross-tenant write here would be invisible until a customer
   // found their data in someone else's report.
   const repos = repositoriesFor(job.data.agencyId);
-  await repos.scans.markRunning(job.data.scanId, WORKER_ID);
+
+  /*
+   * ⚠️ A JOB CAN OUTLIVE ITS SCAN, AND THAT IS NOT A FAILURE. Deleting a
+   * website (or an agency, or a retention sweep) cascades the scan row away
+   * while its job sits in Redis. Retrying cannot bring the row back, so the
+   * job is discarded here — loudly enough to find in a log, quietly enough not
+   * to page anyone. Before this check the job threw P2025 and burned its whole
+   * retry schedule against a decision that was final on the first attempt.
+   */
+  const started = await repos.scans.markRunning(job.data.scanId, WORKER_ID);
+  if (!started) {
+    log.warn("scan row no longer exists — discarding job");
+    return {
+      scanId: job.data.scanId,
+      status: "DISCARDED",
+      durationMs: 0,
+      requestCount: 0,
+    };
+  }
 
   const result = await runScan(
     {
@@ -266,7 +284,16 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
 
 interface ScanSummary {
   scanId: string;
-  status: ScanResult["status"];
+  /**
+   * The scanner's own outcomes, plus `DISCARDED`.
+   *
+   * ⚠️ `DISCARDED` IS NOT A SCAN OUTCOME AND MUST NOT BE CONFUSED WITH ONE. It
+   * means the job was dropped before any journey ran, because the scan row it
+   * names no longer exists. Reusing `FAILED` here would put "this scan failed"
+   * into the job history for a scan that was never attempted — and a failure
+   * count that includes deleted rows is a metric nobody can act on.
+   */
+  status: ScanResult["status"] | "DISCARDED";
   durationMs: number;
   requestCount: number;
 }

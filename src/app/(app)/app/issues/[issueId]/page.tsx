@@ -5,6 +5,7 @@ import { can } from "@pdm/shared/permissions";
 import { IssueEvidenceList } from "@/components/issues/issue-evidence-list";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SeverityBadge, StatusBadge } from "@/components/ui/severity-badge";
 import { IssueActions } from "@/components/issues/issue-actions";
 import { RemediationDialog } from "@/components/issues/remediation-dialog";
@@ -124,6 +125,23 @@ export default async function IssueDetailPage({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
+      {/*
+        An issue is most often opened from an alert email or a client message,
+        so the reader frequently arrives with no history and no idea which of
+        their sites this is. The trail answers that before the title does.
+      */}
+      <Breadcrumbs
+        items={[
+          { label: t("issues.title"), href: "/app/issues" },
+          {
+            label: issue.website.url
+              .replace(/^https?:\/\//, "")
+              .replace(/\/$/, ""),
+            href: `/app/websites/${issue.website.id}`,
+          },
+          { label: issue.ruleId },
+        ]}
+      />
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-2.5">
