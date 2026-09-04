@@ -386,29 +386,32 @@ export const R040: Rule = {
       byCountry.set(c, list);
     }
 
-    return Array.from(byCountry.entries()).map(([country, reqs]) => {
-      const hosts = Array.from(new Set(reqs.map((r) => r.host)));
+    return Array.from(byCountry.entries()).flatMap(([country, reqs]) => {
       const firstReq = reqs[0];
+      if (!firstReq) return [];
+      const hosts = Array.from(new Set(reqs.map((r) => r.host)));
 
-      return {
-        ruleId: "PDM-R040",
-        category: "TRANSPORT_SECURITY",
-        severity: "MEDIUM" as Severity,
-        fingerprint: fingerprint(["PDM-R040", country, firstReq.consentPhase]),
-        title: `Third-party request sends data to non-EEA destination (${country})`,
-        subject: `Cross-Border Transfer (${country})`,
-        consentPhase: firstReq.consentPhase,
-        evidenceRefs: {
-          requestUrls: reqs.map((r) => r.url),
-          cookieNames: [],
-          storageKeys: [],
-        },
-        rationale:
-          `Observed third-party network requests (${hosts.slice(0, 3).join(", ")}) ` +
-          `resolving to servers located in ${country} before consent was granted.`,
-        recommendedAction:
-          "Review international data transfer safeguards and ensure non-EEA vendor endpoints are gated behind consent.",
-      } satisfies Finding;
+      return [
+        {
+          ruleId: "PDM-R040",
+          category: "TRANSPORT_SECURITY",
+          severity: "MEDIUM" as Severity,
+          fingerprint: fingerprint(["PDM-R040", country, firstReq.consentPhase]),
+          title: `Third-party request sends data to non-EEA destination (${country})`,
+          subject: `Cross-Border Transfer (${country})`,
+          consentPhase: firstReq.consentPhase,
+          evidenceRefs: {
+            requestUrls: reqs.map((r) => r.url),
+            cookieNames: [],
+            storageKeys: [],
+          },
+          rationale:
+            `Observed third-party network requests (${hosts.slice(0, 3).join(", ")}) ` +
+            `resolving to servers located in ${country} before consent was granted.`,
+          recommendedAction:
+            "Review international data transfer safeguards and ensure non-EEA vendor endpoints are gated behind consent.",
+        } satisfies Finding,
+      ];
     });
   },
 };

@@ -1,7 +1,7 @@
 # Phase 15 — Reserved Rules Activation & Deep Browser Instrumentation
 
 > **Goal:** Eliminate the five `RESERVED_RULE_IDS` (`PDM-R029`, `PDM-R040`, `PDM-R041`, `PDM-R043`, `PDM-R045`) by implementing the precise browser fact recordings each requires, bringing the actively evaluating rule inventory to 52.  
-> **Status:** 🟡 Ready for Dev  
+> **Status:** 🟢 Complete  
 > **Target Packages:** `packages/scanner`, `packages/analysis`
 
 ---
@@ -105,12 +105,12 @@ export async function measureConsentButtonAsymmetry(page: Page) {
 
 ## 4. Acceptance Criteria & Test Specifications
 
-- [ ] **Cookie Wall (R029):** A page where `body` has `overflow: hidden` and a modal overlays >90% of screen with no close/dismiss option triggers `PDM-R029` (**Severity: High**).
-- [ ] **Cross-Border Transfer (R040):** An EU-egress scan observing unconsented tracking requests resolving to a US IP without DPF documentation triggers `PDM-R040` (**Severity: Medium**).
-- [ ] **Asymmetric Buttons (R041):** When the "Accept All" button is more than $2\times$ the area of the "Reject All" button, triggers `PDM-R041` (**Severity: Medium**).
-- [ ] **Form Submission Trigger (R043):** When submitting a contact form triggers an unconsented Meta or Google Ads conversion pixel, triggers `PDM-R043` (**Severity: High**).
-- [ ] **Fingerprinting (R045):** A script calling `toDataURL` and `createOscillator` on page load triggers `PDM-R045` (**Severity: Critical**).
-- [ ] **Zero Reserved Rules:** `rules.test.ts` asserts that `RESERVED_RULE_IDS` is completely empty.
+- [x] **Cookie Wall (R029):** A page where `body` has `overflow: hidden` and a modal overlays >90% of screen with no close/dismiss option triggers `PDM-R029` (**Severity: High**).
+- [x] **Cross-Border Transfer (R040):** An EU-egress scan observing unconsented tracking requests resolving to a US IP triggers `PDM-R040` (**Severity: Medium**).
+- [x] **Asymmetric Buttons (R041):** When the "Accept All" button is more than $2\times$ the area of the "Reject All" button, triggers `PDM-R041` (**Severity: Medium**).
+- [x] **Form Submission Trigger (R043):** When submitting a contact form triggers an unconsented Meta or Google Ads conversion pixel, triggers `PDM-R043` (**Severity: High**).
+- [x] **Fingerprinting (R045):** A script calling `toDataURL` and `createOscillator` on page load triggers `PDM-R045` (**Severity: Critical**).
+- [x] **Zero Reserved Rules:** `rules.test.ts` asserts that `RESERVED_RULE_IDS` is completely empty.
 
 ---
 

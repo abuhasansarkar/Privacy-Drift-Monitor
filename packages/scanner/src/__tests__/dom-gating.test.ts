@@ -5,7 +5,7 @@ import {
   type DomGatingFact,
   type ButtonGeometryFact,
 } from "../instrumentation/dom-gating";
-import { resolveDestinationCountry, COUNTRY_CODE_MAP } from "../net/geoip";
+import { resolveDestinationCountry } from "../net/geoip";
 
 describe("DOM Gating & Asymmetric Geometry Instrumentation (PDM-R029 / PDM-R041)", () => {
   it("measureDomGating handles evaluation failure gracefully without throwing", async () => {

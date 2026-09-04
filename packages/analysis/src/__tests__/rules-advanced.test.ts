@@ -43,10 +43,10 @@ describe("PDM-R029 — Cookie Wall / Forcible Gating", () => {
 
     const findings = R029.evaluate(ctx);
     expect(findings).toHaveLength(1);
-    expect(findings[0].ruleId).toBe("PDM-R029");
-    expect(findings[0].severity).toBe("HIGH");
-    expect(findings[0].category).toBe("CONSENT_FAILURE");
-    expect(findings[0].title).toContain("Cookie wall detected");
+    expect(findings[0]!.ruleId).toBe("PDM-R029");
+    expect(findings[0]!.severity).toBe("HIGH");
+    expect(findings[0]!.category).toBe("CONSENT_FAILURE");
+    expect(findings[0]!.title).toContain("Cookie wall detected");
   });
 });
 
@@ -123,10 +123,10 @@ describe("PDM-R040 — Cross-Border Data Transfer", () => {
     const ctx = createMockContext({ requests });
     const findings = R040.evaluate(ctx);
     expect(findings).toHaveLength(1);
-    expect(findings[0].ruleId).toBe("PDM-R040");
-    expect(findings[0].severity).toBe("MEDIUM");
-    expect(findings[0].category).toBe("TRANSPORT_SECURITY");
-    expect(findings[0].title).toContain("US");
+    expect(findings[0]!.ruleId).toBe("PDM-R040");
+    expect(findings[0]!.severity).toBe("MEDIUM");
+    expect(findings[0]!.category).toBe("TRANSPORT_SECURITY");
+    expect(findings[0]!.title).toContain("US");
   });
 });
 
@@ -155,10 +155,10 @@ describe("PDM-R041 — Asymmetric Consent Button Sizing", () => {
 
     const findings = R041.evaluate(ctx);
     expect(findings).toHaveLength(1);
-    expect(findings[0].ruleId).toBe("PDM-R041");
-    expect(findings[0].severity).toBe("MEDIUM");
-    expect(findings[0].category).toBe("CONSENT_MISSING");
-    expect(findings[0].title).toContain("4x larger");
+    expect(findings[0]!.ruleId).toBe("PDM-R041");
+    expect(findings[0]!.severity).toBe("MEDIUM");
+    expect(findings[0]!.category).toBe("CONSENT_MISSING");
+    expect(findings[0]!.title).toContain("4x larger");
   });
 });
 
@@ -187,10 +187,10 @@ describe("PDM-R043 — Form Submission Tracker Burst", () => {
 
     const findings = R043.evaluate(ctx);
     expect(findings).toHaveLength(1);
-    expect(findings[0].ruleId).toBe("PDM-R043");
-    expect(findings[0].severity).toBe("HIGH");
-    expect(findings[0].category).toBe("INTERACTION");
-    expect(findings[0].title).toContain("Unconsented tracker burst");
+    expect(findings[0]!.ruleId).toBe("PDM-R043");
+    expect(findings[0]!.severity).toBe("HIGH");
+    expect(findings[0]!.category).toBe("INTERACTION");
+    expect(findings[0]!.title).toContain("Unconsented tracker burst");
   });
 });
 
@@ -221,9 +221,9 @@ describe("PDM-R045 — Browser Fingerprinting Detection", () => {
 
     const findings = R045.evaluate(ctx);
     expect(findings).toHaveLength(1);
-    expect(findings[0].ruleId).toBe("PDM-R045");
-    expect(findings[0].severity).toBe("CRITICAL");
-    expect(findings[0].category).toBe("FINGERPRINT");
-    expect(findings[0].title).toContain("Browser fingerprinting");
+    expect(findings[0]!.ruleId).toBe("PDM-R045");
+    expect(findings[0]!.severity).toBe("CRITICAL");
+    expect(findings[0]!.category).toBe("FINGERPRINT");
+    expect(findings[0]!.title).toContain("Browser fingerprinting");
   });
 });

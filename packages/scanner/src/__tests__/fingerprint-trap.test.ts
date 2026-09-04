@@ -26,22 +26,22 @@ describe("Browser Fingerprinting Trap (PDM-R045)", () => {
     const rawCalls: RecordedFingerprintCall[] = [
       {
         api: "canvas.toDataURL",
-        timestamp: 100,
+        timestampMs: 100,
         stackSnippet: "at tracker.js:42:10",
       },
       {
         api: "canvas.getImageData",
-        timestamp: 120,
+        timestampMs: 120,
         stackSnippet: "at tracker.js:55:12",
       },
       {
         api: "audio.createOscillator",
-        timestamp: 150,
+        timestampMs: 150,
         stackSnippet: "at audio-fp.js:12:4",
       },
       {
         api: "webgl.readPixels",
-        timestamp: 200,
+        timestampMs: 200,
         stackSnippet: "at gpu-detect.js:88:5",
       },
     ];
