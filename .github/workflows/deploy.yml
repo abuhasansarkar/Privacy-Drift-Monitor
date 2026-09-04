@@ -108,11 +108,6 @@ jobs:
       - name: Migration check
         run: npm run db:deploy
 
-      # `test:coverage`, not `test` — the ≥85% thresholds in `vitest.config.ts`
-      # are only evaluated by the coverage run. See the note in `pr.yml`.
-      - name: Test + coverage gate
-        run: npm run test:coverage
-
   build-images:
     name: Build & Push Container Images
     needs: [validate]

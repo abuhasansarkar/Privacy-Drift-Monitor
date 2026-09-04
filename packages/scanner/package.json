@@ -33,7 +33,6 @@
   "devDependencies": {
     "@pdm/config": "*",
     "@types/node": "^20",
-    "typescript": "^5",
-    "vitest": "^3"
+    "typescript": "^5"
   }
 }

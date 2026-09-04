@@ -33,7 +33,6 @@
     "prisma": "^6",
     "tsx": "^4",
     "typescript": "^5",
-    "vitest": "^3",
     "@pdm/billing": "*"
   }
 }
