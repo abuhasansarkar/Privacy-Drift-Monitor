@@ -79,3 +79,7 @@ export {
   NOTIFICATION_COPY,
   renderCopy,
 } from "./copy";
+
+export type { SlackAlertOptions, SlackDeliveryResult } from "./slack";
+export { buildSlackBlocks, sendSlackAlert } from "./slack";
+

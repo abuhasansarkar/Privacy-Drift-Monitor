@@ -9,6 +9,7 @@ import {
   type NotificationJobData,
   type ReportJobData,
   type ScanJobData,
+  type WebhookJobData,
 } from "./queues";
 
 /**
@@ -133,6 +134,16 @@ export function createAiWorker<TResult>(
   options: QueueWorkerOptions,
 ): Worker<AiJobData, TResult> {
   return new Worker<AiJobData, TResult>(QUEUE_NAMES.ai, processor, {
+    connection: options.connection,
+    concurrency: options.concurrency,
+  });
+}
+
+export function createWebhookWorker<TResult>(
+  processor: Processor<WebhookJobData, TResult>,
+  options: QueueWorkerOptions,
+): Worker<WebhookJobData, TResult> {
+  return new Worker<WebhookJobData, TResult>(QUEUE_NAMES.webhook, processor, {
     connection: options.connection,
     concurrency: options.concurrency,
   });

@@ -304,7 +304,9 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
     userAgent: "",
     cmp,
     phases,
-    pagesScanned: navigationSucceeded ? 1 : 0,
+    pagesScanned: navigationSucceeded
+      ? Math.max(1, input.sitemapConfig?.selectedUrls?.length ?? 1)
+      : 0,
     errorCode,
     errorMessage,
     errorPhase,

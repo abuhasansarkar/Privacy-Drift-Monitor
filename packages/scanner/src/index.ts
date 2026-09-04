@@ -108,4 +108,28 @@ export {
   extractCleanText,
 } from "./policy/extractor";
 
+export {
+  fetchAndParseSitemap,
+  classifyUrlArchetype,
+  selectDiverseArchetypalUrls,
+  extractLocsFromXml,
+  isSitemapIndex,
+  type UrlArchetype,
+  type SitemapDiscoveryResult,
+  type SitemapSpiderOptions,
+} from "./spider/sitemap";
+
+export {
+  encryptCredentials,
+  decryptCredentials,
+  type CredentialSecrets,
+} from "./auth/crypto";
+
+export {
+  performAuthenticatedLogin,
+  type AuthenticatedScanConfigPayload,
+  type LoginResult,
+  type LoginRunnerOptions,
+} from "./auth/login-runner";
+
 

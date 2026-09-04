@@ -17,7 +17,8 @@
     "./record/screenshots": "./src/record/screenshots.ts",
     "./queue/jobs": "./src/queue/queues.ts",
     "./navigate": "./src/navigate.ts",
-    "./testing/fixture-server": "./src/testing/fixture-server.ts"
+    "./testing/fixture-server": "./src/testing/fixture-server.ts",
+    "./spider/archetypes": "./src/spider/archetypes.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

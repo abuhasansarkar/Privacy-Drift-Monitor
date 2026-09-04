@@ -51,10 +51,18 @@ export default async function SecuritySettingsPage() {
         </div>
       </Card>
 
-      <Placeholder
-        title={t("security.apiKeysTitle")}
-        body={t("security.apiKeysBody")}
-      />
+      <Card>
+        <CardHeader title={t("security.apiKeysTitle")} />
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <p className="min-w-[16rem] flex-1 text-small text-muted-foreground">
+            {t("security.apiKeysBody")}
+          </p>
+          <ButtonLink href="/app/settings/api" variant="secondary">
+            Manage API &amp; Webhooks
+          </ButtonLink>
+        </div>
+      </Card>
+
       <Placeholder
         title={t("security.ipAllowlistTitle")}
         body={t("security.ipAllowlistBody")}

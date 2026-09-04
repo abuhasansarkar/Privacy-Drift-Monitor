@@ -17,6 +17,7 @@ const SECTIONS = [
   { href: "/app/settings/ignored", label: t("ignored.title") },
   { href: "/app/settings/ai", label: t("aiSettings.title") },
   { href: "/app/settings/security", label: t("security.title") },
+  { href: "/app/settings/api", label: "API & Webhooks" },
   { href: "/app/settings/audit", label: t("audit.title") },
 ];
 

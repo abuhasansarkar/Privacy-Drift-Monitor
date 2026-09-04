@@ -91,6 +91,23 @@ export {
   extractEffectiveDate,
 } from "./prompts/policy-extract";
 
+export type { CookieClassifyOutput } from "./prompts/cookie-classify";
+export {
+  COOKIE_CLASSIFY_V1,
+  COOKIE_CLASSIFY_USER_V1,
+  CookieClassifyOutputSchema,
+} from "./prompts/cookie-classify";
+
+export type {
+  CookieClassificationInput,
+  CookieClassifierDeps,
+} from "./cookie-classifier";
+export {
+  classifyCookie,
+  getCookieCacheKey,
+  clearCookieClassificationCache,
+} from "./cookie-classifier";
+
 export type {
   ValidationFailure,
   ValidationResult,

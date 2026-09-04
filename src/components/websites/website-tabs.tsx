@@ -28,6 +28,7 @@ const TABS = [
   { segment: "scans", label: t("websiteTabs.scans") },
   { segment: "evidence", label: t("evidence.title") },
   { segment: "reports", label: t("reports.title") },
+  { segment: "crawl", label: "Crawl & Auth" },
 ];
 
 export function WebsiteTabs({ websiteId }: { websiteId: string }) {

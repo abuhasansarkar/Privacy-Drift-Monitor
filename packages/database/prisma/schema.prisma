@@ -93,6 +93,8 @@ model Agency {
   featureFlagOverrides FeatureFlagOverride[]
   portalUsers          PortalUser[]
   consentModeAudits    ConsentModeAudit[]
+  apiKeys              ApiKey[]
+  webhookEndpoints     WebhookEndpoint[]
 
   @@index([clerkOrgId])
   @@index([slug])
@@ -342,6 +344,8 @@ model Website {
   suppressions DriftSuppression[]
   jurisdictionConfig WebsiteJurisdictionConfig?
   policyAudits       PolicyAudit[]
+  sitemapConfig      SitemapCrawlConfig?
+  authScanConfig     AuthenticatedScanConfig?
 
   @@unique([agencyId, url])
   @@index([agencyId, monitoringStatus, archivedAt])
@@ -1806,4 +1810,95 @@ model ConsentModeAudit {
   @@index([agencyId])
   @@map("consent_mode_audits")
 }
+
+// ───────────────────────────── Public API & Outbound Webhooks (Phase 16) ─────────────────────────────
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  agencyId    String
+  name        String
+  keyPrefix   String    // e.g. "pdm_live_a1b2"
+  keyHash     String    @unique // SHA-256 hash of the full secret token
+  scopes      String[]  @default(["read", "write"])
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  agency      Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model WebhookEndpoint {
+  id          String            @id @default(uuid())
+  agencyId    String
+  url         String
+  description String?
+  secret      String            // whsec_... HMAC signing secret
+  events      String[]          // e.g. ["website.scan.completed", "privacy_drift.detected"]
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  agency      Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  deliveries  WebhookDelivery[]
+
+  @@index([agencyId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id          String          @id @default(uuid())
+  endpointId  String
+  event       String
+  payload     Json
+  statusCode  Int?
+  durationMs  Int?
+  error       String?
+  attempt     Int             @default(1)
+  status      DeliveryStatus  @default(PENDING)
+  createdAt   DateTime        @default(now())
+
+  endpoint    WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt(sort: Desc)])
+  @@map("webhook_deliveries")
+}
+
+enum DeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model SitemapCrawlConfig {
+  id              String    @id @default(uuid())
+  websiteId       String    @unique
+  maxPages        Int       @default(5)
+  discoveredUrls  String[]  @default([])
+  selectedUrls    String[]  @default([])
+  lastCrawledAt   DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  @@map("sitemap_crawl_configs")
+}
+
+model AuthenticatedScanConfig {
+  id                String   @id @default(uuid())
+  websiteId         String   @unique
+  loginUrl          String
+  usernameSelector  String
+  passwordSelector  String
+  submitSelector    String
+  encryptedSecrets  String   // AES-256-GCM payload with IV and authTag
+  isActive          Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+
+  website           Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  @@map("authenticated_scan_configs")
+}
+
 

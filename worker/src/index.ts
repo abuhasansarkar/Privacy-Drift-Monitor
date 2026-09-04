@@ -16,6 +16,7 @@ import {
   createAiQueue,
   createEmailQueue,
   createNotificationQueue,
+  createWebhookQueue,
   createRedisConnection,
   type AiJobData,
   type DigestJobData,
@@ -24,6 +25,7 @@ import {
   type NotificationJobData,
   type ReportJobData,
   type ScanJobData,
+  type WebhookJobData,
 } from "@pdm/scanner/queue/queues";
 // bullmq is reached through the scanner package on purpose — see queue/worker.ts.
 import {
@@ -34,6 +36,7 @@ import {
   createReportWorker,
   createFreeScanWorker,
   createScanWorker,
+  createWebhookWorker,
   type Job,
 } from "@pdm/scanner/queue/worker";
 import { closeReportBrowser } from "@pdm/reports";
@@ -52,6 +55,9 @@ import { generateReport } from "./jobs/report.job";
 import { closeAiRedis, processAiJob } from "./jobs/ai.job";
 import { enqueueAutoExplain } from "./jobs/auto-explain";
 import { runPolicyAudit } from "./jobs/policy-audit.job";
+import { processWebhookJob } from "./jobs/webhook.job";
+import { triggerWorkerWebhooks } from "./jobs/webhook-trigger";
+import { runCookieClassification } from "./jobs/cookie-classifier.job";
 import { startScheduler } from "./scheduler";
 import { startDigestScheduler } from "./schedulers/digest-scheduler";
 
@@ -167,6 +173,16 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
     } catch (error) {
       log.error({ err: error }, "analysis failed; evidence is kept");
     }
+
+    try {
+      await runCookieClassification({
+        agencyId: job.data.agencyId,
+        websiteId: job.data.websiteId,
+        scanId: result.scanId,
+      });
+    } catch (err) {
+      log.warn({ err }, "cookie classification skipped or failed; scan continues");
+    }
   }
 
   /*
@@ -195,6 +211,46 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
     await enqueueAutoExplain(job.data.agencyId, result.scanId, aiQueue);
   } catch (error) {
     log.warn({ err: error }, "auto-explain enqueue failed; findings are unaffected");
+  }
+
+  /*
+   * Outbound webhooks dispatch event notifications to registered endpoints.
+   */
+  try {
+    await triggerWorkerWebhooks(
+      job.data.agencyId,
+      "website.scan.completed",
+      {
+        scanId: result.scanId,
+        websiteId: job.data.websiteId,
+        url: job.data.url,
+        status: result.status,
+        durationMs: result.durationMs,
+        pagesScanned: result.pagesScanned,
+        errorCode: result.errorCode,
+        finishedAt: result.finishedAt.toISOString(),
+      },
+      webhookQueue,
+    );
+
+    const driftCount = await repos.db.privacyDriftEvent.count({
+      where: { currentScanId: result.scanId },
+    });
+    if (driftCount > 0) {
+      await triggerWorkerWebhooks(
+        job.data.agencyId,
+        "privacy_drift.detected",
+        {
+          scanId: result.scanId,
+          websiteId: job.data.websiteId,
+          driftEventCount: driftCount,
+          finishedAt: result.finishedAt.toISOString(),
+        },
+        webhookQueue,
+      );
+    }
+  } catch (error) {
+    log.warn({ err: error }, "webhook trigger failed; findings are unaffected");
   }
 
   // The job's return value is a SUMMARY, not the evidence. BullMQ stores the
@@ -374,7 +430,7 @@ async function persist(
  * deployment; production splits `scan` from `report`.
  */
 const ROLES = (process.env.WORKER_ROLES ??
-  "scan,scheduler,notification,email,report,digest,ai,free-scan")
+  "scan,scheduler,notification,email,report,digest,ai,free-scan,webhook")
   .split(",")
   .map((role) => role.trim())
   .filter(Boolean);
@@ -385,6 +441,7 @@ const notificationQueue = createNotificationQueue(connection);
 const emailQueue = createEmailQueue(connection);
 /* The analysis job publishes auto-explain work here (§8.5 feature 1). */
 const aiQueue = createAiQueue(connection);
+const webhookQueue = createWebhookQueue(connection);
 
 const workers: { name: string; close: () => Promise<void> }[] = [];
 
@@ -526,6 +583,20 @@ if (hasRole("digest")) {
   workers.push({ name: QUEUE_NAMES.digest, close: () => digestWorker.close() });
 }
 
+if (hasRole("webhook")) {
+  const webhookWorker = createWebhookWorker(
+    (job: Job<WebhookJobData>) => processWebhookJob(job),
+    { connection, concurrency: Number(process.env.WEBHOOK_CONCURRENCY ?? 5) },
+  );
+  webhookWorker.on("failed", (job, error) => {
+    childLogger({ jobId: job?.id }).warn(
+      { err: error, attempt: job?.attemptsMade, deliveryId: job?.data.deliveryId },
+      "webhook delivery failed; will retry",
+    );
+  });
+  workers.push({ name: QUEUE_NAMES.webhook, close: () => webhookWorker.close() });
+}
+
 // The scheduler runs IN the worker process rather than as its own service:
 // it is a database sweep on a timer, and a second deployable would need its own
 // leader election to avoid double-sweeping (§7.5). Set WORKER_ROLES without
@@ -577,7 +648,12 @@ async function shutdown(signal: string) {
     //    `closeAiRedis` releases the AI job's own connection — it is separate
     //    from `connection` because the ports do plain GET/SET/INCR, which must
     //    not share a client BullMQ has configured for blocking reads.
-    await Promise.all([notificationQueue.close(), emailQueue.close(), aiQueue.close()]);
+    await Promise.all([
+      notificationQueue.close(),
+      emailQueue.close(),
+      aiQueue.close(),
+      webhookQueue.close(),
+    ]);
     await closeAiRedis();
     await connection.quit();
     logger.info("worker stopped cleanly");

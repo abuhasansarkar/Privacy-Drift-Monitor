@@ -145,11 +145,11 @@ export function verifyWebhookSignature(payload: string, header: string, secret: 
 
 ## 5. Acceptance Criteria & Test Specifications
 
-- [ ] **API Key Rejection:** Requests with missing or malformed `Authorization` header return HTTP 401.
-- [ ] **Tenant Isolation Enforced:** An API Key for Agency A cannot view or trigger scans for Agency B's websites (HTTP 404/403).
-- [ ] **Webhook Signature Verified:** Outbound webhook POST contains valid `X-PDM-Signature` header matching the endpoint secret.
-- [ ] **Exponential Backoff:** If a destination endpoint returns 500, the worker retries up to 5 times before marking the delivery as `FAILED`.
-- [ ] **Slack Block Delivery:** When `privacy_drift.detected` occurs, a formatted block with website URL, health score change, and issue count posts to the configured Slack channel.
+- [x] **API Key Rejection:** Requests with missing or malformed `Authorization` header return HTTP 401.
+- [x] **Tenant Isolation Enforced:** An API Key for Agency A cannot view or trigger scans for Agency B's websites (HTTP 404/403).
+- [x] **Webhook Signature Verified:** Outbound webhook POST contains valid `X-PDM-Signature` header matching the endpoint secret.
+- [x] **Exponential Backoff:** If a destination endpoint returns 500, the worker retries up to 5 times before marking the delivery as `FAILED`.
+- [x] **Slack Block Delivery:** When `privacy_drift.detected` occurs, a formatted block with website URL, health score change, and issue count posts to the configured Slack channel.
 
 ---
 

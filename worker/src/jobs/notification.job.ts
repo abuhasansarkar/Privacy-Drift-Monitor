@@ -5,6 +5,7 @@ import {
   DEFAULT_TRIGGER_TYPES,
   DUPLICATE_WINDOW_MS,
   planDispatch,
+  sendSlackAlert,
   type AlertEvent,
   type AlertRuleSpec,
   type AlertScopeType,
@@ -250,6 +251,29 @@ export async function dispatchNotification(
         "alert email queued",
       );
       emailCount += 1;
+    }
+  }
+
+  // ── 3. Slack notification ────────────────────────────────────────────────
+  const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const hasSlackRule = rules.some((r) => r.channels.includes("slack"));
+  if (slackWebhookUrl || hasSlackRule) {
+    const targetUrl = slackWebhookUrl;
+    if (targetUrl) {
+      try {
+        await sendSlackAlert({
+          webhookUrl: targetUrl,
+          websiteUrl: data.linkUrl ? `${APP_URL}${data.linkUrl}` : APP_URL,
+          websiteLabel: data.websiteLabel ?? undefined,
+          title: data.title,
+          severity: data.severity,
+          body: data.body,
+          dashboardUrl: data.linkUrl ? `${APP_URL}${data.linkUrl}` : undefined,
+        });
+        log.info({ type: event.type }, "slack alert dispatched");
+      } catch (err) {
+        log.warn({ err }, "slack alert dispatch failed");
+      }
     }
   }
 

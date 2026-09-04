@@ -201,7 +201,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
         /** Null means "do not schedule" — a MANUAL-frequency site (§7.5). */
         nextScanAt: Date | null;
       },
-      actor: { userId: string; ipHash?: string; userAgent?: string },
+      actor: { userId?: string | null; ipHash?: string; userAgent?: string },
     ): Promise<Website> {
       return db.$transaction(async (tx) => {
         const created = await tx.website.create({
@@ -247,7 +247,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
     async update(
       id: string,
       patch: Prisma.WebsiteUpdateInput,
-      actor: { userId: string; ipHash?: string; userAgent?: string },
+      actor: { userId?: string | null; ipHash?: string; userAgent?: string },
     ): Promise<Website | null> {
       const before = await db.website.findUnique({ where: { id } });
       if (!before) return null;
@@ -259,7 +259,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
             action: "website.updated",
             entityType: "Website",
             entityId: id,
-            userId: actor.userId,
+            userId: actor.userId ?? null,
             after: patch,
             ipHash: actor.ipHash ?? null,
             userAgent: actor.userAgent ?? null,
@@ -282,7 +282,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
       id: string,
       status: MonitoringStatus,
       nextScanAt: Date | null,
-      actor: { userId: string; ipHash?: string; userAgent?: string },
+      actor: { userId?: string | null; ipHash?: string; userAgent?: string },
     ): Promise<Website | null> {
       const before = await db.website.findUnique({ where: { id } });
       if (!before) return null;
@@ -304,7 +304,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
             action: status === "ACTIVE" ? "website.resumed" : "website.paused",
             entityType: "Website",
             entityId: id,
-            userId: actor.userId,
+            userId: actor.userId ?? null,
             before: { monitoringStatus: before.monitoringStatus },
             after: { monitoringStatus: status },
             ipHash: actor.ipHash ?? null,
@@ -323,7 +323,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
      */
     async archive(
       id: string,
-      actor: { userId: string; ipHash?: string; userAgent?: string },
+      actor: { userId?: string | null; ipHash?: string; userAgent?: string },
     ): Promise<Website | null> {
       const existing = await db.website.findUnique({ where: { id } });
       if (!existing) return null;
@@ -345,7 +345,7 @@ export function websiteRepository(db: TenantClient, agencyId: string) {
             action: "website.archived",
             entityType: "Website",
             entityId: id,
-            userId: actor.userId,
+            userId: actor.userId ?? null,
             ipHash: actor.ipHash ?? null,
             userAgent: actor.userAgent ?? null,
           },

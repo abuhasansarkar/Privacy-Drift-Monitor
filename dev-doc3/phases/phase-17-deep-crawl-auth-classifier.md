@@ -111,10 +111,10 @@ Adhere to strict technical privacy standards. If the cookie is used for cross-si
 
 ## 5. Acceptance Criteria & Test Specifications
 
-- [ ] **Sitemap Clustering:** The sitemap parser correctly groups URLs into `HOME`, `CART`, `CHECKOUT`, `BLOG`, and `FORM` without infinite recursion.
-- [ ] **Credential Security:** Credentials stored in `AuthenticatedScanConfig` cannot be decrypted without the master key `SCANNER_ENCRYPTION_KEY`. Plaintext credentials never leak into logs or API responses.
-- [ ] **Authenticated Navigation:** Playwright fills login fields, waits for network idle, confirms navigation away from login URL, and passes authenticated cookies to subsequent scan phases.
-- [ ] **AI Classifier Caching:** Classifying the cookie `_pk_id` returns category `ANALYTICS`, vendor `Matomo`, and caches the result so subsequent scans do not make duplicate OpenAI calls.
+- [x] **Sitemap Clustering:** The sitemap parser correctly groups URLs into `HOME`, `CART`, `CHECKOUT`, `BLOG`, and `FORM` without infinite recursion.
+- [x] **Credential Security:** Credentials stored in `AuthenticatedScanConfig` cannot be decrypted without the master key `SCANNER_ENCRYPTION_KEY`. Plaintext credentials never leak into logs or API responses.
+- [x] **Authenticated Navigation:** Playwright fills login fields, waits for network idle, confirms navigation away from login URL, and passes authenticated cookies to subsequent scan phases.
+- [x] **AI Classifier Caching:** Classifying the cookie `_pk_id` returns category `ANALYTICS`, vendor `Matomo`, and caches the result so subsequent scans do not make duplicate OpenAI calls.
 
 ---
 

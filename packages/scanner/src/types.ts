@@ -267,6 +267,20 @@ export interface ScanInput {
   /** The free public scanner runs ONE phase with a tighter budget (§10.4). */
   phases?: readonly ConsentPhase[];
   timeoutMs?: number;
+  /** Crawl configuration for multi-page sitemap execution (§17.1, §17.2). */
+  sitemapConfig?: {
+    maxPages?: number;
+    selectedUrls?: string[];
+  } | null;
+  /** Authenticated scanning configuration for member areas (§17.3). */
+  authConfig?: {
+    loginUrl: string;
+    usernameSelector: string;
+    passwordSelector: string;
+    submitSelector: string;
+    encryptedSecrets: string;
+    isActive: boolean;
+  } | null;
 }
 
 /**

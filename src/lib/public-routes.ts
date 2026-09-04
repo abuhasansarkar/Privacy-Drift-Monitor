@@ -50,6 +50,7 @@ export const PUBLIC_ROUTE_PATTERNS: string[] = [
   "/signup(.*)",
   "/api/webhooks(.*)",
   "/api/public(.*)",
+  "/api/v1(.*)",
   // Liveness and readiness probes are called by the platform with no session.
   // Gating these behind auth makes every deploy fail its health check.
   "/api/health(.*)",

@@ -40,6 +40,7 @@ export const QUEUE_NAMES = {
    * free scans is physically incapable of taking a paid browser slot.
    */
   freeScan: "pdm-scan-free",
+  webhook: "pdm-webhook",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -460,3 +461,41 @@ export async function enqueueAi(
   // colons, and BullMQ throws on those at enqueue time, in production.
   await queue.add("generate", data, { jobId: toJobId(data.dedupeKey) });
 }
+
+export interface WebhookJobData {
+  deliveryId: string;
+  endpointId: string;
+  endpointUrl: string;
+  secret: string;
+  event: string;
+  payload: Record<string, unknown>;
+  attempt: number;
+}
+
+export const WEBHOOK_JOB_OPTIONS: JobsOptions = {
+  attempts: 5,
+  backoff: { type: "exponential", delay: 2000 },
+  removeOnComplete: { age: 24 * 3600, count: 1000 },
+  removeOnFail: { age: 7 * 24 * 3600 },
+};
+
+export function createWebhookQueue(
+  connection: ConnectionOptions,
+): Queue<WebhookJobData> {
+  return new Queue<WebhookJobData>(QUEUE_NAMES.webhook, {
+    connection,
+    defaultJobOptions: WEBHOOK_JOB_OPTIONS,
+  });
+}
+
+export async function enqueueWebhook(
+  queue: Queue<WebhookJobData>,
+  data: WebhookJobData,
+  options?: JobsOptions,
+): Promise<void> {
+  await queue.add("dispatch", data, {
+    jobId: toJobId(data.deliveryId),
+    ...options,
+  });
+}
+

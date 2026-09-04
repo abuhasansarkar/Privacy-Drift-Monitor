@@ -223,3 +223,9 @@ export function renderPrompt(
   }
   return rendered;
 }
+
+export {
+  COOKIE_CLASSIFY_V1,
+  CookieClassifyOutputSchema,
+  type CookieClassifyOutput,
+} from "./cookie-classify";
