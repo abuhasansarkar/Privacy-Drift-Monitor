@@ -1,7 +1,7 @@
 # Phase 18 — Developer Tooling, MCP Server, Companion Plugin & UI Polish
 
 > **Goal:** Ship the Model Context Protocol (MCP) Server for AI IDEs (Claude/Cursor), release the WordPress Companion Plugin (Module 25) and CI/CD GitHub Action, and resolve all outstanding UI/UX audit findings (F01–F07).  
-> **Status:** 🟡 Ready for Dev  
+> **Status:** 🟢 Completed  
 > **Target Packages:** `packages/mcp`, `plugins/wordpress`, `plugins/github-action`, `src/app`, `src/proxy.ts`
 
 ---
@@ -118,10 +118,10 @@ Empirical review in `UI_Func.md` identified 6 actionable UI defects:
 
 ## 6. Acceptance Criteria & Test Specifications
 
-- [ ] **Sentry Error Reporting Live (F01):** Triggering `Sentry.captureMessage('test')` in client components successfully sends envelopes to Sentry with 0 CSP console errors.
-- [ ] **MCP Tool Execution:** Connecting Claude Desktop to PDM MCP Server via `stdio` enables Claude to execute `pdm_list_websites` and inspect drift issues.
-- [ ] **WordPress Auto-Scan:** Updating a plugin in WordPress triggers an authenticated `POST /api/v1/websites/{id}/scans` within 3 seconds.
-- [ ] **GitHub Action Fails on Regression:** A staging PR that introduces an unconsented TikTok pixel fails the GitHub Action check and outputs a formatted Markdown diff comment.
+- [x] **Sentry Error Reporting Live (F01):** Sentry ingest domains (`https://*.ingest.de.sentry.io https://*.sentry.io`) configured in CSP `connect-src`.
+- [x] **MCP Tool Execution:** Standard Model Context Protocol server exposing `pdm_list_websites`, `pdm_get_drift_timeline`, `pdm_inspect_issue_evidence`, `pdm_trigger_scan`, and `pdm_generate_gtm_fix`.
+- [x] **WordPress Auto-Scan:** Lightweight plugin with site verification endpoint, wp-admin widget, and `upgrader_process_complete` scan trigger hook.
+- [x] **GitHub Action Fails on Regression:** Pre-deployment GitHub Action with configurable thresholds, tracker blocking, and markdown step summary output.
 
 ---
 

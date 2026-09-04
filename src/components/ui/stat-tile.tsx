@@ -18,7 +18,7 @@ export function StatTile({
   note?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border bg-card px-4 py-3.5">
+    <div className="flex flex-col gap-1 rounded-lg border border-border bg-card px-4 py-3.5 shadow-xs transition-all duration-200 hover:border-primary/30 hover:shadow-sm">
       <span className="text-caption font-medium text-muted-foreground">
         {label}
       </span>

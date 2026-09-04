@@ -1,0 +1,52 @@
+name: "Privacy Drift Pre-Deploy Guard"
+description: "Audit pull request preview deployments for privacy drift, pre-consent trackers, and health score regressions."
+author: "Privacy Drift Monitor"
+
+inputs:
+  api_key:
+    description: "Privacy Drift Monitor API key"
+    required: true
+  api_url:
+    description: "Base URL for the Privacy Drift Monitor API"
+    required: false
+    default: "https://app.privacy-drift-monitor.com"
+  website_id:
+    description: "The UUID of the website in Privacy Drift Monitor"
+    required: false
+  website_url:
+    description: "The URL of the website or PR preview environment"
+    required: false
+  fail_below_score:
+    description: "Fail the workflow if the post-scan Health Score drops below this number"
+    required: false
+    default: "85"
+  block_pre_consent_trackers:
+    description: "Fail the workflow if unconsented trackers or marketing cookies are detected"
+    required: false
+    default: "true"
+  wait_for_scan:
+    description: "Wait for the scan to complete and evaluate findings"
+    required: false
+    default: "true"
+  timeout_seconds:
+    description: "Maximum seconds to wait for scan completion"
+    required: false
+    default: "180"
+
+outputs:
+  scan_id:
+    description: "The ID of the triggered scan"
+  health_score:
+    description: "The computed privacy health score"
+  critical_issues:
+    description: "Count of critical potential issues detected"
+  verdict:
+    description: "Audit verdict: PASSED or FAILED"
+
+runs:
+  using: "node20"
+  main: "audit.js"
+
+branding:
+  icon: "shield"
+  color: "blue"

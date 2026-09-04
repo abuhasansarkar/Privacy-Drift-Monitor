@@ -286,6 +286,8 @@ export const aiRequestStatus = z.enum([
   "CACHED",
 ]);
 
+export const deliveryStatus = z.enum(["PENDING", "SUCCESS", "FAILED"]);
+
 export type AgencyRole = z.infer<typeof agencyRole>;
 export type AgencyStatus = z.infer<typeof agencyStatus>;
 export type MemberStatus = z.infer<typeof memberStatus>;
@@ -317,3 +319,4 @@ export type AIFeature = z.infer<typeof aiFeature>;
 export type AIRequestStatus = z.infer<typeof aiRequestStatus>;
 export type Jurisdiction = z.infer<typeof jurisdiction>;
 export type GeoEgressRegion = z.infer<typeof geoEgressRegion>;
+export type DeliveryStatus = z.infer<typeof deliveryStatus>;

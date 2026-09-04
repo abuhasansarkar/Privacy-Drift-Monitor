@@ -26,6 +26,93 @@ export async function getWebsiteDetail(ctx: AgencyContext, websiteId: string) {
 
 export type WebsiteDetail = NonNullable<Awaited<ReturnType<typeof getWebsiteDetail>>>;
 
+export interface WebsiteTrendPoint {
+  day: string;
+  score: number;
+}
+
+export async function getWebsiteHealthTrend(
+  ctx: AgencyContext,
+  websiteId: string,
+): Promise<WebsiteTrendPoint[]> {
+  const repos = repositoriesFor(ctx.agencyId);
+  const since30d = new Date(Date.now() - 30 * 86_400_000);
+
+  const scans = await repos.db.scan.findMany({
+    where: {
+      websiteId,
+      agencyId: ctx.agencyId,
+      finishedAt: { gte: since30d },
+      healthScore: { not: null },
+    },
+    select: { finishedAt: true, healthScore: true },
+    orderBy: { finishedAt: "asc" },
+  });
+
+  const byDay = new Map<string, { total: number; count: number }>();
+  for (const scan of scans) {
+    if (!scan.finishedAt || scan.healthScore === null) continue;
+    const day = scan.finishedAt.toISOString().slice(0, 10);
+    const entry = byDay.get(day) ?? { total: 0, count: 0 };
+    entry.total += scan.healthScore;
+    entry.count += 1;
+    byDay.set(day, entry);
+  }
+
+  return Array.from(byDay.entries()).map(([day, { total, count }]) => ({
+    day,
+    score: Math.round(total / count),
+  }));
+}
+
+export async function getWebsiteRecentScans(
+  ctx: AgencyContext,
+  websiteId: string,
+  limit = 5,
+) {
+  const repos = repositoriesFor(ctx.agencyId);
+  return repos.db.scan.findMany({
+    where: { websiteId, agencyId: ctx.agencyId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      status: true,
+      trigger: true,
+      startedAt: true,
+      finishedAt: true,
+      requestCount: true,
+      healthScore: true,
+    },
+  });
+}
+
+export async function getWebsiteTopIssues(
+  ctx: AgencyContext,
+  websiteId: string,
+  limit = 5,
+) {
+  const repos = repositoriesFor(ctx.agencyId);
+  return repos.db.issue.findMany({
+    where: {
+      websiteId,
+      agencyId: ctx.agencyId,
+      status: { notIn: ["RESOLVED", "VERIFIED", "IGNORED"] },
+    },
+    orderBy: [{ severity: "desc" }, { lastSeenAt: "desc" }],
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      severity: true,
+      category: true,
+      ruleId: true,
+      lastSeenAt: true,
+      occurrenceCount: true,
+    },
+  });
+}
+
 export async function getClientDetail(ctx: AgencyContext, clientId: string) {
   const repos = repositoriesFor(ctx.agencyId);
 
@@ -35,3 +122,4 @@ export async function getClientDetail(ctx: AgencyContext, clientId: string) {
 }
 
 export type ClientDetail = NonNullable<Awaited<ReturnType<typeof getClientDetail>>>;
+

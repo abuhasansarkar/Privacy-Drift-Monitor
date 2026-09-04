@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { t } from "@pdm/shared/copy";
 import { cn } from "@/lib/cn";
+import { Loader2 } from "lucide-react";
 import { GlobeIcon, SearchIcon, UsersIcon, AlertCircleIcon } from "@/components/ui/icons";
 import type { SearchResult } from "@/app/api/search/route";
 
@@ -40,6 +41,7 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [active, setActive] = useState(0);
+  const [loading, setLoading] = useState(false);
   // Monotonic request id: only the newest response is allowed to render.
   const sequence = useRef(0);
 
@@ -76,6 +78,10 @@ export function CommandPalette({
       } catch {
         // A failed search is silent: the next keystroke retries, and an error
         // banner over a palette is noise the user cannot act on.
+      } finally {
+        if (id === sequence.current) {
+          setLoading(false);
+        }
       }
     }, DEBOUNCE_MS);
 
@@ -92,6 +98,7 @@ export function CommandPalette({
     setQuery("");
     setResults([]);
     setActive(0);
+    setLoading(false);
     onClose();
   }
 
@@ -111,16 +118,24 @@ export function CommandPalette({
         type="button"
         aria-label={t("common.close")}
         onClick={close}
-        className="absolute inset-0 cursor-default bg-foreground/20 backdrop-blur-[1px]"
+        className="absolute inset-0 cursor-default bg-foreground/20 backdrop-blur-[2px] animate-in fade-in-0 duration-150"
       />
 
-      <div className="relative w-full max-w-xl overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-lg border border-border bg-popover shadow-xl animate-in fade-in-0 zoom-in-95 duration-150">
         <div className="flex items-center gap-2.5 border-b border-border px-3.5">
-          <SearchIcon className="text-muted-foreground" />
+          {loading ? (
+            <Loader2 className="size-4 animate-spin text-primary shrink-0" />
+          ) : (
+            <SearchIcon className="text-muted-foreground" />
+          )}
           <input
             ref={inputRef}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              const val = event.target.value;
+              setQuery(val);
+              setLoading(val.trim() !== "");
+            }}
             onKeyDown={(event) => {
               if (event.key === "Escape") close();
               if (event.key === "ArrowDown") {

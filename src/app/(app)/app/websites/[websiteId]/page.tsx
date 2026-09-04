@@ -1,12 +1,20 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { t } from "@pdm/shared/copy";
 import { Card, CardHeader } from "@/components/ui/card";
 import { HealthScore } from "@/components/ui/health-score";
 import { MutedBadge, SeverityBadge, StatusBadge } from "@/components/ui/severity-badge";
+import { HealthTrend } from "@/components/dashboard/health-trend";
+import { ScanStatusBadge } from "@/components/scans/scan-phases";
 import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { FREQUENCY_LABEL, MONITORING_LABEL, MONITORING_TONE } from "@/lib/labels";
 import { requireWebsiteAccess } from "@/server/auth/context";
-import { getWebsiteDetail } from "@/server/queries/detail";
+import {
+  getWebsiteDetail,
+  getWebsiteHealthTrend,
+  getWebsiteRecentScans,
+  getWebsiteTopIssues,
+} from "@/server/queries/detail";
 
 /**
  * WEBSITE DETAIL — OVERVIEW TAB — §3.6, UI_DESIGN_PROMPTS §5.6.
@@ -26,7 +34,12 @@ export default async function WebsiteDetailPage({
   const { websiteId } = await params;
   const ctx = await requireWebsiteAccess(websiteId);
 
-  const website = await getWebsiteDetail(ctx, websiteId);
+  const [website, trendPoints, recentScans, topIssues] = await Promise.all([
+    getWebsiteDetail(ctx, websiteId),
+    getWebsiteHealthTrend(ctx, websiteId),
+    getWebsiteRecentScans(ctx, websiteId, 5),
+    getWebsiteTopIssues(ctx, websiteId, 5),
+  ]);
   if (!website) notFound();
 
   const now = new Date();
@@ -150,6 +163,120 @@ export default async function WebsiteDetailPage({
         </dl>
       </Card>
 
+      {/* 30-Day Health Trend */}
+      <Card>
+        <CardHeader
+          title={t("dashboard.healthTrend")}
+          action={
+            <span className="text-caption text-muted-foreground">
+              Last 30 days
+            </span>
+          }
+        />
+        <div className="p-4">
+          <HealthTrend points={trendPoints} />
+        </div>
+      </Card>
+
+      {/* Recent Scans & Open Potential Issues Overview */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader
+            title={t("websites.scanHistoryTitle")}
+            action={
+              <Link
+                href={`/app/websites/${websiteId}/scans`}
+                className="text-caption font-medium text-primary hover:underline"
+              >
+                View all scans →
+              </Link>
+            }
+          />
+          {recentScans.length === 0 ? (
+            <p className="p-4 text-small text-muted-foreground">
+              {t("empty.noScansYet")}
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {recentScans.map((scan) => (
+                <li key={scan.id}>
+                  <Link
+                    href={`/app/websites/${websiteId}/scans/${scan.id}`}
+                    className="flex items-center justify-between p-3.5 transition hover:bg-muted/50"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-small font-medium">
+                        {scan.startedAt ? (
+                          <time dateTime={scan.startedAt.toISOString()}>
+                            {formatDateTime(scan.startedAt, ctx.timezone)}
+                          </time>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {t("scans.queued")}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-caption text-muted-foreground">
+                        {scan.trigger} · {formatNumber(scan.requestCount)} requests
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {scan.healthScore !== null ? (
+                        <span className="font-mono text-caption tabular-nums">
+                          Score {scan.healthScore}
+                        </span>
+                      ) : null}
+                      <ScanStatusBadge status={scan.status} />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={t("dashboard.openIssues")}
+            action={
+              <Link
+                href={`/app/websites/${websiteId}/issues`}
+                className="text-caption font-medium text-primary hover:underline"
+              >
+                View all issues →
+              </Link>
+            }
+          />
+          {topIssues.length === 0 ? (
+            <p className="p-4 text-small text-muted-foreground">
+              {t("empty.noIssues")}
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {topIssues.map((issue) => (
+                <li key={issue.id}>
+                  <Link
+                    href={`/app/issues/${issue.id}`}
+                    className="flex items-center justify-between p-3.5 transition hover:bg-muted/50"
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0 pr-2">
+                      <span className="truncate text-small font-medium">
+                        {issue.title}
+                      </span>
+                      <span className="font-mono text-caption text-muted-foreground">
+                        {issue.ruleId} · {formatRelative(issue.lastSeenAt, now)}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      <SeverityBadge severity={issue.severity} />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

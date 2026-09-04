@@ -90,7 +90,7 @@ export function RecentActivity({
                 {item.href ? (
                   <Link
                     href={item.href}
-                    className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-muted"
+                    className="flex items-start gap-2.5 px-4 py-2.5 transition-colors duration-150 hover:bg-muted"
                   >
                     {body}
                   </Link>

@@ -36,25 +36,57 @@ export interface IssueEvidenceRow {
   payload: unknown;
 }
 
-/** Pulls the one identifying string a reader needs, per evidence kind. */
-function subjectOf(row: IssueEvidenceRow): string | null {
-  if (typeof row.payload !== "object" || row.payload === null) return null;
+interface EvidenceDetail {
+  primary: string;
+  secondary?: string;
+  context?: string;
+}
+
+function parseEvidenceRow(row: IssueEvidenceRow): EvidenceDetail {
+  if (typeof row.payload !== "object" || row.payload === null) {
+    return { primary: "" };
+  }
   const payload = row.payload as Record<string, unknown>;
 
-  const url = payload.url;
-  if (typeof url === "string") {
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return url;
+  if (row.kind === "NETWORK_REQUEST") {
+    const urlStr = typeof payload.url === "string" ? payload.url : "";
+    if (urlStr) {
+      try {
+        const u = new URL(urlStr);
+        return {
+          primary: u.hostname,
+          secondary: `${u.origin}${u.pathname}${u.search ? (u.search.length > 120 ? u.search.slice(0, 120) + "..." : u.search) : ""}`,
+          context: typeof payload.method === "string" ? payload.method : undefined,
+        };
+      } catch {
+        return { primary: urlStr };
+      }
     }
   }
 
-  for (const key of ["name", "key", "host", "domain", "selector"]) {
-    const value = payload[key];
-    if (typeof value === "string" && value.length > 0) return value;
+  if (row.kind === "COOKIE") {
+    const name = typeof payload.name === "string" ? payload.name : "";
+    const domain = typeof payload.domain === "string" ? payload.domain : "";
+    return {
+      primary: name || "cookie",
+      secondary: domain ? `Domain: ${domain}` : undefined,
+    };
   }
-  return null;
+
+  if (row.kind === "STORAGE_ENTRY") {
+    const key = typeof payload.key === "string" ? payload.key : "";
+    const storageType = typeof payload.storageType === "string" ? payload.storageType : "";
+    return {
+      primary: key || "storage item",
+      secondary: storageType ? `Type: ${storageType}` : undefined,
+    };
+  }
+
+  for (const key of ["url", "name", "key", "host", "domain", "selector"]) {
+    const value = payload[key];
+    if (typeof value === "string" && value.length > 0) return { primary: value };
+  }
+  return { primary: "" };
 }
 
 /** Seconds from navigation start — comparable across scans, unlike wall-clock. */
@@ -75,30 +107,43 @@ export function IssueEvidenceList({
   return (
     <ul className="divide-y divide-border rounded-md border border-border">
       {rows.map((row) => {
-        const subject = subjectOf(row);
+        const detail = parseEvidenceRow(row);
+        const displayPrimary = detail.primary || unknownSubjectLabel;
         return (
           <li
             key={row.id}
-            className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2"
+            className="flex flex-col gap-1.5 px-3 py-2.5"
           >
-            <span className="text-caption font-medium text-foreground">
-              {EVIDENCE_KIND_LABEL[row.kind] ?? row.kind}
-            </span>
-            <span className="min-w-0 flex-1 truncate font-mono text-mono text-muted-foreground">
-              {subject ?? unknownSubjectLabel}
-            </span>
-            {/*
-              The consent state is the single most important field in the
-              system (§4.5) — a request is only meaningful paired with the
-              state it happened under, so it is never dropped for space.
-            */}
-            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-caption text-muted-foreground">
-              {CONSENT_PHASE_LABEL[row.consentPhase as keyof typeof CONSENT_PHASE_LABEL] ??
-                row.consentPhase}
-            </span>
-            <span className="shrink-0 font-mono text-caption tabular-nums text-muted-foreground">
-              {offset(row.observedAtMs)}
-            </span>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-caption font-medium text-foreground">
+                {EVIDENCE_KIND_LABEL[row.kind] ?? row.kind}
+              </span>
+              {detail.context ? (
+                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground">
+                  {detail.context}
+                </span>
+              ) : null}
+              <span className="min-w-0 flex-1 truncate font-mono text-mono font-medium text-foreground">
+                {displayPrimary}
+              </span>
+              {/*
+                The consent state is the single most important field in the
+                system (§4.5) — a request is only meaningful paired with the
+                state it happened under, so it is never dropped for space.
+              */}
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-caption text-muted-foreground">
+                {CONSENT_PHASE_LABEL[row.consentPhase as keyof typeof CONSENT_PHASE_LABEL] ??
+                  row.consentPhase}
+              </span>
+              <span className="shrink-0 font-mono text-caption tabular-nums text-muted-foreground">
+                {offset(row.observedAtMs)}
+              </span>
+            </div>
+            {detail.secondary ? (
+              <div className="font-mono text-caption text-muted-foreground break-all pl-2 border-l-2 border-border/80">
+                {detail.secondary}
+              </div>
+            ) : null}
           </li>
         );
       })}

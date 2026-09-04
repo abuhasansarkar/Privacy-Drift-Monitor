@@ -13,7 +13,7 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <section className={cn("rounded-lg border border-border bg-card", className)}>
+    <section className={cn("rounded-lg border border-border bg-card shadow-xs transition-shadow duration-200", className)}>
       {children}
     </section>
   );

@@ -34,7 +34,7 @@ const SIZE: Record<Size, string> = {
 
 const BASE =
   "inline-flex items-center justify-center rounded-md border font-medium " +
-  "whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50";
+  "whitespace-nowrap transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
 
 function classes(variant: Variant, size: Size, className?: string) {
   return cn(BASE, VARIANT[variant], SIZE[size], className);

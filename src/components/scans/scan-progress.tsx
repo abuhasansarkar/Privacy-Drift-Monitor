@@ -52,7 +52,7 @@ export function ScanProgress({
           aria-label={currentLabel}
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none"
+            className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none"
             style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
           />
         </div>

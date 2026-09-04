@@ -73,7 +73,7 @@ export function AttentionCenter({
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-wrap items-start gap-3 border-b border-border px-4 py-3 last:border-b-0"
+              className="flex flex-wrap items-start gap-3 border-b border-border px-4 py-3 transition-colors duration-150 hover:bg-muted/40 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

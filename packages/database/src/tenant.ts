@@ -78,6 +78,9 @@ export const TENANT_MODELS = [
   "policyAudit",
   "sessionReplayAudit",
   "gpcAuditRecord",
+  "consentModeAudit",
+  "apiKey",
+  "webhookEndpoint",
 ] as const;
 
 export type TenantModel = (typeof TENANT_MODELS)[number];
@@ -103,6 +106,9 @@ export const GLOBAL_MODELS = [
    * and a per-tenant blocklist would let a distributed abuser walk around it.
    */
   "freeScanBlocklist",
+  "webhookDelivery",
+  "sitemapCrawlConfig",
+  "authenticatedScanConfig",
 ] as const;
 
 const TENANT_MODEL_SET: ReadonlySet<string> = new Set(

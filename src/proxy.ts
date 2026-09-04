@@ -160,7 +160,7 @@ function contentSecurityPolicy(nonce: string | null): string {
      * way. No DSN configured means no origin is added — the policy does not
      * widen for a feature that is switched off.
      */
-    `connect-src 'self' https://*.clerk.accounts.dev https://api.stripe.com wss://*.clerk.accounts.dev${
+    `connect-src 'self' https://*.clerk.accounts.dev https://api.stripe.com wss://*.clerk.accounts.dev https://*.ingest.de.sentry.io https://*.sentry.io${
       SENTRY_INGEST_ORIGIN ? ` ${SENTRY_INGEST_ORIGIN}` : ""
     }${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
     "frame-src https://js.stripe.com https://challenges.cloudflare.com",

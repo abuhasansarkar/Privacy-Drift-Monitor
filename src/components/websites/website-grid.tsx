@@ -58,7 +58,7 @@ export function WebsiteGrid({
               <Link
                 href={`/app/websites/${site.id}`}
                 className={cn(
-                  "flex h-full flex-col gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50",
+                  "flex h-full flex-col gap-3 rounded-lg border p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 hover:bg-muted/30",
                   failing ? "border-danger/40 bg-danger-muted/40" : "border-border",
                   (site.archived || site.monitoringStatus === "PAUSED") && "opacity-60",
                 )}

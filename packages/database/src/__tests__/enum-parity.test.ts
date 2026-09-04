@@ -60,6 +60,7 @@ const PAIRS: ReadonlyArray<readonly [keyof typeof enums, string]> = [
   ["aiRequestStatus", "AIRequestStatus"],
   ["jurisdiction", "Jurisdiction"],
   ["geoEgressRegion", "GeoEgressRegion"],
+  ["deliveryStatus", "DeliveryStatus"],
 ];
 
 const prismaEnums = new Map(
