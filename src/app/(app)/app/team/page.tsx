@@ -27,10 +27,42 @@ export default async function TeamPage() {
   const repos = repositoriesFor(ctx.agencyId);
 
   const now = new Date();
-  const [members, invitations] = await Promise.all([
+  const [members, invitations, websites] = await Promise.all([
     repos.team.list(),
     repos.team.pendingInvitations(now),
+    repos.db.website.findMany({
+      where: { archivedAt: null },
+      select: { id: true, url: true },
+      orderBy: { url: "asc" },
+    }),
   ]);
+
+  const inviteIds = invitations.map((inv) => inv.id);
+  const alertHistories =
+    inviteIds.length > 0
+      ? await repos.db.alertHistory.findMany({
+          where: {
+            agencyId: ctx.agencyId,
+            entityType: "invitation",
+            entityId: { in: inviteIds },
+            channel: "email",
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+
+  const alertMap = new Map<string, (typeof alertHistories)[0]>();
+  for (const alert of alertHistories) {
+    if (alert.entityId && !alertMap.has(alert.entityId)) {
+      alertMap.set(alert.entityId, alert);
+    }
+  }
+
+  const emailFrom = process.env.EMAIL_FROM ?? "";
+  const isSandboxDomain = emailFrom.includes("resend.dev");
+  const hasFailedInvite = invitations.some((inv) => alertMap.get(inv.id)?.status === "failed");
+
+  const websiteOptions = websites.map((w) => ({ id: w.id, url: w.url }));
 
   const columns: Column[] = [
     { key: "member", label: t("team.columnMember") },
@@ -73,7 +105,10 @@ export default async function TeamPage() {
         role: (
           <MemberRowActions
             memberId={member.id}
+            memberName={name}
             role={member.role}
+            websiteScope={member.websiteScope}
+            websites={websiteOptions}
             isSelf={isSelf}
             canChangeRole={can(ctx.role, "team:role_change")}
             canRemove={can(ctx.role, "team:remove")}
@@ -95,6 +130,17 @@ export default async function TeamPage() {
         }
       />
 
+      {isSandboxDomain || hasFailedInvite ? (
+        <div className="flex flex-col gap-1.5 rounded-lg border border-warning/30 bg-warning/10 p-4 text-small">
+          <div className="font-semibold text-warning">
+            Notice: Email Delivery in Sandbox Mode
+          </div>
+          <p className="text-muted-foreground text-caption leading-relaxed">
+            Your email service is currently configured with the provider sandbox domain (<code>onboarding@resend.dev</code>). Resend restricts sandbox emails to your account owner address only. When inviting other team members, automatic email delivery will be rejected by the provider. You can copy the invitation link using the <strong className="text-foreground">Copy link</strong> button below and share it directly with your colleague to join immediately. To enable automated email sending to all recipients, please verify a custom sending domain in Resend.
+          </p>
+        </div>
+      ) : null}
+
       <Card>
         <DataList caption={t("team.title")} columns={columns} rows={rows} />
       </Card>
@@ -102,11 +148,9 @@ export default async function TeamPage() {
       <PendingInvitations
         invitations={invitations.map((inv) => {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-          const inviteUrl = inv.token.includes(":::")
-            ? inv.token.split(":::")[1]!
-            : (inv.token.startsWith("http")
-                ? inv.token
-                : `${appUrl}/signup?invitation=${inv.token}`);
+          const rawToken = inv.token.split(":::")[0];
+          const inviteUrl = `${appUrl}/invite/${rawToken}`;
+          const alert = alertMap.get(inv.id);
 
           return {
             id: inv.id,
@@ -115,6 +159,8 @@ export default async function TeamPage() {
             inviteUrl,
             createdAt: inv.createdAt,
             expiresAt: inv.expiresAt,
+            deliveryStatus: alert?.status ?? null,
+            deliveryError: alert?.errorMessage ?? null,
           };
         })}
         canRevoke={can(ctx.role, "team:invite")}

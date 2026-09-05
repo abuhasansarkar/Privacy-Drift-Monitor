@@ -39,6 +39,7 @@ export type AuditAction =
   | "report.deleted"
   | "member.invited"
   | "member.role_changed"
+  | "member.scope_changed"
   | "member.removed"
   | "agency.updated"
   | "branding.updated"

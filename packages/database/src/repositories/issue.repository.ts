@@ -401,7 +401,26 @@ export function issueRepository(db: TenantClient, agencyId: string) {
         include: {
           website: { select: { id: true, url: true, clientId: true } },
           evidence: true,
+          assignedTo: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
         },
+      });
+    },
+
+    async assign(id: string, assignedToId: string | null): Promise<Issue | null> {
+      const existing = await db.issue.findUnique({ where: { id } });
+      if (!existing) return null;
+
+      return db.issue.update({
+        where: { id },
+        data: { assignedToId },
       });
     },
 

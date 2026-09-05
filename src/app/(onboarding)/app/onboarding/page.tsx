@@ -6,8 +6,10 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { t } from "@pdm/shared/copy";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckIcon, PlusIcon } from "@/components/ui/icons";
+import { CheckIcon, PlusIcon, ShieldIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
+import { ROLE_LABEL } from "@/lib/labels";
+import type { AgencyRole } from "@pdm/shared/permissions";
 import { tryGetAgencyContext } from "@/server/auth/context";
 
 /**
@@ -36,6 +38,60 @@ export default async function OnboardingPage() {
   // `organization.created`, which the webhook turns into the Agency row and the
   // OWNER membership.
   if (!ctx) {
+    const { currentUser } = await import("@clerk/nextjs/server");
+    const user = await currentUser();
+    const userEmail =
+      user?.emailAddresses.find((a) => a.id === user.primaryEmailAddressId)?.emailAddress ??
+      user?.emailAddresses[0]?.emailAddress;
+
+    let pendingInvite = null;
+    if (userEmail) {
+      const { unsafeGlobalClient } = await import("@pdm/database");
+      const db = unsafeGlobalClient("onboarding checks pending invites for user");
+      pendingInvite = await db.invitation.findFirst({
+        where: {
+          email: userEmail.toLowerCase(),
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        include: { agency: true },
+      });
+    }
+
+    if (pendingInvite) {
+      const rawToken = pendingInvite.token.includes(":::")
+        ? pendingInvite.token.split(":::")[0]!
+        : pendingInvite.token;
+
+      return (
+        <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-canvas px-4 py-12">
+          <div className="w-full max-w-md">
+            <Card className="flex flex-col items-center p-6 text-center shadow-lg">
+              <div className="mb-4 grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+                <ShieldIcon />
+              </div>
+              <h1 className="text-h3">Pending Team Invitation</h1>
+              <p className="mt-2 text-small text-muted-foreground">
+                You have been invited to join <strong>{pendingInvite.agency.name}</strong> as a{" "}
+                <strong className="text-foreground">{ROLE_LABEL[pendingInvite.role as AgencyRole]}</strong>.
+              </p>
+              <div className="mt-6 flex w-full flex-col gap-2">
+                <ButtonLink
+                  href={`/invite/${rawToken}`}
+                  variant="primary"
+                  size="md"
+                  className="w-full justify-center"
+                >
+                  Accept & Join {pendingInvite.agency.name}
+                </ButtonLink>
+              </div>
+            </Card>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-canvas px-4 py-12">
         <div className="max-w-md text-center">

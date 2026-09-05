@@ -200,5 +200,17 @@ async function recordStatus(
 function describe(error: unknown): string {
   // Provider text never reaches a user (§6.7) — this string lands in
   // `AlertHistory.errorMessage`, which only the owning agency reads.
+  if (error instanceof EmailRejectedError) {
+    try {
+      const parsed = JSON.parse(error.detail) as { message?: string };
+      if (parsed.message) {
+        return `Resend (${error.status}): ${parsed.message}`.slice(0, 300);
+      }
+    } catch {
+      if (error.detail) {
+        return `Resend (${error.status}): ${error.detail}`.slice(0, 300);
+      }
+    }
+  }
   return error instanceof Error ? error.message.slice(0, 300) : "Unknown error";
 }

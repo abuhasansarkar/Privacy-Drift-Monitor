@@ -144,6 +144,31 @@ export function teamRepository(db: TenantClient, agencyId: string) {
       });
     },
 
+    async setWebsiteScope(
+      memberId: string,
+      websiteScope: string[],
+    ) {
+      return db.agencyMember.update({
+        where: { id: memberId },
+        data: { websiteScope },
+      });
+    },
+
+    async findPendingInvitationByToken(token: string) {
+      return db.invitation.findFirst({
+        where: {
+          agencyId,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+          OR: [
+            { token },
+            { token: { startsWith: `${token}:::` } },
+          ],
+        },
+      });
+    },
+
     async remove(memberId: string): Promise<"ok" | "last-owner" | null> {
       return db.$transaction(async (tx) => {
         const member = await tx.agencyMember.findUnique({ where: { id: memberId } });

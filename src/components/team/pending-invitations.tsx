@@ -17,6 +17,8 @@ export interface PendingInviteItem {
   inviteUrl: string;
   createdAt: Date;
   expiresAt: Date;
+  deliveryStatus?: string | null;
+  deliveryError?: string | null;
 }
 
 export function PendingInvitations({
@@ -62,7 +64,11 @@ export function PendingInvitations({
       if (!outcome.ok) {
         setMessage({ type: "error", text: outcome.message });
       } else {
-        setMessage({ type: "success", text: t("team.resendSuccess") });
+        setMessage({
+          type: "success",
+          text: "Invitation reenqueued. Note: On sandbox Resend, test emails only reach the account owner. Use Copy link for other recipients.",
+        });
+        router.refresh();
       }
     });
   }
@@ -96,6 +102,7 @@ export function PendingInvitations({
             <tr className="border-b border-border text-caption text-muted-foreground">
               <th className="px-4 py-3 font-medium">{t("team.columnEmail")}</th>
               <th className="px-4 py-3 font-medium">{t("team.columnRole")}</th>
+              <th className="px-4 py-3 font-medium">Email Delivery</th>
               <th className="px-4 py-3 font-medium">{t("team.columnSent")}</th>
               <th className="px-4 py-3 font-medium">{t("team.columnExpires")}</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -109,6 +116,35 @@ export function PendingInvitations({
                   <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-caption font-medium">
                     {ROLE_LABEL[inv.role]}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  {inv.deliveryStatus === "failed" ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="inline-flex items-center gap-1 w-fit rounded-md border border-danger/30 bg-danger/10 px-2 py-0.5 text-caption font-medium text-danger">
+                        Delivery Failed
+                      </span>
+                      <span
+                        className="max-w-[180px] truncate text-[11px] text-muted-foreground"
+                        title={inv.deliveryError || "Provider rejected delivery"}
+                      >
+                        {inv.deliveryError?.includes("403")
+                          ? "Sandbox domain restricted"
+                          : (inv.deliveryError || "Provider rejected")}
+                      </span>
+                    </div>
+                  ) : inv.deliveryStatus === "delivered" || inv.deliveryStatus === "sent" ? (
+                    <span className="inline-flex items-center rounded-md border border-success/30 bg-success/10 px-2 py-0.5 text-caption font-medium text-success">
+                      {inv.deliveryStatus === "delivered" ? "Delivered" : "Sent"}
+                    </span>
+                  ) : inv.deliveryStatus === "simulated" ? (
+                    <span className="inline-flex items-center rounded-md border border-warning/30 bg-warning/10 px-2 py-0.5 text-caption font-medium text-warning">
+                      Simulated
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-caption font-medium text-muted-foreground">
+                      Queued
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   <time dateTime={inv.createdAt.toISOString()}>

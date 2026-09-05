@@ -121,6 +121,9 @@ export function InviteMemberDialog() {
                         {copied ? t("team.linkCopied") : t("team.copyLink")}
                       </Button>
                     </div>
+                    <p className="text-[12px] text-muted-foreground">
+                      Tip: If outbound email delivery is restricted on your provider sandbox domain, your colleague can join immediately using this link.
+                    </p>
                   </div>
                 ) : null}
 

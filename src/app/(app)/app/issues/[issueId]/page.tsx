@@ -14,6 +14,8 @@ import { ISSUE_STATUS_LABEL, ISSUE_STATUS_TONE } from "@/lib/labels";
 import { requirePermission } from "@/server/auth/context";
 import { getIssueDetail } from "@/server/queries/issues";
 import { readStoredOutput } from "@/server/services/ai";
+import { repositoriesFor } from "@pdm/database/repositories";
+import { IssueAssigneeSelect } from "@/components/issues/issue-assignee-select";
 import {
   IssueExplanationSection,
   IssueFixSection,
@@ -62,9 +64,11 @@ export default async function IssueDetailPage({
    * the ordinary case and renders as the "not generated yet" state with a
    * button, not as an error.
    */
-  const [explanation, fix] = await Promise.all([
+  const repos = repositoriesFor(ctx.agencyId);
+  const [explanation, fix, members] = await Promise.all([
     readStoredOutput(ctx, "EXPLAIN_ISSUE", "issue", issue.id),
     readStoredOutput(ctx, "RECOMMEND_FIX", "issue", issue.id),
+    repos.team.list(),
   ]);
 
   /*
@@ -166,6 +170,22 @@ export default async function IssueDetailPage({
             <span className="font-mono text-caption text-muted-foreground">
               {t("issues.ruleLabel")} {issue.ruleId}
             </span>
+            <span aria-hidden="true">·</span>
+            <IssueAssigneeSelect
+              issueId={issue.id}
+              currentAssignee={issue.assignedTo}
+              members={members.map((m) => ({
+                id: m.id,
+                userId: m.userId,
+                user: {
+                  id: m.user.id,
+                  firstName: m.user.firstName,
+                  lastName: m.user.lastName,
+                  email: m.user.email,
+                },
+              }))}
+              canAssign={can(ctx.role, "issue:assign")}
+            />
           </span>
         }
         actions={

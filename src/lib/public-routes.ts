@@ -48,6 +48,7 @@ export const PUBLIC_ROUTE_PATTERNS: string[] = [
   "/robots.txt",
   "/login(.*)",
   "/signup(.*)",
+  "/invite(.*)",
   "/api/webhooks(.*)",
   "/api/public(.*)",
   "/api/v1(.*)",

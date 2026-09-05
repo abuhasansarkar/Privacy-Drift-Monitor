@@ -116,3 +116,64 @@ export async function ignoreIssue(
     return actionFromError(error, "ignoreIssue");
   }
 }
+
+const assignIssueInput = z.object({
+  issueId: z.string().uuid(),
+  assignedToUserId: z.string().uuid().nullable(),
+});
+
+export async function assignIssue(
+  raw: z.infer<typeof assignIssueInput>,
+): Promise<ActionResult<{ id: string; assignedToUserId: string | null }>> {
+  try {
+    const ctx = await requirePermission("issue:assign");
+
+    const parsed = assignIssueInput.safeParse(raw);
+    if (!parsed.success) {
+      throw new ValidationError(t("error.validation"), { reason: "ASSIGN_ISSUE_SCHEMA" });
+    }
+
+    const repos = repositoriesFor(ctx.agencyId);
+
+    // If assigning to a user, verify the user is an active member of this agency
+    if (parsed.data.assignedToUserId) {
+      const isMember = await repos.db.agencyMember.findFirst({
+        where: {
+          agencyId: ctx.agencyId,
+          userId: parsed.data.assignedToUserId,
+          status: "ACTIVE",
+        },
+      });
+      if (!isMember) {
+        throw new ValidationError("User is not an active member of this agency.", {
+          reason: "ASSIGNEE_NOT_MEMBER",
+        });
+      }
+    }
+
+    const updated = await repos.issues.assign(
+      parsed.data.issueId,
+      parsed.data.assignedToUserId,
+    );
+
+    if (!updated) {
+      throw new ValidationError(t("error.notFound"), {
+        reason: `ISSUE_MISSING:${parsed.data.issueId}`,
+      });
+    }
+
+    await repos.audit.record({
+      action: "issue.assigned",
+      entityType: "issue",
+      entityId: parsed.data.issueId,
+      userId: ctx.userId,
+      after: { assignedToId: parsed.data.assignedToUserId },
+    });
+
+    revalidatePath("/app/issues");
+    revalidatePath(`/app/issues/${parsed.data.issueId}`);
+    return actionOk({ id: updated.id, assignedToUserId: parsed.data.assignedToUserId });
+  } catch (error) {
+    return actionFromError(error, "assignIssue");
+  }
+}

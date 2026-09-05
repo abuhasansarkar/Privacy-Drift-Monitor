@@ -7,6 +7,7 @@ import { t } from "@pdm/shared/copy";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABEL } from "@/lib/labels";
 import { removeMember, setMemberRole } from "@/server/actions/team";
+import { MemberScopeDialog, type WebsiteOption } from "./member-scope-dialog";
 
 const ROLES: AgencyRole[] = ["OWNER", "ADMIN", "MANAGER", "DEVELOPER", "VIEWER"];
 
@@ -20,13 +21,19 @@ const ROLES: AgencyRole[] = ["OWNER", "ADMIN", "MANAGER", "DEVELOPER", "VIEWER"]
  */
 export function MemberRowActions({
   memberId,
+  memberName,
   role,
+  websiteScope = [],
+  websites = [],
   isSelf,
   canChangeRole,
   canRemove,
 }: {
   memberId: string;
+  memberName: string;
   role: AgencyRole;
+  websiteScope?: string[];
+  websites?: WebsiteOption[];
   isSelf: boolean;
   canChangeRole: boolean;
   canRemove: boolean;
@@ -38,6 +45,15 @@ export function MemberRowActions({
   return (
     <span className="flex flex-col items-end gap-1.5">
       <span className="flex items-center gap-2">
+        {canChangeRole ? (
+          <MemberScopeDialog
+            memberId={memberId}
+            memberName={memberName}
+            initialScope={websiteScope}
+            websites={websites}
+          />
+        ) : null}
+
         {canChangeRole ? (
           <select
             value={role}

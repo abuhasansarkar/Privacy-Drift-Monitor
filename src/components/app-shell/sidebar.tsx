@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { OrganizationSwitcher } from "@clerk/nextjs";
 import { t } from "@pdm/shared/copy";
 import { can, type AgencyRole } from "@pdm/shared/permissions";
 import { cn } from "@/lib/cn";
@@ -15,7 +16,6 @@ import {
   GlobeIcon,
   GridIcon,
   HelpCircleIcon,
-  ShieldIcon,
   SlidersIcon,
   SparkleIcon,
   UsersIcon,
@@ -81,14 +81,24 @@ export function Sidebar({
 
   return (
     <div className="flex h-full flex-col bg-background p-3">
-      {/* Agency Header */}
-      <div className="flex items-center gap-2.5 px-2 pt-1 pb-3">
-        <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground shadow-sm">
-          <ShieldIcon />
-        </span>
-        <span className="min-w-0 truncate font-semibold tracking-tight">
-          {agencyName}
-        </span>
+      {/* Agency Header & Organization Switcher */}
+      <div className="flex items-center px-1 pt-1 pb-3" title={agencyName}>
+        <OrganizationSwitcher
+          hidePersonal={true}
+          afterSelectOrganizationUrl="/app"
+          afterCreateOrganizationUrl="/app/onboarding"
+          afterLeaveOrganizationUrl="/app/onboarding"
+          appearance={{
+            elements: {
+              rootBox: "w-full",
+              organizationSwitcherTrigger:
+                "w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted/80 transition-colors text-small font-semibold tracking-tight",
+              organizationPreview: "gap-2 min-w-0 flex-1 truncate",
+              organizationPreviewTextContainer: "min-w-0 truncate",
+              organizationPreviewMainIdentifier: "truncate font-semibold text-small",
+            },
+          }}
+        />
       </div>
 
       {/* Main Top Navigation */}
