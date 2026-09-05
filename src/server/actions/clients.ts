@@ -7,6 +7,7 @@ import { client as clientSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ValidationError } from "@pdm/shared/errors";
 import { requirePermission } from "@/server/auth/context";
+import { requireFeature } from "@/server/services/entitlement-guard";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
 /**
@@ -82,5 +83,44 @@ export async function archiveClient(
     return actionOk({ id: archived.id });
   } catch (error) {
     return actionFromError(error, "archiveClient");
+  }
+}
+
+export async function toggleClientPortal(
+  input: z.infer<typeof clientSchemas.toggleClientPortalSchema>,
+): Promise<ActionResult<{ id: string; portalEnabled: boolean }>> {
+  try {
+    const ctx = await requirePermission("client:portal_toggle");
+
+    const parsed = clientSchemas.toggleClientPortalSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new ValidationError(t("error.validation"), {
+        reason: `TOGGLE_CLIENT_PORTAL_SCHEMA:${parsed.error.issues[0]?.path.join(".")}`,
+      });
+    }
+
+    if (parsed.data.enabled) {
+      await requireFeature(ctx.agencyId, "clientPortal");
+    }
+
+    const repos = repositoriesFor(ctx.agencyId);
+    const updated = await repos.clients.update(
+      parsed.data.clientId,
+      { portalEnabled: parsed.data.enabled },
+      { userId: ctx.userId },
+    );
+
+    if (!updated) {
+      throw new ValidationError(t("error.notFound"), {
+        reason: `CLIENT_MISSING:${parsed.data.clientId}`,
+      });
+    }
+
+    revalidatePath("/app/clients");
+    revalidatePath(`/app/clients/${parsed.data.clientId}`);
+
+    return actionOk({ id: updated.id, portalEnabled: updated.portalEnabled });
+  } catch (error) {
+    return actionFromError(error, "toggleClientPortal");
   }
 }

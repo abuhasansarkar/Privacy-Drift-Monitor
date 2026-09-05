@@ -146,7 +146,12 @@ const CLIENT_FACING: ReadonlySet<EmailTemplateName> = new Set([
 
 function absolute(origin: string, path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${origin.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  const base = origin.replace(/\/$/, "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  if (base.endsWith("/portal") && cleanPath.startsWith("/portal/")) {
+    return `${base}${cleanPath.slice("/portal".length)}`;
+  }
+  return `${base}${cleanPath}`;
 }
 
 function digestBody(

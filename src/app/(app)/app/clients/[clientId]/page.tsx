@@ -12,6 +12,7 @@ import { Can } from "@/components/can";
 import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { MONITORING_LABEL, MONITORING_TONE } from "@/lib/labels";
 import { requirePermission } from "@/server/auth/context";
+import { can } from "@pdm/shared/permissions";
 import { getClientDetail } from "@/server/queries/detail";
 import { repositoriesFor } from "@pdm/database/repositories";
 import { PortalContacts } from "@/components/portal/portal-contacts";
@@ -124,15 +125,19 @@ export default async function ClientDetailPage({
           <p className="text-caption text-muted-foreground">
             {t("clients.columnPortal")}
           </p>
-          <p className="mt-2 text-small">
-            {client.portalEnabled ? t("clients.portalOn") : t("clients.portalOff")}
-          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <StatusBadge
+              tone={client.portalEnabled ? "success" : "muted"}
+              label={client.portalEnabled ? t("clients.portalOn") : t("clients.portalOff")}
+            />
+          </div>
         </Card>
       </div>
 
       <PortalContacts
         clientId={client.id}
         portalEnabled={client.portalEnabled}
+        canTogglePortal={can(ctx.role, "client:portal_toggle")}
         contacts={portalContacts.map((contact) => ({
           id: contact.id,
           email: contact.email,

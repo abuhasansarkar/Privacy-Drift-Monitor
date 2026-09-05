@@ -2145,6 +2145,12 @@ export const en = {
       "Invite someone at the client to see monitoring status, current items and reports.",
     neverSignedIn: "Never",
     portalDisabled: "Turn the portal on for this client before inviting contacts.",
+    enablePortal: "Enable portal",
+    disablePortal: "Disable portal",
+    portalEnabledSuccess: "Client portal enabled.",
+    portalDisabledSuccess: "Client portal disabled.",
+    disableConfirm:
+      "Disable the client portal? Existing portal contacts will not be able to sign in while it is disabled.",
   },
 
   /** §3.11 — per-type notification preferences. */

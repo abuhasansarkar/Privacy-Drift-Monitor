@@ -34,6 +34,13 @@ export const updateClientSchema = createClientSchema
 
 export type UpdateClientInput = z.infer<typeof updateClientSchema>;
 
+export const toggleClientPortalSchema = z.object({
+  clientId: uuid,
+  enabled: z.boolean(),
+});
+
+export type ToggleClientPortalInput = z.infer<typeof toggleClientPortalSchema>;
+
 /** Whitelisted sort keys — no free-form field name reaches Prisma (§6.4). */
 export const clientSortField = z.enum([
   "name",

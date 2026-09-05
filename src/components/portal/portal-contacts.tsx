@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/severity-badge";
 import { invitePortalUser, revokePortalUser } from "@/server/actions/portal";
+import { toggleClientPortal } from "@/server/actions/clients";
 
 /**
  * PORTAL CONTACTS — §3.13, feature doc 15.
@@ -40,10 +41,12 @@ export function PortalContacts({
   clientId,
   contacts,
   portalEnabled,
+  canTogglePortal = false,
 }: {
   clientId: string;
   contacts: PortalContact[];
   portalEnabled: boolean;
+  canTogglePortal?: boolean;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -54,12 +57,81 @@ export function PortalContacts({
 
   return (
     <Card>
-      <CardHeader title={t("portalAdmin.title")} />
+      <CardHeader
+        title={t("portalAdmin.title")}
+        action={
+          <div className="flex items-center gap-2.5">
+            <StatusBadge
+              tone={portalEnabled ? "success" : "muted"}
+              label={portalEnabled ? t("clients.portalEnabled") : t("clients.portalOff")}
+            />
+            {canTogglePortal ? (
+              <Button
+                size="sm"
+                variant={portalEnabled ? "ghost" : "secondary"}
+                disabled={pending}
+                onClick={() => {
+                  if (portalEnabled && !window.confirm(t("portalAdmin.disableConfirm"))) {
+                    return;
+                  }
+                  start(async () => {
+                    setError(null);
+                    setMessage(null);
+                    const result = await toggleClientPortal({
+                      clientId,
+                      enabled: !portalEnabled,
+                    });
+                    if (!result.ok) {
+                      setError(result.message);
+                      return;
+                    }
+                    setMessage(
+                      !portalEnabled
+                        ? t("portalAdmin.portalEnabledSuccess")
+                        : t("portalAdmin.portalDisabledSuccess"),
+                    );
+                    router.refresh();
+                  });
+                }}
+              >
+                {portalEnabled
+                  ? t("portalAdmin.disablePortal")
+                  : t("portalAdmin.enablePortal")}
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
 
       {!portalEnabled ? (
-        <p className="px-4 py-3 text-small text-muted-foreground">
-          {t("portalAdmin.portalDisabled")}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/20 px-4 py-3 text-small text-muted-foreground">
+          <span>{t("portalAdmin.portalDisabled")}</span>
+          {canTogglePortal ? (
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={pending}
+              onClick={() => {
+                start(async () => {
+                  setError(null);
+                  setMessage(null);
+                  const result = await toggleClientPortal({
+                    clientId,
+                    enabled: true,
+                  });
+                  if (!result.ok) {
+                    setError(result.message);
+                    return;
+                  }
+                  setMessage(t("portalAdmin.portalEnabledSuccess"));
+                  router.refresh();
+                });
+              }}
+            >
+              {t("portalAdmin.enablePortal")}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
 
       {contacts.length === 0 ? (
