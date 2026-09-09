@@ -131,27 +131,6 @@ export async function installRouteGuard(
 }
 
 /**
- * Media blocking — record-then-abort (§4.4, task 2.4).
- *
- * ⚠️ THE REQUEST IS RECORDED BEFORE IT IS ABORTED. Playwright fires the
- * `request` event before the route handler runs, so the network recorder has
- * already seen it. Aborting only stops the BYTES.
- *
- * That distinction is the whole design: a video or font is evidence that the
- * request happened — which is what a tracking finding rests on — while its
- * payload is megabytes we would download, never look at, and pay for. Blocking
- * the request outright would make the site's behaviour look different from what
- * a real visitor triggers.
- */
-export async function installMediaBlocking(page: Page): Promise<void> {
-  await page.route("**/*", (route: Route) => {
-    const type = route.request().resourceType();
-    if (type === "media" || type === "font") return route.abort();
-    return route.continue();
-  });
-}
-
-/**
  * Navigates and reports what happened.
  *
  * `waitUntil: "commit"` rather than `load` or `networkidle`: we want control

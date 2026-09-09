@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { repositoriesFor } from "@pdm/database/repositories";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
+import {
+  enforceApiRateLimit,
+  enforceApiWriteRateLimit,
+} from "@/server/services/api-rate-limit";
 import { childLogger } from "@pdm/shared/logger";
 
 const log = childLogger({ component: "api-v1-website-detail" });
@@ -20,6 +24,8 @@ export async function GET(
 
   const scopeError = requireApiScope(auth, "read");
   if (scopeError) return scopeError;
+
+  await enforceApiRateLimit(auth.keyId);
 
   const { id } = await context.params;
   const db = forAgency(auth.agencyId);
@@ -93,6 +99,8 @@ export async function DELETE(
 
   const scopeError = requireApiScope(auth, "write");
   if (scopeError) return scopeError;
+
+  await enforceApiWriteRateLimit(auth.keyId);
 
   const { id } = await context.params;
   const repos = repositoriesFor(auth.agencyId);

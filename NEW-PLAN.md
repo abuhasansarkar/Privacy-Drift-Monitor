@@ -360,17 +360,17 @@ Scheduler: `sweepDueWebsites` (jittered), `recoverStuckScans`, `runRetention`,
 | **G-14** | ✅ **FIXED** | **Demo seed evidence row লিখত না**, শুধু counter বসাত — তাই Evidence/Cookies/Consent tab খালি দেখাত অথচ scan "COMPLETED, 73 requests" বলত। **এটাই "UI ঠিকমতো দেখায় না"-র আসল কারণ।** [T04](dev-doc/tasks/T04-demo-seed-evidence.md) | `seed-demo.ts` |
 | **G-15** | ✅ **FIXED** | **`PORTAL_TOKEN_SECRET` `.env`-এ ছিল না** — impersonation runtime-এ throw করত, আর দুটো IP-hash salt নীরবে খালি string হয়ে যেত। [T05](dev-doc/tasks/T05-env-drift.md) | `.env` |
 | **G-01** | ✅ **FIXED** | `AGENTS.md` / `CLAUDE.md` অস্তিত্বহীন ফাইলে পাঠাত ও ভুল scale দাবি করত → `NEW-PLAN.md`/`dev-doc/`-এ redirect, মাপা সংখ্যা, `BUILT` বনাম `DONE`। [T08](dev-doc/tasks/T08-agents-md-sync.md) | `AGENTS.md`, `CLAUDE.md` |
-| **G-02** | 🔴 Critical | কোনো unit/integration test নেই। চারটা documented contract অরক্ষিত | repo-wide |
-| **G-03** | 🔴 High | ৭৪টা seeded vendor detection quality-র ছাদ বেঁধে দেয়; advertising মাত্র ৭টা | `prisma/seed/trackers.json` |
+| **G-02** | ✅ FIXED 2026-09-09 | কোনো unit/integration test নেই। চারটা documented contract অরক্ষিত | repo-wide |
+| **G-03** | 🟡 Partial (74→120, 2026-09-09) | ৭৪টা seeded vendor detection quality-র ছাদ বেঁধে দেয়; advertising মাত্র ৭টা। এখন 120 (advertising 23) — 2,000+ target এখনো বাকি | `prisma/seed/trackers.json` |
 | **G-04** | ✅ **FIXED** | দুটো dead queue সরানো; সেই সাথে ধরা পড়ল জীবন্ত `pdm-webhook` admin view-তে **ছিল না**। এখন ৮ = ৮। [T06](dev-doc/tasks/T06-dead-queues.md) | `queues.ts`, `admin/queue.ts` |
-| **G-05** | 🟠 Medium | Public API v1-এ scope আর pagination আছে, **rate limiting নেই** | `src/app/api/v1/**` |
-| **G-06** | 🟠 Medium | `installMediaBlocking` uncalled dead code, যা ঠিক সেই দ্বিতীয় `page.route("**/*")` handler নিবন্ধন করে যেটাকে codebase নিজেই "নীরবে security control বাদ দেয়" বলে documented করেছে | [navigate.ts:146](packages/scanner/src/navigate.ts#L146) |
-| **G-07** | 🟠 Medium | `PDM-R051` / `PDM-R052` repo-র নিজের convention ভাঙে — plan-বহির্ভূত rule id-তে `X` prefix থাকার কথা | `rules/consent-mode.ts` |
-| **G-08** | 🟡 Low | Health score-এ HIGH penalty 12; বাকি সব severity documented model-এর সাথে মেলে। Undocumented divergence | [score.ts:53](packages/analysis/src/score.ts#L53) |
-| **G-09** | 🟡 Low | বাসি CI comment: `pr.yml:4` `test`-কে gate বলে; `deploy.yml:38-40` "coverage gate" আর "1,072 tests" উল্লেখ করে | `.github/workflows/` |
+| **G-05** | ✅ FIXED 2026-09-09 | Public API v1-এ scope আর pagination আছে, **rate limiting নেই** | `src/app/api/v1/**` |
+| **G-06** | ✅ FIXED 2026-09-09 | `installMediaBlocking` uncalled dead code, যা ঠিক সেই দ্বিতীয় `page.route("**/*")` handler নিবন্ধন করে যেটাকে codebase নিজেই "নীরবে security control বাদ দেয়" বলে documented করেছে | [navigate.ts:146](packages/scanner/src/navigate.ts#L146) |
+| **G-07** | ✅ FIXED 2026-09-09 | `PDM-R051` / `PDM-R052` repo-র নিজের convention ভাঙে — plan-বহির্ভূত rule id-তে `X` prefix থাকার কথা | `rules/consent-mode.ts` |
+| **G-08** | ✅ FIXED 2026-09-09 | Health score-এ HIGH penalty 12; বাকি সব severity documented model-এর সাথে মেলে। Undocumented divergence | [score.ts:53](packages/analysis/src/score.ts#L53) |
+| **G-09** | ✅ FIXED 2026-09-09 | বাসি CI comment: `pr.yml:4` `test`-কে gate বলে; `deploy.yml:38-40` "coverage gate" আর "1,072 tests" উল্লেখ করে | `.github/workflows/` |
 | **G-10** | ✅ **FIXED** | Sentry scaffold debris মুছে ফেলা; build-এ আর নেই। [T07](dev-doc/tasks/T07-scaffold-debris.md) | `src/app/` |
-| **G-11** | 🟡 Low | অনাথ `test/global-setup.ts`, `test/server-only-stub.ts`; খালি `@pdm/config` workspace | |
-| **G-12** | 🟡 Low | `.env.example`-এ `TURNSTILE_SITE_KEY` আর `NEXT_PUBLIC_TURNSTILE_SITE_KEY` দুটোই | `.env.example:145` |
+| **G-11** | ✅ FIXED 2026-09-09 | অনাথ `test/global-setup.ts`, `test/server-only-stub.ts`; খালি `@pdm/config` workspace | |
+| **G-12** | ✅ FIXED 2026-09-09 | `.env.example`-এ `TURNSTILE_SITE_KEY` আর `NEXT_PUBLIC_TURNSTILE_SITE_KEY` দুটোই | `.env.example:145` |
 
 ### আসল dependency-র বিরুদ্ধে কখনও চালানো হয়নি
 

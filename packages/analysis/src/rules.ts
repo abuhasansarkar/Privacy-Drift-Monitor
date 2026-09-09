@@ -21,7 +21,7 @@ import {
   R048,
   R050,
 } from "./rules/advanced";
-import { CONSENT_MODE_RULES, R051, R052 } from "./rules/consent-mode";
+import { CONSENT_MODE_RULES, R_X03, R_X04 } from "./rules/consent-mode";
 import type { Finding, Rule, RuleContext } from "./rules/types";
 
 /**
@@ -72,7 +72,7 @@ export const ADVANCED_RULES: readonly Rule[] = [
   R048,
   R050,
 ];
-export { CONSENT_MODE_RULES, R051, R052 };
+export { CONSENT_MODE_RULES, R_X03, R_X04 };
 
 /**
  * Ids that are DELIBERATELY NOT IMPLEMENTED, and the evidence each one would

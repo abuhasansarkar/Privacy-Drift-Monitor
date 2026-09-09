@@ -2,16 +2,16 @@ import type { Finding, Rule, Severity } from "./types";
 import { executed, fingerprint } from "./types";
 
 /**
- * GOOGLE CONSENT MODE V2 RULES — PDM-R051 & PDM-R052, Phase 13.
+ * GOOGLE CONSENT MODE V2 RULES — PDM-X03 & PDM-X04, Phase 13.
  *
  * Inspects Google Consent Mode v2 signals (ad_storage, analytics_storage,
  * ad_user_data, ad_personalization) to ensure tags default to denied before
  * consent, and update properly upon Reject All.
  */
 
-/** PDM-R051 — Google Consent Mode default set to granted before consent. */
-export const R051: Rule = {
-  id: "PDM-R051",
+/** PDM-X03 — Google Consent Mode default set to granted before consent. */
+export const R_X03: Rule = {
+  id: "PDM-X03",
   category: "TAG_MANAGER",
   precedence: 98,
   evaluate(context): Finding[] {
@@ -47,9 +47,9 @@ export const R051: Rule = {
   },
 };
 
-/** PDM-R052 — Google Consent Mode not updated to denied on Reject All. */
-export const R052: Rule = {
-  id: "PDM-R052",
+/** PDM-X04 — Google Consent Mode not updated to denied on Reject All. */
+export const R_X04: Rule = {
+  id: "PDM-X04",
   category: "CONSENT_FAILURE",
   precedence: 88,
   evaluate(context): Finding[] {
@@ -58,7 +58,7 @@ export const R052: Rule = {
     if (!cm || !cm.isConsentModeDetected) return [];
 
     const isRejectIncomplete =
-      cm.issuesDetected.includes("PDM-R052") ||
+      cm.issuesDetected.includes("PDM-X04") ||
       cm.postRejectAdStorage === "granted" ||
       cm.postRejectAnalytics === "granted" ||
       cm.postRejectUserData === "granted" ||
@@ -90,4 +90,4 @@ export const R052: Rule = {
   },
 };
 
-export const CONSENT_MODE_RULES: readonly Rule[] = [R051, R052];
+export const CONSENT_MODE_RULES: readonly Rule[] = [R_X03, R_X04];

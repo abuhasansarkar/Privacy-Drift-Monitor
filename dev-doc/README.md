@@ -33,16 +33,16 @@
 
 | # | Task | P | Status |
 |---|---|---|---|
-| [T01](tasks/T01-test-harness.md) | Test harness (vitest) ফেরানো | P0 | TODO |
-| [T02](tasks/T02-contract-tests.md) | চারটা contract test | P0 | TODO |
+| [T01](tasks/T01-test-harness.md) | Test harness (vitest) ফেরানো | P0 | DONE |
+| [T02](tasks/T02-contract-tests.md) | চারটা contract test | P0 | DONE |
 | [T03](tasks/T03-zero-phase-confidence.md) | Phase-শূন্য scan `FULL` confidence দেখায় | P0 | DONE |
 | [T04](tasks/T04-demo-seed-evidence.md) | Demo seed evidence row লেখে না — UI খালি | P0 | DONE |
 | [T05](tasks/T05-env-drift.md) | `.env` drift — `PORTAL_TOKEN_SECRET` নেই | P1 | DONE |
 | [T06](tasks/T06-dead-queues.md) | দুটো dead queue admin UI-তে দেখায় | P1 | DONE |
 | [T07](tasks/T07-scaffold-debris.md) | Sentry example page/route production-এ যায় | P1 | DONE |
 | [T08](tasks/T08-agents-md-sync.md) | `AGENTS.md`/`CLAUDE.md` অস্তিত্বহীন ফাইল দেখায় | P1 | DONE |
-| [T09](tasks/T09-vendor-catalogue.md) | Vendor catalogue 74 → 2,000+ | P1 | TODO |
-| [T10](tasks/T10-api-rate-limit.md) | Public API v1-এ rate limit নেই | P1 | TODO |
+| [T09](tasks/T09-vendor-catalogue.md) | Vendor catalogue 74 → 2,000+ | P1 | BUILT (partial — 120/2,000) |
+| [T10](tasks/T10-api-rate-limit.md) | Public API v1-এ rate limit নেই | P1 | DONE |
 | [T11](tasks/T11-scan-baseline.md) | `ScanBaseline` approval workflow | P2 | TODO |
 | [T12](tasks/T12-maintenance-window.md) | Maintenance window | P2 | TODO |
 | [T13](tasks/T13-ai-features.md) | AI feature ৫–৮ | P2 | TODO |

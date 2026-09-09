@@ -87,6 +87,12 @@ jobs:
       - name: Terminology gate (Part I §1.12)
         run: npm run check:terminology
 
+      # T01: the suite was deleted in 2a192cf and restored in September 2026.
+      # Unit suites run without services; DB-backed suites need the Postgres
+      # service above (they create and migrate their own `_test` database).
+      - name: Tests
+        run: npm test
+
       # Phase 0 acceptance: "migrations apply cleanly to a fresh database".
       - name: Migration check
         run: npm run db:deploy

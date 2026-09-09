@@ -56,3 +56,9 @@ playwright-report/
 # it and sat in the tree contradicting the docs beside it.
 build-out.txt
 verify-out.txt
+
+# Throwaway UI-review debris (screenshots, console logs, the driver script).
+# tmp-ui-review.mjs produced ~8 MB of screenshots and a console-error log in a
+# past review pass and sat untracked in the tree. Anything future passes write
+# under this prefix is disposable by definition.
+tmp-ui-*

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { toAppError } from "@pdm/shared/errors";
+import {
+  ApiRateLimitError,
+  apiRateLimitResponse,
+} from "@/server/services/api-rate-limit";
 
 /**
  * Converts a thrown `AppError` into the v1 error envelope.
@@ -23,6 +27,10 @@ export function withApiErrors<A extends unknown[]>(
     try {
       return await handler(...args);
     } catch (error) {
+      // G-05/T10: the rate limiter signals a breach by throwing; map it to the
+      // documented 429 envelope before the generic AppError conversion turns
+      // it into a 500.
+      if (error instanceof ApiRateLimitError) return apiRateLimitResponse(error);
       const appError = toAppError(error);
       return NextResponse.json(
         {

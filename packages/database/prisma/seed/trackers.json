@@ -1,88 +1,3704 @@
 [
-  { "slug": "google-analytics-4", "name": "Google Analytics 4", "vendorCompany": "Google LLC", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["google-analytics.com", "*.google-analytics.com", "analytics.google.com"], "scriptPatterns": ["gtag/js", "analytics.js", "ga.js"], "cookiePatterns": ["_ga", "_ga_*", "_gid", "_gat", "_gat_*"], "storagePatterns": [], "requestPathPatterns": ["/g/collect", "/collect", "/j/collect"], "documentationUrl": "https://developers.google.com/analytics", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.98, "aliases": ["GA4", "Google Analytics"], "isEssentialCandidate": false },
-  { "slug": "google-tag-manager", "name": "Google Tag Manager", "vendorCompany": "Google LLC", "category": "FUNCTIONAL", "riskLevel": "MEDIUM", "domainPatterns": ["googletagmanager.com", "*.googletagmanager.com"], "scriptPatterns": ["gtm.js", "gtag/js"], "cookiePatterns": ["_gcl_au"], "storagePatterns": [], "requestPathPatterns": ["/gtm.js", "/gtag/js"], "documentationUrl": "https://developers.google.com/tag-platform/tag-manager", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.98, "aliases": ["GTM"], "isEssentialCandidate": false },
-  { "slug": "google-ads", "name": "Google Ads", "vendorCompany": "Google LLC", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["googleadservices.com", "googlesyndication.com", "*.googlesyndication.com", "adservice.google.com"], "scriptPatterns": ["conversion.js", "conversion_async.js"], "cookiePatterns": ["_gcl_au", "_gcl_aw", "_gcl_dc"], "storagePatterns": [], "requestPathPatterns": ["/pagead/", "/conversion/"], "documentationUrl": "https://support.google.com/google-ads", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.97, "aliases": ["AdWords"], "isEssentialCandidate": false },
-  { "slug": "google-doubleclick", "name": "Google DoubleClick", "vendorCompany": "Google LLC", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["doubleclick.net", "*.doubleclick.net"], "scriptPatterns": [], "cookiePatterns": ["IDE", "test_cookie", "DSID"], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://marketingplatform.google.com", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.98, "aliases": ["DCM", "Campaign Manager"], "isEssentialCandidate": false },
-  { "slug": "google-fonts", "name": "Google Fonts", "vendorCompany": "Google LLC", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["fonts.googleapis.com", "fonts.gstatic.com"], "scriptPatterns": [], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": ["/css", "/css2"], "documentationUrl": "https://developers.google.com/fonts", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.99, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "google-recaptcha", "name": "Google reCAPTCHA", "vendorCompany": "Google LLC", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["recaptcha.net", "www.google.com/recaptcha", "www.gstatic.com/recaptcha"], "scriptPatterns": ["recaptcha__", "api.js"], "cookiePatterns": ["_GRECAPTCHA"], "storagePatterns": [], "requestPathPatterns": ["/recaptcha/"], "documentationUrl": "https://developers.google.com/recaptcha", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.96, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "google-maps", "name": "Google Maps", "vendorCompany": "Google LLC", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["maps.googleapis.com", "maps.gstatic.com"], "scriptPatterns": ["maps/api/js"], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": ["/maps/api/"], "documentationUrl": "https://developers.google.com/maps", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "youtube", "name": "YouTube", "vendorCompany": "Google LLC", "category": "SOCIAL", "riskLevel": "MEDIUM", "domainPatterns": ["youtube.com", "*.youtube.com", "youtube-nocookie.com", "ytimg.com", "*.ytimg.com"], "scriptPatterns": ["iframe_api", "www-embed-player"], "cookiePatterns": ["VISITOR_INFO1_LIVE", "YSC", "PREF", "CONSENT"], "storagePatterns": ["yt-remote-*", "yt.innertube::*"], "requestPathPatterns": ["/embed/"], "documentationUrl": "https://developers.google.com/youtube", "privacyPolicyUrl": "https://policies.google.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "meta-pixel", "name": "Meta Pixel", "vendorCompany": "Meta Platforms, Inc.", "category": "MARKETING", "riskLevel": "CRITICAL", "domainPatterns": ["connect.facebook.net", "facebook.com", "*.facebook.com", "facebook.net"], "scriptPatterns": ["fbevents.js", "fbq("], "cookiePatterns": ["_fbp", "_fbc", "fr", "datr"], "storagePatterns": ["fbssls_*"], "requestPathPatterns": ["/tr?", "/tr/"], "documentationUrl": "https://developers.facebook.com/docs/meta-pixel", "privacyPolicyUrl": "https://www.facebook.com/privacy/policy", "dataProcessingLocation": "US", "baseConfidence": 0.98, "aliases": ["Facebook Pixel"], "isEssentialCandidate": false },
-  { "slug": "instagram", "name": "Instagram Embed", "vendorCompany": "Meta Platforms, Inc.", "category": "SOCIAL", "riskLevel": "MEDIUM", "domainPatterns": ["instagram.com", "*.cdninstagram.com"], "scriptPatterns": ["embed.js"], "cookiePatterns": ["ig_did", "csrftoken"], "storagePatterns": [], "requestPathPatterns": ["/embed"], "documentationUrl": "https://developers.facebook.com/docs/instagram", "privacyPolicyUrl": "https://privacycenter.instagram.com", "dataProcessingLocation": "US", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "microsoft-clarity", "name": "Microsoft Clarity", "vendorCompany": "Microsoft Corporation", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["clarity.ms", "*.clarity.ms"], "scriptPatterns": ["clarity.js"], "cookiePatterns": ["_clck", "_clsk", "CLID"], "storagePatterns": ["clarity_*"], "requestPathPatterns": ["/collect"], "documentationUrl": "https://learn.microsoft.com/clarity", "privacyPolicyUrl": "https://privacy.microsoft.com", "dataProcessingLocation": "US", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "microsoft-bing-uet", "name": "Microsoft Advertising UET", "vendorCompany": "Microsoft Corporation", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["bat.bing.com", "bing.com"], "scriptPatterns": ["bat.js", "uetq"], "cookiePatterns": ["_uetsid", "_uetvid", "MUID"], "storagePatterns": ["_uetsid*", "_uetvid*"], "requestPathPatterns": ["/action/"], "documentationUrl": "https://help.ads.microsoft.com", "privacyPolicyUrl": "https://privacy.microsoft.com", "dataProcessingLocation": "US", "baseConfidence": 0.96, "aliases": ["Bing Ads", "UET"], "isEssentialCandidate": false },
-
-  { "slug": "tiktok-pixel", "name": "TikTok Pixel", "vendorCompany": "ByteDance Ltd.", "category": "MARKETING", "riskLevel": "CRITICAL", "domainPatterns": ["analytics.tiktok.com", "tiktok.com", "*.tiktokcdn.com"], "scriptPatterns": ["ttq.js", "pixel/events.js"], "cookiePatterns": ["_ttp", "tt_appInfo", "tt_sessionId"], "storagePatterns": ["tt_*"], "requestPathPatterns": ["/api/v2/pixel", "/i18n/pixel/"], "documentationUrl": "https://ads.tiktok.com/help", "privacyPolicyUrl": "https://www.tiktok.com/legal/privacy-policy", "dataProcessingLocation": "US/SG", "baseConfidence": 0.96, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "linkedin-insight", "name": "LinkedIn Insight Tag", "vendorCompany": "LinkedIn Corporation", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["snap.licdn.com", "linkedin.com", "*.licdn.com", "px.ads.linkedin.com"], "scriptPatterns": ["insight.min.js"], "cookiePatterns": ["li_sugr", "bcookie", "lidc", "UserMatchHistory", "AnalyticsSyncHistory"], "storagePatterns": [], "requestPathPatterns": ["/collect"], "documentationUrl": "https://www.linkedin.com/help/lms", "privacyPolicyUrl": "https://www.linkedin.com/legal/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.96, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "x-twitter-pixel", "name": "X (Twitter) Pixel", "vendorCompany": "X Corp.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["static.ads-twitter.com", "analytics.twitter.com", "t.co", "platform.twitter.com"], "scriptPatterns": ["uwt.js", "widgets.js"], "cookiePatterns": ["personalization_id", "guest_id", "muc_ads"], "storagePatterns": [], "requestPathPatterns": ["/i/adsct"], "documentationUrl": "https://business.x.com", "privacyPolicyUrl": "https://x.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.95, "aliases": ["Twitter Pixel"], "isEssentialCandidate": false },
-  { "slug": "pinterest-tag", "name": "Pinterest Tag", "vendorCompany": "Pinterest, Inc.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["ct.pinterest.com", "pinterest.com", "*.pinimg.com"], "scriptPatterns": ["pinit.js", "tag/pinit"], "cookiePatterns": ["_pinterest_ct_ua", "_pin_unauth", "_epik"], "storagePatterns": [], "requestPathPatterns": ["/v3/", "/ct/"], "documentationUrl": "https://help.pinterest.com/business", "privacyPolicyUrl": "https://policy.pinterest.com/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "snap-pixel", "name": "Snap Pixel", "vendorCompany": "Snap Inc.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["sc-static.net", "tr.snapchat.com", "snapchat.com"], "scriptPatterns": ["scevent.min.js"], "cookiePatterns": ["_scid", "sc_at"], "storagePatterns": [], "requestPathPatterns": ["/cm/", "/p"], "documentationUrl": "https://businesshelp.snapchat.com", "privacyPolicyUrl": "https://snap.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "reddit-pixel", "name": "Reddit Pixel", "vendorCompany": "Reddit, Inc.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["redditstatic.com", "alb.reddit.com", "events.redditmedia.com"], "scriptPatterns": ["pixel.js", "conversions-tracking"], "cookiePatterns": ["_rdt_uuid"], "storagePatterns": [], "requestPathPatterns": ["/rp.gif"], "documentationUrl": "https://business.reddithelp.com", "privacyPolicyUrl": "https://www.reddit.com/policies/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "hotjar", "name": "Hotjar", "vendorCompany": "Hotjar Ltd.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["hotjar.com", "*.hotjar.com", "hotjar.io", "*.hotjar.io"], "scriptPatterns": ["hotjar-", "modules.js"], "cookiePatterns": ["_hjSessionUser_*", "_hjSession_*", "_hjIncludedInSessionSample", "_hjAbsoluteSessionInProgress"], "storagePatterns": ["_hj*"], "requestPathPatterns": ["/api/v2/client/"], "documentationUrl": "https://help.hotjar.com", "privacyPolicyUrl": "https://www.hotjar.com/legal/policies/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "mouseflow", "name": "Mouseflow", "vendorCompany": "Mouseflow ApS", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["mouseflow.com", "*.mouseflow.com"], "scriptPatterns": ["mouseflow.js"], "cookiePatterns": ["mf_user", "_mf_*"], "storagePatterns": ["mf_*"], "requestPathPatterns": [], "documentationUrl": "https://help.mouseflow.com", "privacyPolicyUrl": "https://mouseflow.com/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "fullstory", "name": "FullStory", "vendorCompany": "FullStory, Inc.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["fullstory.com", "*.fullstory.com", "fs.js"], "scriptPatterns": ["fs.js", "edge.fullstory.com"], "cookiePatterns": ["fs_uid", "fs_lua"], "storagePatterns": ["fs_*"], "requestPathPatterns": ["/rec/"], "documentationUrl": "https://help.fullstory.com", "privacyPolicyUrl": "https://www.fullstory.com/legal/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "crazy-egg", "name": "Crazy Egg", "vendorCompany": "Crazy Egg, Inc.", "category": "ANALYTICS", "riskLevel": "MEDIUM", "domainPatterns": ["crazyegg.com", "*.crazyegg.com"], "scriptPatterns": ["script.crazyegg.com"], "cookiePatterns": ["_ce.s", "_ce.gtld", "cebs"], "storagePatterns": ["_ce*"], "requestPathPatterns": [], "documentationUrl": "https://help.crazyegg.com", "privacyPolicyUrl": "https://www.crazyegg.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "matomo", "name": "Matomo", "vendorCompany": "InnoCraft Ltd.", "category": "ANALYTICS", "riskLevel": "MEDIUM", "domainPatterns": ["matomo.cloud", "*.matomo.cloud", "matomo.org"], "scriptPatterns": ["matomo.js", "piwik.js"], "cookiePatterns": ["_pk_id*", "_pk_ses*", "_pk_ref*", "MATOMO_SESSID"], "storagePatterns": [], "requestPathPatterns": ["/matomo.php", "/piwik.php"], "documentationUrl": "https://matomo.org/docs", "privacyPolicyUrl": "https://matomo.org/privacy-policy", "dataProcessingLocation": "EU", "baseConfidence": 0.93, "aliases": ["Piwik"], "isEssentialCandidate": false },
-  { "slug": "plausible", "name": "Plausible Analytics", "vendorCompany": "Plausible Insights OÜ", "category": "ANALYTICS", "riskLevel": "LOW", "domainPatterns": ["plausible.io", "*.plausible.io"], "scriptPatterns": ["plausible.js", "script.js"], "cookiePatterns": [], "storagePatterns": ["plausible_*"], "requestPathPatterns": ["/api/event"], "documentationUrl": "https://plausible.io/docs", "privacyPolicyUrl": "https://plausible.io/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "fathom", "name": "Fathom Analytics", "vendorCompany": "Conva Ventures Inc.", "category": "ANALYTICS", "riskLevel": "LOW", "domainPatterns": ["usefathom.com", "*.usefathom.com", "cdn.usefathom.com"], "scriptPatterns": ["script.js"], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://usefathom.com/docs", "privacyPolicyUrl": "https://usefathom.com/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "segment", "name": "Segment", "vendorCompany": "Twilio Inc.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["segment.com", "*.segment.com", "segment.io", "cdn.segment.com"], "scriptPatterns": ["analytics.min.js", "analytics.js"], "cookiePatterns": ["ajs_user_id", "ajs_anonymous_id", "ajs_group_id"], "storagePatterns": ["ajs_*"], "requestPathPatterns": ["/v1/t", "/v1/p", "/v1/i"], "documentationUrl": "https://segment.com/docs", "privacyPolicyUrl": "https://www.twilio.com/legal/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "amplitude", "name": "Amplitude", "vendorCompany": "Amplitude, Inc.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["amplitude.com", "*.amplitude.com", "api.amplitude.com", "cdn.amplitude.com"], "scriptPatterns": ["amplitude-", "amplitude.js"], "cookiePatterns": ["amp_*", "amplitude_id*"], "storagePatterns": ["amplitude_*", "AMP_*"], "requestPathPatterns": ["/2/httpapi", "/batch"], "documentationUrl": "https://amplitude.com/docs", "privacyPolicyUrl": "https://amplitude.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "mixpanel", "name": "Mixpanel", "vendorCompany": "Mixpanel, Inc.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["mixpanel.com", "*.mixpanel.com", "cdn.mxpnl.com", "api.mixpanel.com"], "scriptPatterns": ["mixpanel-2", "mixpanel.min.js"], "cookiePatterns": ["mp_*"], "storagePatterns": ["mp_*"], "requestPathPatterns": ["/track", "/engage"], "documentationUrl": "https://docs.mixpanel.com", "privacyPolicyUrl": "https://mixpanel.com/legal/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "hubspot", "name": "HubSpot", "vendorCompany": "HubSpot, Inc.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["hubspot.com", "*.hubspot.com", "hs-scripts.com", "hsforms.net", "hs-analytics.net", "hsadspixel.net", "hubapi.com"], "scriptPatterns": ["hs-script-loader", "leadflows.js", "forms/v2.js"], "cookiePatterns": ["hubspotutk", "__hstc", "__hssc", "__hssrc", "__hs_opt_out"], "storagePatterns": ["hs-*"], "requestPathPatterns": ["/__ptq.gif", "/collected-forms/"], "documentationUrl": "https://developers.hubspot.com", "privacyPolicyUrl": "https://legal.hubspot.com/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.96, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "marketo", "name": "Marketo", "vendorCompany": "Adobe Inc.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["marketo.net", "*.marketo.net", "mktoresp.com", "*.mktoresp.com"], "scriptPatterns": ["munchkin.js", "forms2.min.js"], "cookiePatterns": ["_mkto_trk"], "storagePatterns": [], "requestPathPatterns": ["/webevents/"], "documentationUrl": "https://developers.marketo.com", "privacyPolicyUrl": "https://www.adobe.com/privacy/policy.html", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "activecampaign", "name": "ActiveCampaign", "vendorCompany": "ActiveCampaign, LLC", "category": "MARKETING", "riskLevel": "MEDIUM", "domainPatterns": ["activehosted.com", "*.activehosted.com", "trackcmp.net"], "scriptPatterns": ["site/tracking"], "cookiePatterns": ["ac_enable_tracking", "prism_*"], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://developers.activecampaign.com", "privacyPolicyUrl": "https://www.activecampaign.com/legal/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.9, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "mailchimp", "name": "Mailchimp", "vendorCompany": "Intuit Inc.", "category": "MARKETING", "riskLevel": "MEDIUM", "domainPatterns": ["mailchimp.com", "*.list-manage.com", "chimpstatic.com"], "scriptPatterns": ["mcjs", "mc-validate.js"], "cookiePatterns": ["_mcid", "mailchimp_landing_site"], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://mailchimp.com/developer", "privacyPolicyUrl": "https://www.intuit.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.91, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "klaviyo", "name": "Klaviyo", "vendorCompany": "Klaviyo, Inc.", "category": "MARKETING", "riskLevel": "HIGH", "domainPatterns": ["klaviyo.com", "*.klaviyo.com", "static.klaviyo.com"], "scriptPatterns": ["klaviyo.js", "onsite/js"], "cookiePatterns": ["__kla_id"], "storagePatterns": ["klaviyo*", "__kla*"], "requestPathPatterns": ["/onsite/track", "/client/"], "documentationUrl": "https://developers.klaviyo.com", "privacyPolicyUrl": "https://www.klaviyo.com/legal/privacy-notice", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "intercom", "name": "Intercom", "vendorCompany": "Intercom, Inc.", "category": "FUNCTIONAL", "riskLevel": "MEDIUM", "domainPatterns": ["intercom.io", "*.intercom.io", "intercomcdn.com", "*.intercomcdn.com"], "scriptPatterns": ["intercom/frame", "shim/latest"], "cookiePatterns": ["intercom-id-*", "intercom-session-*", "intercom-device-id-*"], "storagePatterns": ["intercom.*"], "requestPathPatterns": ["/messenger/"], "documentationUrl": "https://developers.intercom.com", "privacyPolicyUrl": "https://www.intercom.com/legal/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "crisp", "name": "Crisp", "vendorCompany": "Crisp IM SAS", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["crisp.chat", "*.crisp.chat"], "scriptPatterns": ["client.crisp.chat/l.js"], "cookiePatterns": ["crisp-client*"], "storagePatterns": ["crisp-client/*"], "requestPathPatterns": [], "documentationUrl": "https://docs.crisp.chat", "privacyPolicyUrl": "https://crisp.chat/en/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "tawk-to", "name": "Tawk.to", "vendorCompany": "tawk.to inc.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["tawk.to", "*.tawk.to"], "scriptPatterns": ["embed.tawk.to"], "cookiePatterns": ["__tawkuuid", "TawkConnectionTime"], "storagePatterns": ["twk_*", "Tawk_*"], "requestPathPatterns": [], "documentationUrl": "https://developer.tawk.to", "privacyPolicyUrl": "https://www.tawk.to/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "zendesk", "name": "Zendesk", "vendorCompany": "Zendesk, Inc.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["zendesk.com", "*.zendesk.com", "zdassets.com", "*.zdassets.com"], "scriptPatterns": ["web_widget", "ekr.zdassets.com"], "cookiePatterns": ["__zlcmid", "_zendesk_*"], "storagePatterns": ["ZD-*"], "requestPathPatterns": [], "documentationUrl": "https://developer.zendesk.com", "privacyPolicyUrl": "https://www.zendesk.com/company/privacy-and-data-protection", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "drift", "name": "Drift", "vendorCompany": "Salesloft, Inc.", "category": "MARKETING", "riskLevel": "MEDIUM", "domainPatterns": ["drift.com", "*.drift.com", "driftt.com", "*.driftt.com"], "scriptPatterns": ["drift.js", "core.js"], "cookiePatterns": ["drift_aid", "driftt_aid", "drift_campaign_refresh"], "storagePatterns": ["drift.*"], "requestPathPatterns": [], "documentationUrl": "https://devdocs.drift.com", "privacyPolicyUrl": "https://www.drift.com/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.92, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "freshworks", "name": "Freshworks / Freshchat", "vendorCompany": "Freshworks Inc.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["freshchat.com", "*.freshchat.com", "freshworks.com", "*.freshworks.com", "wchat.freshchat.com"], "scriptPatterns": ["widget.js", "freshchat.js"], "cookiePatterns": ["_fw_crm_v"], "storagePatterns": ["FCRM*", "fc_*"], "requestPathPatterns": [], "documentationUrl": "https://developers.freshchat.com", "privacyPolicyUrl": "https://www.freshworks.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.9, "aliases": ["Freshdesk"], "isEssentialCandidate": false },
-
-  { "slug": "trustpilot", "name": "Trustpilot", "vendorCompany": "Trustpilot A/S", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["trustpilot.com", "*.trustpilot.com"], "scriptPatterns": ["bootstrap/v5/tp.widget"], "cookiePatterns": ["__cfruid"], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://developers.trustpilot.com", "privacyPolicyUrl": "https://uk.legal.trustpilot.com/end-user-privacy-terms", "dataProcessingLocation": "EU", "baseConfidence": 0.92, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "yotpo", "name": "Yotpo", "vendorCompany": "Yotpo Ltd.", "category": "FUNCTIONAL", "riskLevel": "MEDIUM", "domainPatterns": ["yotpo.com", "*.yotpo.com", "staticw2.yotpo.com"], "scriptPatterns": ["widget.js"], "cookiePatterns": ["yotpo_pixel", "_yotpo_*"], "storagePatterns": ["yotpo*"], "requestPathPatterns": [], "documentationUrl": "https://support.yotpo.com", "privacyPolicyUrl": "https://www.yotpo.com/privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.9, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "judge-me", "name": "Judge.me", "vendorCompany": "Judge.me Ltd.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["judge.me", "*.judge.me", "cdn.judge.me"], "scriptPatterns": ["loader.js", "widget.js"], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://help.judge.me", "privacyPolicyUrl": "https://judge.me/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.88, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "stripe", "name": "Stripe", "vendorCompany": "Stripe, Inc.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["stripe.com", "*.stripe.com", "stripe.network", "js.stripe.com"], "scriptPatterns": ["stripe.js", "v3"], "cookiePatterns": ["__stripe_mid", "__stripe_sid"], "storagePatterns": [], "requestPathPatterns": ["/v3", "/6"], "documentationUrl": "https://stripe.com/docs", "privacyPolicyUrl": "https://stripe.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "paypal", "name": "PayPal", "vendorCompany": "PayPal Holdings, Inc.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["paypal.com", "*.paypal.com", "paypalobjects.com", "*.paypalobjects.com"], "scriptPatterns": ["sdk/js", "checkout.js"], "cookiePatterns": ["ts", "tsrce", "x-pp-s", "LANG"], "storagePatterns": [], "requestPathPatterns": ["/sdk/"], "documentationUrl": "https://developer.paypal.com", "privacyPolicyUrl": "https://www.paypal.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "klarna", "name": "Klarna", "vendorCompany": "Klarna Bank AB", "category": "NECESSARY", "riskLevel": "MEDIUM", "domainPatterns": ["klarna.com", "*.klarna.com", "klarnaservices.com", "*.klarnacdn.net"], "scriptPatterns": ["klarna-", "lib.js"], "cookiePatterns": ["kl_*"], "storagePatterns": ["klarna*"], "requestPathPatterns": [], "documentationUrl": "https://docs.klarna.com", "privacyPolicyUrl": "https://www.klarna.com/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.92, "aliases": [], "isEssentialCandidate": true },
-
-  { "slug": "cloudflare-insights", "name": "Cloudflare Web Analytics", "vendorCompany": "Cloudflare, Inc.", "category": "ANALYTICS", "riskLevel": "LOW", "domainPatterns": ["static.cloudflareinsights.com", "cloudflareinsights.com"], "scriptPatterns": ["beacon.min.js"], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": ["/cdn-cgi/rum"], "documentationUrl": "https://developers.cloudflare.com/analytics", "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy", "dataProcessingLocation": "US", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "cloudflare-challenge", "name": "Cloudflare Bot Management", "vendorCompany": "Cloudflare, Inc.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["challenges.cloudflare.com"], "scriptPatterns": ["turnstile", "challenge-platform"], "cookiePatterns": ["__cf_bm", "cf_clearance", "__cflb"], "storagePatterns": [], "requestPathPatterns": ["/cdn-cgi/challenge-platform/"], "documentationUrl": "https://developers.cloudflare.com/turnstile", "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy", "dataProcessingLocation": "US", "baseConfidence": 0.96, "aliases": ["Turnstile"], "isEssentialCandidate": true },
-  { "slug": "jsdelivr", "name": "jsDelivr CDN", "vendorCompany": "jsDelivr", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["cdn.jsdelivr.net", "jsdelivr.net"], "scriptPatterns": [], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://www.jsdelivr.com", "privacyPolicyUrl": "https://www.jsdelivr.com/privacy-policy-jsdelivr-net", "dataProcessingLocation": "Global", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "unpkg", "name": "unpkg CDN", "vendorCompany": "Cloudflare / unpkg", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["unpkg.com"], "scriptPatterns": [], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://unpkg.com", "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy", "dataProcessingLocation": "Global", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "cdnjs", "name": "cdnjs", "vendorCompany": "Cloudflare, Inc.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["cdnjs.cloudflare.com"], "scriptPatterns": [], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://cdnjs.com", "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy", "dataProcessingLocation": "Global", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "cloudinary", "name": "Cloudinary", "vendorCompany": "Cloudinary Ltd.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["cloudinary.com", "*.cloudinary.com", "res.cloudinary.com"], "scriptPatterns": [], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://cloudinary.com/documentation", "privacyPolicyUrl": "https://cloudinary.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "vimeo", "name": "Vimeo", "vendorCompany": "Vimeo.com, Inc.", "category": "SOCIAL", "riskLevel": "MEDIUM", "domainPatterns": ["vimeo.com", "*.vimeo.com", "vimeocdn.com", "*.vimeocdn.com"], "scriptPatterns": ["player.js"], "cookiePatterns": ["vuid", "player"], "storagePatterns": [], "requestPathPatterns": ["/video/"], "documentationUrl": "https://developer.vimeo.com", "privacyPolicyUrl": "https://vimeo.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "wistia", "name": "Wistia", "vendorCompany": "Wistia, Inc.", "category": "ANALYTICS", "riskLevel": "MEDIUM", "domainPatterns": ["wistia.com", "*.wistia.com", "wistia.net", "*.wistia.net"], "scriptPatterns": ["E-v1.js", "player.js"], "cookiePatterns": ["wistia", "wistia-video-progress-*"], "storagePatterns": ["wistia*"], "requestPathPatterns": [], "documentationUrl": "https://wistia.com/support/developers", "privacyPolicyUrl": "https://wistia.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.92, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "soundcloud", "name": "SoundCloud", "vendorCompany": "SoundCloud Global Limited", "category": "SOCIAL", "riskLevel": "MEDIUM", "domainPatterns": ["soundcloud.com", "*.soundcloud.com", "sndcdn.com"], "scriptPatterns": ["api.js", "widget"], "cookiePatterns": ["sc_anonymous_id"], "storagePatterns": [], "requestPathPatterns": ["/player/"], "documentationUrl": "https://developers.soundcloud.com", "privacyPolicyUrl": "https://soundcloud.com/pages/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.9, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "spotify", "name": "Spotify Embed", "vendorCompany": "Spotify AB", "category": "SOCIAL", "riskLevel": "MEDIUM", "domainPatterns": ["spotify.com", "*.spotify.com", "scdn.co", "*.scdn.co"], "scriptPatterns": [], "cookiePatterns": ["sp_t", "sp_landing"], "storagePatterns": [], "requestPathPatterns": ["/embed/"], "documentationUrl": "https://developer.spotify.com", "privacyPolicyUrl": "https://www.spotify.com/legal/privacy-policy", "dataProcessingLocation": "EU", "baseConfidence": 0.9, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "mapbox", "name": "Mapbox", "vendorCompany": "Mapbox, Inc.", "category": "FUNCTIONAL", "riskLevel": "LOW", "domainPatterns": ["mapbox.com", "*.mapbox.com", "api.mapbox.com"], "scriptPatterns": ["mapbox-gl.js"], "cookiePatterns": [], "storagePatterns": [], "requestPathPatterns": ["/v4/", "/styles/"], "documentationUrl": "https://docs.mapbox.com", "privacyPolicyUrl": "https://www.mapbox.com/legal/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "typeform", "name": "Typeform", "vendorCompany": "TYPEFORM SL", "category": "FUNCTIONAL", "riskLevel": "MEDIUM", "domainPatterns": ["typeform.com", "*.typeform.com"], "scriptPatterns": ["embed/next", "embed.js"], "cookiePatterns": ["tf_*"], "storagePatterns": ["tf_*"], "requestPathPatterns": ["/to/"], "documentationUrl": "https://developer.typeform.com", "privacyPolicyUrl": "https://admin.typeform.com/to/dwk6gt", "dataProcessingLocation": "EU", "baseConfidence": 0.92, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "calendly", "name": "Calendly", "vendorCompany": "Calendly LLC", "category": "FUNCTIONAL", "riskLevel": "MEDIUM", "domainPatterns": ["calendly.com", "*.calendly.com", "assets.calendly.com"], "scriptPatterns": ["widget.js"], "cookiePatterns": ["__Secure-*", "_calendly_session"], "storagePatterns": [], "requestPathPatterns": [], "documentationUrl": "https://developer.calendly.com", "privacyPolicyUrl": "https://calendly.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.91, "aliases": [], "isEssentialCandidate": false },
-
-  { "slug": "vwo", "name": "VWO", "vendorCompany": "Wingify Software Pvt. Ltd.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["visualwebsiteoptimizer.com", "*.visualwebsiteoptimizer.com", "vwo.com"], "scriptPatterns": ["va.js", "vwo_"], "cookiePatterns": ["_vwo_uuid*", "_vis_opt_*", "_vwo_sn"], "storagePatterns": ["_vwo*"], "requestPathPatterns": ["/j.php"], "documentationUrl": "https://developers.vwo.com", "privacyPolicyUrl": "https://vwo.com/privacy-policy", "dataProcessingLocation": "US/IN", "baseConfidence": 0.93, "aliases": ["Visual Website Optimizer"], "isEssentialCandidate": false },
-  { "slug": "optimizely", "name": "Optimizely", "vendorCompany": "Optimizely, Inc.", "category": "ANALYTICS", "riskLevel": "HIGH", "domainPatterns": ["optimizely.com", "*.optimizely.com", "cdn.optimizely.com"], "scriptPatterns": ["optimizely.js"], "cookiePatterns": ["optimizelyEndUserId", "optimizely_*"], "storagePatterns": ["optimizely*"], "requestPathPatterns": ["/log/event"], "documentationUrl": "https://docs.developers.optimizely.com", "privacyPolicyUrl": "https://www.optimizely.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "criteo", "name": "Criteo", "vendorCompany": "Criteo S.A.", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["criteo.com", "*.criteo.com", "criteo.net", "*.criteo.net"], "scriptPatterns": ["ld.js", "dis.criteo.com"], "cookiePatterns": ["uid", "cto_bundle", "cto_*"], "storagePatterns": ["cto_*"], "requestPathPatterns": ["/dis/", "/delivery/"], "documentationUrl": "https://developers.criteo.com", "privacyPolicyUrl": "https://www.criteo.com/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "taboola", "name": "Taboola", "vendorCompany": "Taboola.com Ltd.", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["taboola.com", "*.taboola.com", "taboolasyndication.com"], "scriptPatterns": ["loader.js", "tfa.js"], "cookiePatterns": ["t_gid", "taboola_*", "trc_cookie_storage"], "storagePatterns": ["taboola*"], "requestPathPatterns": ["/trc/"], "documentationUrl": "https://developers.taboola.com", "privacyPolicyUrl": "https://www.taboola.com/policies/privacy-policy", "dataProcessingLocation": "US/IL", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "outbrain", "name": "Outbrain", "vendorCompany": "Outbrain Inc.", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["outbrain.com", "*.outbrain.com", "outbrainimg.com"], "scriptPatterns": ["outbrain.js", "obtp.js"], "cookiePatterns": ["obuid", "outbrain_cid_fetch"], "storagePatterns": [], "requestPathPatterns": ["/utils/", "/network/"], "documentationUrl": "https://www.outbrain.com/help", "privacyPolicyUrl": "https://www.outbrain.com/privacy", "dataProcessingLocation": "US/IL", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": false },
-  { "slug": "adroll", "name": "AdRoll", "vendorCompany": "NextRoll, Inc.", "category": "ADVERTISING", "riskLevel": "CRITICAL", "domainPatterns": ["adroll.com", "*.adroll.com", "adroll.io"], "scriptPatterns": ["roundtrip.js", "pixel.js"], "cookiePatterns": ["__adroll", "__adroll_fpc", "__ar_v4"], "storagePatterns": ["__adroll*"], "requestPathPatterns": ["/pixel/"], "documentationUrl": "https://help.adroll.com", "privacyPolicyUrl": "https://www.nextroll.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": ["NextRoll"], "isEssentialCandidate": false },
-
-  { "slug": "cookiebot", "name": "Cookiebot", "vendorCompany": "Usercentrics A/S", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["consent.cookiebot.com", "consentcdn.cookiebot.com", "cookiebot.com"], "scriptPatterns": ["uc.js", "cookiebot.js"], "cookiePatterns": ["CookieConsent", "CookieConsentBulkTicket"], "storagePatterns": ["CookieConsent*"], "requestPathPatterns": ["/uc.js", "/consentconfig/"], "documentationUrl": "https://support.cookiebot.com", "privacyPolicyUrl": "https://www.cookiebot.com/en/privacy-policy", "dataProcessingLocation": "EU", "baseConfidence": 0.98, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "cookieyes", "name": "CookieYes", "vendorCompany": "CookieYes Limited", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["cdn-cookieyes.com", "cookieyes.com", "*.cookieyes.com"], "scriptPatterns": ["client_data", "script.js"], "cookiePatterns": ["cookieyes-consent", "cky-*"], "storagePatterns": ["cookieyes*"], "requestPathPatterns": ["/client_data/"], "documentationUrl": "https://www.cookieyes.com/documentation", "privacyPolicyUrl": "https://www.cookieyes.com/privacy-policy", "dataProcessingLocation": "EU", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "complianz", "name": "Complianz", "vendorCompany": "Really Simple Plugins B.V.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["complianz.io", "complianz.com"], "scriptPatterns": ["complianz", "cmplz-cookiebanner"], "cookiePatterns": ["cmplz_*", "complianz_*"], "storagePatterns": ["cmplz_*"], "requestPathPatterns": [], "documentationUrl": "https://complianz.io/support", "privacyPolicyUrl": "https://complianz.io/privacy-statement", "dataProcessingLocation": "EU", "baseConfidence": 0.96, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "onetrust", "name": "OneTrust", "vendorCompany": "OneTrust, LLC", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["cdn.cookielaw.org", "onetrust.com", "*.onetrust.com", "geolocation.onetrust.com", "privacyportal.onetrust.com"], "scriptPatterns": ["otSDKStub.js", "otBannerSdk.js"], "cookiePatterns": ["OptanonConsent", "OptanonAlertBoxClosed", "eupubconsent-v2"], "storagePatterns": ["OneTrust*", "Optanon*"], "requestPathPatterns": ["/consent/", "/scripttemplates/"], "documentationUrl": "https://developer.onetrust.com", "privacyPolicyUrl": "https://www.onetrust.com/privacy-notice", "dataProcessingLocation": "US/EU", "baseConfidence": 0.98, "aliases": ["Optanon", "CookiePro"], "isEssentialCandidate": true },
-  { "slug": "usercentrics", "name": "Usercentrics", "vendorCompany": "Usercentrics GmbH", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["app.usercentrics.eu", "api.usercentrics.eu", "usercentrics.eu", "*.usercentrics.eu"], "scriptPatterns": ["loader.js", "bundle.js"], "cookiePatterns": ["ucConsent", "usercentrics*"], "storagePatterns": ["uc_*", "ucSettings"], "requestPathPatterns": ["/settings/", "/latest/"], "documentationUrl": "https://docs.usercentrics.com", "privacyPolicyUrl": "https://usercentrics.com/privacy-policy", "dataProcessingLocation": "EU", "baseConfidence": 0.97, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "iubenda", "name": "Iubenda", "vendorCompany": "iubenda s.r.l.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["iubenda.com", "*.iubenda.com", "cdn.iubenda.com"], "scriptPatterns": ["cs/iubenda_cs.js", "cookie_solution"], "cookiePatterns": ["_iub_cs-*", "euconsent-v2"], "storagePatterns": ["_iub*"], "requestPathPatterns": ["/cs/"], "documentationUrl": "https://www.iubenda.com/en/help", "privacyPolicyUrl": "https://www.iubenda.com/privacy-policy/78683", "dataProcessingLocation": "EU", "baseConfidence": 0.95, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "termly", "name": "Termly", "vendorCompany": "Termly, Inc.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["termly.io", "*.termly.io", "app.termly.io"], "scriptPatterns": ["resource-blocker", "embed.min.js"], "cookiePatterns": ["TERMLY_API_CACHE"], "storagePatterns": ["TERMLY_*"], "requestPathPatterns": [], "documentationUrl": "https://help.termly.io", "privacyPolicyUrl": "https://termly.io/our-privacy-policy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "osano", "name": "Osano", "vendorCompany": "Osano, Inc.", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["osano.com", "*.osano.com", "cmp.osano.com"], "scriptPatterns": ["osano.js"], "cookiePatterns": ["osano_consentmanager", "osano_consentmanager_uuid"], "storagePatterns": ["osano*"], "requestPathPatterns": ["/169/"], "documentationUrl": "https://docs.osano.com", "privacyPolicyUrl": "https://www.osano.com/privacy", "dataProcessingLocation": "US", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "axeptio", "name": "Axeptio", "vendorCompany": "Axeptio SAS", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["axept.io", "*.axept.io", "static.axept.io"], "scriptPatterns": ["sdk.js"], "cookiePatterns": ["axeptio_cookies", "axeptio_authorized_vendors"], "storagePatterns": ["axeptio*"], "requestPathPatterns": [], "documentationUrl": "https://developers.axeptio.eu", "privacyPolicyUrl": "https://www.axeptio.eu/privacy", "dataProcessingLocation": "EU", "baseConfidence": 0.93, "aliases": [], "isEssentialCandidate": true },
-  { "slug": "didomi", "name": "Didomi", "vendorCompany": "Didomi SAS", "category": "NECESSARY", "riskLevel": "LOW", "domainPatterns": ["didomi.io", "*.didomi.io", "sdk.privacy-center.org"], "scriptPatterns": ["loader.js", "didomi.js"], "cookiePatterns": ["didomi_token", "euconsent-v2"], "storagePatterns": ["didomi*"], "requestPathPatterns": [], "documentationUrl": "https://developers.didomi.io", "privacyPolicyUrl": "https://www.didomi.io/privacy-policy", "dataProcessingLocation": "EU", "baseConfidence": 0.94, "aliases": [], "isEssentialCandidate": true }
+ {
+  "slug": "google-analytics-4",
+  "name": "Google Analytics 4",
+  "vendorCompany": "Google LLC",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "google-analytics.com",
+   "*.google-analytics.com",
+   "analytics.google.com"
+  ],
+  "scriptPatterns": [
+   "gtag/js",
+   "analytics.js",
+   "ga.js"
+  ],
+  "cookiePatterns": [
+   "_ga",
+   "_ga_*",
+   "_gid",
+   "_gat",
+   "_gat_*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/g/collect",
+   "/collect",
+   "/j/collect"
+  ],
+  "documentationUrl": "https://developers.google.com/analytics",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.98,
+  "aliases": [
+   "GA4",
+   "Google Analytics"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "google-tag-manager",
+  "name": "Google Tag Manager",
+  "vendorCompany": "Google LLC",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "googletagmanager.com",
+   "*.googletagmanager.com"
+  ],
+  "scriptPatterns": [
+   "gtm.js",
+   "gtag/js"
+  ],
+  "cookiePatterns": [
+   "_gcl_au"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/gtm.js",
+   "/gtag/js"
+  ],
+  "documentationUrl": "https://developers.google.com/tag-platform/tag-manager",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.98,
+  "aliases": [
+   "GTM"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "google-ads",
+  "name": "Google Ads",
+  "vendorCompany": "Google LLC",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "googleadservices.com",
+   "googlesyndication.com",
+   "*.googlesyndication.com",
+   "adservice.google.com"
+  ],
+  "scriptPatterns": [
+   "conversion.js",
+   "conversion_async.js"
+  ],
+  "cookiePatterns": [
+   "_gcl_au",
+   "_gcl_aw",
+   "_gcl_dc"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/pagead/",
+   "/conversion/"
+  ],
+  "documentationUrl": "https://support.google.com/google-ads",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.97,
+  "aliases": [
+   "AdWords"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "google-doubleclick",
+  "name": "Google DoubleClick",
+  "vendorCompany": "Google LLC",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "doubleclick.net",
+   "*.doubleclick.net"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [
+   "IDE",
+   "test_cookie",
+   "DSID"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://marketingplatform.google.com",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.98,
+  "aliases": [
+   "DCM",
+   "Campaign Manager"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "google-fonts",
+  "name": "Google Fonts",
+  "vendorCompany": "Google LLC",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "fonts.googleapis.com",
+   "fonts.gstatic.com"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/css",
+   "/css2"
+  ],
+  "documentationUrl": "https://developers.google.com/fonts",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.99,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "google-recaptcha",
+  "name": "Google reCAPTCHA",
+  "vendorCompany": "Google LLC",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "recaptcha.net",
+   "www.google.com/recaptcha",
+   "www.gstatic.com/recaptcha"
+  ],
+  "scriptPatterns": [
+   "recaptcha__",
+   "api.js"
+  ],
+  "cookiePatterns": [
+   "_GRECAPTCHA"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/recaptcha/"
+  ],
+  "documentationUrl": "https://developers.google.com/recaptcha",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.96,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "google-maps",
+  "name": "Google Maps",
+  "vendorCompany": "Google LLC",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "maps.googleapis.com",
+   "maps.gstatic.com"
+  ],
+  "scriptPatterns": [
+   "maps/api/js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/maps/api/"
+  ],
+  "documentationUrl": "https://developers.google.com/maps",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "youtube",
+  "name": "YouTube",
+  "vendorCompany": "Google LLC",
+  "category": "SOCIAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "youtube.com",
+   "*.youtube.com",
+   "youtube-nocookie.com",
+   "ytimg.com",
+   "*.ytimg.com"
+  ],
+  "scriptPatterns": [
+   "iframe_api",
+   "www-embed-player"
+  ],
+  "cookiePatterns": [
+   "VISITOR_INFO1_LIVE",
+   "YSC",
+   "PREF",
+   "CONSENT"
+  ],
+  "storagePatterns": [
+   "yt-remote-*",
+   "yt.innertube::*"
+  ],
+  "requestPathPatterns": [
+   "/embed/"
+  ],
+  "documentationUrl": "https://developers.google.com/youtube",
+  "privacyPolicyUrl": "https://policies.google.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "meta-pixel",
+  "name": "Meta Pixel",
+  "vendorCompany": "Meta Platforms, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "connect.facebook.net",
+   "facebook.com",
+   "*.facebook.com",
+   "facebook.net"
+  ],
+  "scriptPatterns": [
+   "fbevents.js",
+   "fbq("
+  ],
+  "cookiePatterns": [
+   "_fbp",
+   "_fbc",
+   "fr",
+   "datr"
+  ],
+  "storagePatterns": [
+   "fbssls_*"
+  ],
+  "requestPathPatterns": [
+   "/tr?",
+   "/tr/"
+  ],
+  "documentationUrl": "https://developers.facebook.com/docs/meta-pixel",
+  "privacyPolicyUrl": "https://www.facebook.com/privacy/policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.98,
+  "aliases": [
+   "Facebook Pixel"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "instagram",
+  "name": "Instagram Embed",
+  "vendorCompany": "Meta Platforms, Inc.",
+  "category": "SOCIAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "instagram.com",
+   "*.cdninstagram.com"
+  ],
+  "scriptPatterns": [
+   "embed.js"
+  ],
+  "cookiePatterns": [
+   "ig_did",
+   "csrftoken"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/embed"
+  ],
+  "documentationUrl": "https://developers.facebook.com/docs/instagram",
+  "privacyPolicyUrl": "https://privacycenter.instagram.com",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "microsoft-clarity",
+  "name": "Microsoft Clarity",
+  "vendorCompany": "Microsoft Corporation",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "clarity.ms",
+   "*.clarity.ms"
+  ],
+  "scriptPatterns": [
+   "clarity.js"
+  ],
+  "cookiePatterns": [
+   "_clck",
+   "_clsk",
+   "CLID"
+  ],
+  "storagePatterns": [
+   "clarity_*"
+  ],
+  "requestPathPatterns": [
+   "/collect"
+  ],
+  "documentationUrl": "https://learn.microsoft.com/clarity",
+  "privacyPolicyUrl": "https://privacy.microsoft.com",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "microsoft-bing-uet",
+  "name": "Microsoft Advertising UET",
+  "vendorCompany": "Microsoft Corporation",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "bat.bing.com",
+   "bing.com"
+  ],
+  "scriptPatterns": [
+   "bat.js",
+   "uetq"
+  ],
+  "cookiePatterns": [
+   "_uetsid",
+   "_uetvid",
+   "MUID"
+  ],
+  "storagePatterns": [
+   "_uetsid*",
+   "_uetvid*"
+  ],
+  "requestPathPatterns": [
+   "/action/"
+  ],
+  "documentationUrl": "https://help.ads.microsoft.com",
+  "privacyPolicyUrl": "https://privacy.microsoft.com",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.96,
+  "aliases": [
+   "Bing Ads",
+   "UET"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "tiktok-pixel",
+  "name": "TikTok Pixel",
+  "vendorCompany": "ByteDance Ltd.",
+  "category": "MARKETING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "analytics.tiktok.com",
+   "tiktok.com",
+   "*.tiktokcdn.com"
+  ],
+  "scriptPatterns": [
+   "ttq.js",
+   "pixel/events.js"
+  ],
+  "cookiePatterns": [
+   "_ttp",
+   "tt_appInfo",
+   "tt_sessionId"
+  ],
+  "storagePatterns": [
+   "tt_*"
+  ],
+  "requestPathPatterns": [
+   "/api/v2/pixel",
+   "/i18n/pixel/"
+  ],
+  "documentationUrl": "https://ads.tiktok.com/help",
+  "privacyPolicyUrl": "https://www.tiktok.com/legal/privacy-policy",
+  "dataProcessingLocation": "US/SG",
+  "baseConfidence": 0.96,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "linkedin-insight",
+  "name": "LinkedIn Insight Tag",
+  "vendorCompany": "LinkedIn Corporation",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "snap.licdn.com",
+   "linkedin.com",
+   "*.licdn.com",
+   "px.ads.linkedin.com"
+  ],
+  "scriptPatterns": [
+   "insight.min.js"
+  ],
+  "cookiePatterns": [
+   "li_sugr",
+   "bcookie",
+   "lidc",
+   "UserMatchHistory",
+   "AnalyticsSyncHistory"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/collect"
+  ],
+  "documentationUrl": "https://www.linkedin.com/help/lms",
+  "privacyPolicyUrl": "https://www.linkedin.com/legal/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.96,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "x-twitter-pixel",
+  "name": "X (Twitter) Pixel",
+  "vendorCompany": "X Corp.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "static.ads-twitter.com",
+   "analytics.twitter.com",
+   "t.co",
+   "platform.twitter.com"
+  ],
+  "scriptPatterns": [
+   "uwt.js",
+   "widgets.js"
+  ],
+  "cookiePatterns": [
+   "personalization_id",
+   "guest_id",
+   "muc_ads"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/i/adsct"
+  ],
+  "documentationUrl": "https://business.x.com",
+  "privacyPolicyUrl": "https://x.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.95,
+  "aliases": [
+   "Twitter Pixel"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "pinterest-tag",
+  "name": "Pinterest Tag",
+  "vendorCompany": "Pinterest, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "ct.pinterest.com",
+   "pinterest.com",
+   "*.pinimg.com"
+  ],
+  "scriptPatterns": [
+   "pinit.js",
+   "tag/pinit"
+  ],
+  "cookiePatterns": [
+   "_pinterest_ct_ua",
+   "_pin_unauth",
+   "_epik"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/v3/",
+   "/ct/"
+  ],
+  "documentationUrl": "https://help.pinterest.com/business",
+  "privacyPolicyUrl": "https://policy.pinterest.com/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "snap-pixel",
+  "name": "Snap Pixel",
+  "vendorCompany": "Snap Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "sc-static.net",
+   "tr.snapchat.com",
+   "snapchat.com"
+  ],
+  "scriptPatterns": [
+   "scevent.min.js"
+  ],
+  "cookiePatterns": [
+   "_scid",
+   "sc_at"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/cm/",
+   "/p"
+  ],
+  "documentationUrl": "https://businesshelp.snapchat.com",
+  "privacyPolicyUrl": "https://snap.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "reddit-pixel",
+  "name": "Reddit Pixel",
+  "vendorCompany": "Reddit, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "redditstatic.com",
+   "alb.reddit.com",
+   "events.redditmedia.com"
+  ],
+  "scriptPatterns": [
+   "pixel.js",
+   "conversions-tracking"
+  ],
+  "cookiePatterns": [
+   "_rdt_uuid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/rp.gif"
+  ],
+  "documentationUrl": "https://business.reddithelp.com",
+  "privacyPolicyUrl": "https://www.reddit.com/policies/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "hotjar",
+  "name": "Hotjar",
+  "vendorCompany": "Hotjar Ltd.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "hotjar.com",
+   "*.hotjar.com",
+   "hotjar.io",
+   "*.hotjar.io"
+  ],
+  "scriptPatterns": [
+   "hotjar-",
+   "modules.js"
+  ],
+  "cookiePatterns": [
+   "_hjSessionUser_*",
+   "_hjSession_*",
+   "_hjIncludedInSessionSample",
+   "_hjAbsoluteSessionInProgress"
+  ],
+  "storagePatterns": [
+   "_hj*"
+  ],
+  "requestPathPatterns": [
+   "/api/v2/client/"
+  ],
+  "documentationUrl": "https://help.hotjar.com",
+  "privacyPolicyUrl": "https://www.hotjar.com/legal/policies/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "mouseflow",
+  "name": "Mouseflow",
+  "vendorCompany": "Mouseflow ApS",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "mouseflow.com",
+   "*.mouseflow.com"
+  ],
+  "scriptPatterns": [
+   "mouseflow.js"
+  ],
+  "cookiePatterns": [
+   "mf_user",
+   "_mf_*"
+  ],
+  "storagePatterns": [
+   "mf_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://help.mouseflow.com",
+  "privacyPolicyUrl": "https://mouseflow.com/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "fullstory",
+  "name": "FullStory",
+  "vendorCompany": "FullStory, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "fullstory.com",
+   "*.fullstory.com",
+   "fs.js"
+  ],
+  "scriptPatterns": [
+   "fs.js",
+   "edge.fullstory.com"
+  ],
+  "cookiePatterns": [
+   "fs_uid",
+   "fs_lua"
+  ],
+  "storagePatterns": [
+   "fs_*"
+  ],
+  "requestPathPatterns": [
+   "/rec/"
+  ],
+  "documentationUrl": "https://help.fullstory.com",
+  "privacyPolicyUrl": "https://www.fullstory.com/legal/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "crazy-egg",
+  "name": "Crazy Egg",
+  "vendorCompany": "Crazy Egg, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "crazyegg.com",
+   "*.crazyegg.com"
+  ],
+  "scriptPatterns": [
+   "script.crazyegg.com"
+  ],
+  "cookiePatterns": [
+   "_ce.s",
+   "_ce.gtld",
+   "cebs"
+  ],
+  "storagePatterns": [
+   "_ce*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://help.crazyegg.com",
+  "privacyPolicyUrl": "https://www.crazyegg.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "matomo",
+  "name": "Matomo",
+  "vendorCompany": "InnoCraft Ltd.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "matomo.cloud",
+   "*.matomo.cloud",
+   "matomo.org"
+  ],
+  "scriptPatterns": [
+   "matomo.js",
+   "piwik.js"
+  ],
+  "cookiePatterns": [
+   "_pk_id*",
+   "_pk_ses*",
+   "_pk_ref*",
+   "MATOMO_SESSID"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/matomo.php",
+   "/piwik.php"
+  ],
+  "documentationUrl": "https://matomo.org/docs",
+  "privacyPolicyUrl": "https://matomo.org/privacy-policy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.93,
+  "aliases": [
+   "Piwik"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "plausible",
+  "name": "Plausible Analytics",
+  "vendorCompany": "Plausible Insights OÜ",
+  "category": "ANALYTICS",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "plausible.io",
+   "*.plausible.io"
+  ],
+  "scriptPatterns": [
+   "plausible.js",
+   "script.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [
+   "plausible_*"
+  ],
+  "requestPathPatterns": [
+   "/api/event"
+  ],
+  "documentationUrl": "https://plausible.io/docs",
+  "privacyPolicyUrl": "https://plausible.io/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "fathom",
+  "name": "Fathom Analytics",
+  "vendorCompany": "Conva Ventures Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "usefathom.com",
+   "*.usefathom.com",
+   "cdn.usefathom.com"
+  ],
+  "scriptPatterns": [
+   "script.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://usefathom.com/docs",
+  "privacyPolicyUrl": "https://usefathom.com/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "segment",
+  "name": "Segment",
+  "vendorCompany": "Twilio Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "segment.com",
+   "*.segment.com",
+   "segment.io",
+   "cdn.segment.com"
+  ],
+  "scriptPatterns": [
+   "analytics.min.js",
+   "analytics.js"
+  ],
+  "cookiePatterns": [
+   "ajs_user_id",
+   "ajs_anonymous_id",
+   "ajs_group_id"
+  ],
+  "storagePatterns": [
+   "ajs_*"
+  ],
+  "requestPathPatterns": [
+   "/v1/t",
+   "/v1/p",
+   "/v1/i"
+  ],
+  "documentationUrl": "https://segment.com/docs",
+  "privacyPolicyUrl": "https://www.twilio.com/legal/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "amplitude",
+  "name": "Amplitude",
+  "vendorCompany": "Amplitude, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "amplitude.com",
+   "*.amplitude.com",
+   "api.amplitude.com",
+   "cdn.amplitude.com"
+  ],
+  "scriptPatterns": [
+   "amplitude-",
+   "amplitude.js"
+  ],
+  "cookiePatterns": [
+   "amp_*",
+   "amplitude_id*"
+  ],
+  "storagePatterns": [
+   "amplitude_*",
+   "AMP_*"
+  ],
+  "requestPathPatterns": [
+   "/2/httpapi",
+   "/batch"
+  ],
+  "documentationUrl": "https://amplitude.com/docs",
+  "privacyPolicyUrl": "https://amplitude.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "mixpanel",
+  "name": "Mixpanel",
+  "vendorCompany": "Mixpanel, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "mixpanel.com",
+   "*.mixpanel.com",
+   "cdn.mxpnl.com",
+   "api.mixpanel.com"
+  ],
+  "scriptPatterns": [
+   "mixpanel-2",
+   "mixpanel.min.js"
+  ],
+  "cookiePatterns": [
+   "mp_*"
+  ],
+  "storagePatterns": [
+   "mp_*"
+  ],
+  "requestPathPatterns": [
+   "/track",
+   "/engage"
+  ],
+  "documentationUrl": "https://docs.mixpanel.com",
+  "privacyPolicyUrl": "https://mixpanel.com/legal/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "hubspot",
+  "name": "HubSpot",
+  "vendorCompany": "HubSpot, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "hubspot.com",
+   "*.hubspot.com",
+   "hs-scripts.com",
+   "hsforms.net",
+   "hs-analytics.net",
+   "hsadspixel.net",
+   "hubapi.com"
+  ],
+  "scriptPatterns": [
+   "hs-script-loader",
+   "leadflows.js",
+   "forms/v2.js"
+  ],
+  "cookiePatterns": [
+   "hubspotutk",
+   "__hstc",
+   "__hssc",
+   "__hssrc",
+   "__hs_opt_out"
+  ],
+  "storagePatterns": [
+   "hs-*"
+  ],
+  "requestPathPatterns": [
+   "/__ptq.gif",
+   "/collected-forms/"
+  ],
+  "documentationUrl": "https://developers.hubspot.com",
+  "privacyPolicyUrl": "https://legal.hubspot.com/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.96,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "marketo",
+  "name": "Marketo",
+  "vendorCompany": "Adobe Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "marketo.net",
+   "*.marketo.net",
+   "mktoresp.com",
+   "*.mktoresp.com"
+  ],
+  "scriptPatterns": [
+   "munchkin.js",
+   "forms2.min.js"
+  ],
+  "cookiePatterns": [
+   "_mkto_trk"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/webevents/"
+  ],
+  "documentationUrl": "https://developers.marketo.com",
+  "privacyPolicyUrl": "https://www.adobe.com/privacy/policy.html",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "activecampaign",
+  "name": "ActiveCampaign",
+  "vendorCompany": "ActiveCampaign, LLC",
+  "category": "MARKETING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "activehosted.com",
+   "*.activehosted.com",
+   "trackcmp.net"
+  ],
+  "scriptPatterns": [
+   "site/tracking"
+  ],
+  "cookiePatterns": [
+   "ac_enable_tracking",
+   "prism_*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developers.activecampaign.com",
+  "privacyPolicyUrl": "https://www.activecampaign.com/legal/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "mailchimp",
+  "name": "Mailchimp",
+  "vendorCompany": "Intuit Inc.",
+  "category": "MARKETING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "mailchimp.com",
+   "*.list-manage.com",
+   "chimpstatic.com"
+  ],
+  "scriptPatterns": [
+   "mcjs",
+   "mc-validate.js"
+  ],
+  "cookiePatterns": [
+   "_mcid",
+   "mailchimp_landing_site"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://mailchimp.com/developer",
+  "privacyPolicyUrl": "https://www.intuit.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.91,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "klaviyo",
+  "name": "Klaviyo",
+  "vendorCompany": "Klaviyo, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "klaviyo.com",
+   "*.klaviyo.com",
+   "static.klaviyo.com"
+  ],
+  "scriptPatterns": [
+   "klaviyo.js",
+   "onsite/js"
+  ],
+  "cookiePatterns": [
+   "__kla_id"
+  ],
+  "storagePatterns": [
+   "klaviyo*",
+   "__kla*"
+  ],
+  "requestPathPatterns": [
+   "/onsite/track",
+   "/client/"
+  ],
+  "documentationUrl": "https://developers.klaviyo.com",
+  "privacyPolicyUrl": "https://www.klaviyo.com/legal/privacy-notice",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "intercom",
+  "name": "Intercom",
+  "vendorCompany": "Intercom, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "intercom.io",
+   "*.intercom.io",
+   "intercomcdn.com",
+   "*.intercomcdn.com"
+  ],
+  "scriptPatterns": [
+   "intercom/frame",
+   "shim/latest"
+  ],
+  "cookiePatterns": [
+   "intercom-id-*",
+   "intercom-session-*",
+   "intercom-device-id-*"
+  ],
+  "storagePatterns": [
+   "intercom.*"
+  ],
+  "requestPathPatterns": [
+   "/messenger/"
+  ],
+  "documentationUrl": "https://developers.intercom.com",
+  "privacyPolicyUrl": "https://www.intercom.com/legal/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "crisp",
+  "name": "Crisp",
+  "vendorCompany": "Crisp IM SAS",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "crisp.chat",
+   "*.crisp.chat"
+  ],
+  "scriptPatterns": [
+   "client.crisp.chat/l.js"
+  ],
+  "cookiePatterns": [
+   "crisp-client*"
+  ],
+  "storagePatterns": [
+   "crisp-client/*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://docs.crisp.chat",
+  "privacyPolicyUrl": "https://crisp.chat/en/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "tawk-to",
+  "name": "Tawk.to",
+  "vendorCompany": "tawk.to inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "tawk.to",
+   "*.tawk.to"
+  ],
+  "scriptPatterns": [
+   "embed.tawk.to"
+  ],
+  "cookiePatterns": [
+   "__tawkuuid",
+   "TawkConnectionTime"
+  ],
+  "storagePatterns": [
+   "twk_*",
+   "Tawk_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developer.tawk.to",
+  "privacyPolicyUrl": "https://www.tawk.to/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "zendesk",
+  "name": "Zendesk",
+  "vendorCompany": "Zendesk, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "zendesk.com",
+   "*.zendesk.com",
+   "zdassets.com",
+   "*.zdassets.com"
+  ],
+  "scriptPatterns": [
+   "web_widget",
+   "ekr.zdassets.com"
+  ],
+  "cookiePatterns": [
+   "__zlcmid",
+   "_zendesk_*"
+  ],
+  "storagePatterns": [
+   "ZD-*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developer.zendesk.com",
+  "privacyPolicyUrl": "https://www.zendesk.com/company/privacy-and-data-protection",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "drift",
+  "name": "Drift",
+  "vendorCompany": "Salesloft, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "drift.com",
+   "*.drift.com",
+   "driftt.com",
+   "*.driftt.com"
+  ],
+  "scriptPatterns": [
+   "drift.js",
+   "core.js"
+  ],
+  "cookiePatterns": [
+   "drift_aid",
+   "driftt_aid",
+   "drift_campaign_refresh"
+  ],
+  "storagePatterns": [
+   "drift.*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://devdocs.drift.com",
+  "privacyPolicyUrl": "https://www.drift.com/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "freshworks",
+  "name": "Freshworks / Freshchat",
+  "vendorCompany": "Freshworks Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "freshchat.com",
+   "*.freshchat.com",
+   "freshworks.com",
+   "*.freshworks.com",
+   "wchat.freshchat.com"
+  ],
+  "scriptPatterns": [
+   "widget.js",
+   "freshchat.js"
+  ],
+  "cookiePatterns": [
+   "_fw_crm_v"
+  ],
+  "storagePatterns": [
+   "FCRM*",
+   "fc_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developers.freshchat.com",
+  "privacyPolicyUrl": "https://www.freshworks.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [
+   "Freshdesk"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "trustpilot",
+  "name": "Trustpilot",
+  "vendorCompany": "Trustpilot A/S",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "trustpilot.com",
+   "*.trustpilot.com"
+  ],
+  "scriptPatterns": [
+   "bootstrap/v5/tp.widget"
+  ],
+  "cookiePatterns": [
+   "__cfruid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developers.trustpilot.com",
+  "privacyPolicyUrl": "https://uk.legal.trustpilot.com/end-user-privacy-terms",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "yotpo",
+  "name": "Yotpo",
+  "vendorCompany": "Yotpo Ltd.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "yotpo.com",
+   "*.yotpo.com",
+   "staticw2.yotpo.com"
+  ],
+  "scriptPatterns": [
+   "widget.js"
+  ],
+  "cookiePatterns": [
+   "yotpo_pixel",
+   "_yotpo_*"
+  ],
+  "storagePatterns": [
+   "yotpo*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://support.yotpo.com",
+  "privacyPolicyUrl": "https://www.yotpo.com/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "judge-me",
+  "name": "Judge.me",
+  "vendorCompany": "Judge.me Ltd.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "judge.me",
+   "*.judge.me",
+   "cdn.judge.me"
+  ],
+  "scriptPatterns": [
+   "loader.js",
+   "widget.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://help.judge.me",
+  "privacyPolicyUrl": "https://judge.me/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.88,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "stripe",
+  "name": "Stripe",
+  "vendorCompany": "Stripe, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "stripe.com",
+   "*.stripe.com",
+   "stripe.network",
+   "js.stripe.com"
+  ],
+  "scriptPatterns": [
+   "stripe.js",
+   "v3"
+  ],
+  "cookiePatterns": [
+   "__stripe_mid",
+   "__stripe_sid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/v3",
+   "/6"
+  ],
+  "documentationUrl": "https://stripe.com/docs",
+  "privacyPolicyUrl": "https://stripe.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "paypal",
+  "name": "PayPal",
+  "vendorCompany": "PayPal Holdings, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "paypal.com",
+   "*.paypal.com",
+   "paypalobjects.com",
+   "*.paypalobjects.com"
+  ],
+  "scriptPatterns": [
+   "sdk/js",
+   "checkout.js"
+  ],
+  "cookiePatterns": [
+   "ts",
+   "tsrce",
+   "x-pp-s",
+   "LANG"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/sdk/"
+  ],
+  "documentationUrl": "https://developer.paypal.com",
+  "privacyPolicyUrl": "https://www.paypal.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "klarna",
+  "name": "Klarna",
+  "vendorCompany": "Klarna Bank AB",
+  "category": "NECESSARY",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "klarna.com",
+   "*.klarna.com",
+   "klarnaservices.com",
+   "*.klarnacdn.net"
+  ],
+  "scriptPatterns": [
+   "klarna-",
+   "lib.js"
+  ],
+  "cookiePatterns": [
+   "kl_*"
+  ],
+  "storagePatterns": [
+   "klarna*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://docs.klarna.com",
+  "privacyPolicyUrl": "https://www.klarna.com/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "cloudflare-insights",
+  "name": "Cloudflare Web Analytics",
+  "vendorCompany": "Cloudflare, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "static.cloudflareinsights.com",
+   "cloudflareinsights.com"
+  ],
+  "scriptPatterns": [
+   "beacon.min.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/cdn-cgi/rum"
+  ],
+  "documentationUrl": "https://developers.cloudflare.com/analytics",
+  "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "cloudflare-challenge",
+  "name": "Cloudflare Bot Management",
+  "vendorCompany": "Cloudflare, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "challenges.cloudflare.com"
+  ],
+  "scriptPatterns": [
+   "turnstile",
+   "challenge-platform"
+  ],
+  "cookiePatterns": [
+   "__cf_bm",
+   "cf_clearance",
+   "__cflb"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/cdn-cgi/challenge-platform/"
+  ],
+  "documentationUrl": "https://developers.cloudflare.com/turnstile",
+  "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.96,
+  "aliases": [
+   "Turnstile"
+  ],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "jsdelivr",
+  "name": "jsDelivr CDN",
+  "vendorCompany": "jsDelivr",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "cdn.jsdelivr.net",
+   "jsdelivr.net"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://www.jsdelivr.com",
+  "privacyPolicyUrl": "https://www.jsdelivr.com/privacy-policy-jsdelivr-net",
+  "dataProcessingLocation": "Global",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "unpkg",
+  "name": "unpkg CDN",
+  "vendorCompany": "Cloudflare / unpkg",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "unpkg.com"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://unpkg.com",
+  "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy",
+  "dataProcessingLocation": "Global",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "cdnjs",
+  "name": "cdnjs",
+  "vendorCompany": "Cloudflare, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "cdnjs.cloudflare.com"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://cdnjs.com",
+  "privacyPolicyUrl": "https://www.cloudflare.com/privacypolicy",
+  "dataProcessingLocation": "Global",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "cloudinary",
+  "name": "Cloudinary",
+  "vendorCompany": "Cloudinary Ltd.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "cloudinary.com",
+   "*.cloudinary.com",
+   "res.cloudinary.com"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://cloudinary.com/documentation",
+  "privacyPolicyUrl": "https://cloudinary.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "vimeo",
+  "name": "Vimeo",
+  "vendorCompany": "Vimeo.com, Inc.",
+  "category": "SOCIAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "vimeo.com",
+   "*.vimeo.com",
+   "vimeocdn.com",
+   "*.vimeocdn.com"
+  ],
+  "scriptPatterns": [
+   "player.js"
+  ],
+  "cookiePatterns": [
+   "vuid",
+   "player"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/video/"
+  ],
+  "documentationUrl": "https://developer.vimeo.com",
+  "privacyPolicyUrl": "https://vimeo.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "wistia",
+  "name": "Wistia",
+  "vendorCompany": "Wistia, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "wistia.com",
+   "*.wistia.com",
+   "wistia.net",
+   "*.wistia.net"
+  ],
+  "scriptPatterns": [
+   "E-v1.js",
+   "player.js"
+  ],
+  "cookiePatterns": [
+   "wistia",
+   "wistia-video-progress-*"
+  ],
+  "storagePatterns": [
+   "wistia*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://wistia.com/support/developers",
+  "privacyPolicyUrl": "https://wistia.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "soundcloud",
+  "name": "SoundCloud",
+  "vendorCompany": "SoundCloud Global Limited",
+  "category": "SOCIAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "soundcloud.com",
+   "*.soundcloud.com",
+   "sndcdn.com"
+  ],
+  "scriptPatterns": [
+   "api.js",
+   "widget"
+  ],
+  "cookiePatterns": [
+   "sc_anonymous_id"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/player/"
+  ],
+  "documentationUrl": "https://developers.soundcloud.com",
+  "privacyPolicyUrl": "https://soundcloud.com/pages/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "spotify",
+  "name": "Spotify Embed",
+  "vendorCompany": "Spotify AB",
+  "category": "SOCIAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "spotify.com",
+   "*.spotify.com",
+   "scdn.co",
+   "*.scdn.co"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [
+   "sp_t",
+   "sp_landing"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/embed/"
+  ],
+  "documentationUrl": "https://developer.spotify.com",
+  "privacyPolicyUrl": "https://www.spotify.com/legal/privacy-policy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "mapbox",
+  "name": "Mapbox",
+  "vendorCompany": "Mapbox, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "mapbox.com",
+   "*.mapbox.com",
+   "api.mapbox.com"
+  ],
+  "scriptPatterns": [
+   "mapbox-gl.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/v4/",
+   "/styles/"
+  ],
+  "documentationUrl": "https://docs.mapbox.com",
+  "privacyPolicyUrl": "https://www.mapbox.com/legal/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "typeform",
+  "name": "Typeform",
+  "vendorCompany": "TYPEFORM SL",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "typeform.com",
+   "*.typeform.com"
+  ],
+  "scriptPatterns": [
+   "embed/next",
+   "embed.js"
+  ],
+  "cookiePatterns": [
+   "tf_*"
+  ],
+  "storagePatterns": [
+   "tf_*"
+  ],
+  "requestPathPatterns": [
+   "/to/"
+  ],
+  "documentationUrl": "https://developer.typeform.com",
+  "privacyPolicyUrl": "https://admin.typeform.com/to/dwk6gt",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "calendly",
+  "name": "Calendly",
+  "vendorCompany": "Calendly LLC",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "calendly.com",
+   "*.calendly.com",
+   "assets.calendly.com"
+  ],
+  "scriptPatterns": [
+   "widget.js"
+  ],
+  "cookiePatterns": [
+   "__Secure-*",
+   "_calendly_session"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developer.calendly.com",
+  "privacyPolicyUrl": "https://calendly.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.91,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "vwo",
+  "name": "VWO",
+  "vendorCompany": "Wingify Software Pvt. Ltd.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "visualwebsiteoptimizer.com",
+   "*.visualwebsiteoptimizer.com",
+   "vwo.com"
+  ],
+  "scriptPatterns": [
+   "va.js",
+   "vwo_"
+  ],
+  "cookiePatterns": [
+   "_vwo_uuid*",
+   "_vis_opt_*",
+   "_vwo_sn"
+  ],
+  "storagePatterns": [
+   "_vwo*"
+  ],
+  "requestPathPatterns": [
+   "/j.php"
+  ],
+  "documentationUrl": "https://developers.vwo.com",
+  "privacyPolicyUrl": "https://vwo.com/privacy-policy",
+  "dataProcessingLocation": "US/IN",
+  "baseConfidence": 0.93,
+  "aliases": [
+   "Visual Website Optimizer"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "optimizely",
+  "name": "Optimizely",
+  "vendorCompany": "Optimizely, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "optimizely.com",
+   "*.optimizely.com",
+   "cdn.optimizely.com"
+  ],
+  "scriptPatterns": [
+   "optimizely.js"
+  ],
+  "cookiePatterns": [
+   "optimizelyEndUserId",
+   "optimizely_*"
+  ],
+  "storagePatterns": [
+   "optimizely*"
+  ],
+  "requestPathPatterns": [
+   "/log/event"
+  ],
+  "documentationUrl": "https://docs.developers.optimizely.com",
+  "privacyPolicyUrl": "https://www.optimizely.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "criteo",
+  "name": "Criteo",
+  "vendorCompany": "Criteo S.A.",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "criteo.com",
+   "*.criteo.com",
+   "criteo.net",
+   "*.criteo.net"
+  ],
+  "scriptPatterns": [
+   "ld.js",
+   "dis.criteo.com"
+  ],
+  "cookiePatterns": [
+   "uid",
+   "cto_bundle",
+   "cto_*"
+  ],
+  "storagePatterns": [
+   "cto_*"
+  ],
+  "requestPathPatterns": [
+   "/dis/",
+   "/delivery/"
+  ],
+  "documentationUrl": "https://developers.criteo.com",
+  "privacyPolicyUrl": "https://www.criteo.com/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "taboola",
+  "name": "Taboola",
+  "vendorCompany": "Taboola.com Ltd.",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "taboola.com",
+   "*.taboola.com",
+   "taboolasyndication.com"
+  ],
+  "scriptPatterns": [
+   "loader.js",
+   "tfa.js"
+  ],
+  "cookiePatterns": [
+   "t_gid",
+   "taboola_*",
+   "trc_cookie_storage"
+  ],
+  "storagePatterns": [
+   "taboola*"
+  ],
+  "requestPathPatterns": [
+   "/trc/"
+  ],
+  "documentationUrl": "https://developers.taboola.com",
+  "privacyPolicyUrl": "https://www.taboola.com/policies/privacy-policy",
+  "dataProcessingLocation": "US/IL",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "outbrain",
+  "name": "Outbrain",
+  "vendorCompany": "Outbrain Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "outbrain.com",
+   "*.outbrain.com",
+   "outbrainimg.com"
+  ],
+  "scriptPatterns": [
+   "outbrain.js",
+   "obtp.js"
+  ],
+  "cookiePatterns": [
+   "obuid",
+   "outbrain_cid_fetch"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/utils/",
+   "/network/"
+  ],
+  "documentationUrl": "https://www.outbrain.com/help",
+  "privacyPolicyUrl": "https://www.outbrain.com/privacy",
+  "dataProcessingLocation": "US/IL",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "adroll",
+  "name": "AdRoll",
+  "vendorCompany": "NextRoll, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "CRITICAL",
+  "domainPatterns": [
+   "adroll.com",
+   "*.adroll.com",
+   "adroll.io"
+  ],
+  "scriptPatterns": [
+   "roundtrip.js",
+   "pixel.js"
+  ],
+  "cookiePatterns": [
+   "__adroll",
+   "__adroll_fpc",
+   "__ar_v4"
+  ],
+  "storagePatterns": [
+   "__adroll*"
+  ],
+  "requestPathPatterns": [
+   "/pixel/"
+  ],
+  "documentationUrl": "https://help.adroll.com",
+  "privacyPolicyUrl": "https://www.nextroll.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [
+   "NextRoll"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "cookiebot",
+  "name": "Cookiebot",
+  "vendorCompany": "Usercentrics A/S",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "consent.cookiebot.com",
+   "consentcdn.cookiebot.com",
+   "cookiebot.com"
+  ],
+  "scriptPatterns": [
+   "uc.js",
+   "cookiebot.js"
+  ],
+  "cookiePatterns": [
+   "CookieConsent",
+   "CookieConsentBulkTicket"
+  ],
+  "storagePatterns": [
+   "CookieConsent*"
+  ],
+  "requestPathPatterns": [
+   "/uc.js",
+   "/consentconfig/"
+  ],
+  "documentationUrl": "https://support.cookiebot.com",
+  "privacyPolicyUrl": "https://www.cookiebot.com/en/privacy-policy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.98,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "cookieyes",
+  "name": "CookieYes",
+  "vendorCompany": "CookieYes Limited",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "cdn-cookieyes.com",
+   "cookieyes.com",
+   "*.cookieyes.com"
+  ],
+  "scriptPatterns": [
+   "client_data",
+   "script.js"
+  ],
+  "cookiePatterns": [
+   "cookieyes-consent",
+   "cky-*"
+  ],
+  "storagePatterns": [
+   "cookieyes*"
+  ],
+  "requestPathPatterns": [
+   "/client_data/"
+  ],
+  "documentationUrl": "https://www.cookieyes.com/documentation",
+  "privacyPolicyUrl": "https://www.cookieyes.com/privacy-policy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "complianz",
+  "name": "Complianz",
+  "vendorCompany": "Really Simple Plugins B.V.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "complianz.io",
+   "complianz.com"
+  ],
+  "scriptPatterns": [
+   "complianz",
+   "cmplz-cookiebanner"
+  ],
+  "cookiePatterns": [
+   "cmplz_*",
+   "complianz_*"
+  ],
+  "storagePatterns": [
+   "cmplz_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://complianz.io/support",
+  "privacyPolicyUrl": "https://complianz.io/privacy-statement",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.96,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "onetrust",
+  "name": "OneTrust",
+  "vendorCompany": "OneTrust, LLC",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "cdn.cookielaw.org",
+   "onetrust.com",
+   "*.onetrust.com",
+   "geolocation.onetrust.com",
+   "privacyportal.onetrust.com"
+  ],
+  "scriptPatterns": [
+   "otSDKStub.js",
+   "otBannerSdk.js"
+  ],
+  "cookiePatterns": [
+   "OptanonConsent",
+   "OptanonAlertBoxClosed",
+   "eupubconsent-v2"
+  ],
+  "storagePatterns": [
+   "OneTrust*",
+   "Optanon*"
+  ],
+  "requestPathPatterns": [
+   "/consent/",
+   "/scripttemplates/"
+  ],
+  "documentationUrl": "https://developer.onetrust.com",
+  "privacyPolicyUrl": "https://www.onetrust.com/privacy-notice",
+  "dataProcessingLocation": "US/EU",
+  "baseConfidence": 0.98,
+  "aliases": [
+   "Optanon",
+   "CookiePro"
+  ],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "usercentrics",
+  "name": "Usercentrics",
+  "vendorCompany": "Usercentrics GmbH",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "app.usercentrics.eu",
+   "api.usercentrics.eu",
+   "usercentrics.eu",
+   "*.usercentrics.eu"
+  ],
+  "scriptPatterns": [
+   "loader.js",
+   "bundle.js"
+  ],
+  "cookiePatterns": [
+   "ucConsent",
+   "usercentrics*"
+  ],
+  "storagePatterns": [
+   "uc_*",
+   "ucSettings"
+  ],
+  "requestPathPatterns": [
+   "/settings/",
+   "/latest/"
+  ],
+  "documentationUrl": "https://docs.usercentrics.com",
+  "privacyPolicyUrl": "https://usercentrics.com/privacy-policy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.97,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "iubenda",
+  "name": "Iubenda",
+  "vendorCompany": "iubenda s.r.l.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "iubenda.com",
+   "*.iubenda.com",
+   "cdn.iubenda.com"
+  ],
+  "scriptPatterns": [
+   "cs/iubenda_cs.js",
+   "cookie_solution"
+  ],
+  "cookiePatterns": [
+   "_iub_cs-*",
+   "euconsent-v2"
+  ],
+  "storagePatterns": [
+   "_iub*"
+  ],
+  "requestPathPatterns": [
+   "/cs/"
+  ],
+  "documentationUrl": "https://www.iubenda.com/en/help",
+  "privacyPolicyUrl": "https://www.iubenda.com/privacy-policy/78683",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.95,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "termly",
+  "name": "Termly",
+  "vendorCompany": "Termly, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "termly.io",
+   "*.termly.io",
+   "app.termly.io"
+  ],
+  "scriptPatterns": [
+   "resource-blocker",
+   "embed.min.js"
+  ],
+  "cookiePatterns": [
+   "TERMLY_API_CACHE"
+  ],
+  "storagePatterns": [
+   "TERMLY_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://help.termly.io",
+  "privacyPolicyUrl": "https://termly.io/our-privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "osano",
+  "name": "Osano",
+  "vendorCompany": "Osano, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "osano.com",
+   "*.osano.com",
+   "cmp.osano.com"
+  ],
+  "scriptPatterns": [
+   "osano.js"
+  ],
+  "cookiePatterns": [
+   "osano_consentmanager",
+   "osano_consentmanager_uuid"
+  ],
+  "storagePatterns": [
+   "osano*"
+  ],
+  "requestPathPatterns": [
+   "/169/"
+  ],
+  "documentationUrl": "https://docs.osano.com",
+  "privacyPolicyUrl": "https://www.osano.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "axeptio",
+  "name": "Axeptio",
+  "vendorCompany": "Axeptio SAS",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "axept.io",
+   "*.axept.io",
+   "static.axept.io"
+  ],
+  "scriptPatterns": [
+   "sdk.js"
+  ],
+  "cookiePatterns": [
+   "axeptio_cookies",
+   "axeptio_authorized_vendors"
+  ],
+  "storagePatterns": [
+   "axeptio*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developers.axeptio.eu",
+  "privacyPolicyUrl": "https://www.axeptio.eu/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.93,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "didomi",
+  "name": "Didomi",
+  "vendorCompany": "Didomi SAS",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "didomi.io",
+   "*.didomi.io",
+   "sdk.privacy-center.org"
+  ],
+  "scriptPatterns": [
+   "loader.js",
+   "didomi.js"
+  ],
+  "cookiePatterns": [
+   "didomi_token",
+   "euconsent-v2"
+  ],
+  "storagePatterns": [
+   "didomi*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developers.didomi.io",
+  "privacyPolicyUrl": "https://www.didomi.io/privacy-policy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.94,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "pubmatic",
+  "name": "PubMatic",
+  "vendorCompany": "PubMatic, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "pubmatic.com",
+   "*.pubmatic.com"
+  ],
+  "scriptPatterns": [
+   "pwt.js",
+   "pubmatic"
+  ],
+  "cookiePatterns": [
+   "KTPCACOOKIE",
+   "khaos",
+   "KADUSERCOOKIE"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/AdServer/"
+  ],
+  "documentationUrl": "https://pubmatic.com",
+  "privacyPolicyUrl": "https://pubmatic.com/legal/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "rubicon-project",
+  "name": "Magnite (Rubicon Project)",
+  "vendorCompany": "Magnite, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "rubiconproject.com",
+   "*.rubiconproject.com",
+   "magnite.com",
+   "*.magnite.com"
+  ],
+  "scriptPatterns": [
+   "prebid*"
+  ],
+  "cookiePatterns": [
+   "khaos_p",
+   "rndr"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/rtb/"
+  ],
+  "documentationUrl": "https://magnite.com",
+  "privacyPolicyUrl": "https://magnite.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.91,
+  "aliases": [
+   "Rubicon",
+   "Apex"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "openx",
+  "name": "OpenX",
+  "vendorCompany": "OpenX Technologies, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "openx.net",
+   "*.openx.net"
+  ],
+  "scriptPatterns": [
+   "jstag",
+   "ox.js"
+  ],
+  "cookiePatterns": [
+   "OX_*",
+   "OXSD"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/w/1.0/",
+   "/v/1.0/"
+  ],
+  "documentationUrl": "https://docs.openx.com",
+  "privacyPolicyUrl": "https://www.openx.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "index-exchange",
+  "name": "Index Exchange",
+  "vendorCompany": "Index Exchange, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "indexww.com",
+   "*.indexww.com",
+   "casalemedia.com",
+   "*.casalemedia.com"
+  ],
+  "scriptPatterns": [
+   "ht.js"
+  ],
+  "cookiePatterns": [
+   "CMID",
+   "CMPRO",
+   "CMPS",
+   "CMRUM3",
+   "CMST"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/headerutil/",
+   "/cx/"
+  ],
+  "documentationUrl": "https://www.indexexchange.com",
+  "privacyPolicyUrl": "https://www.indexexchange.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [
+   "Casale Media"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "appnexus",
+  "name": "Xandr (AppNexus)",
+  "vendorCompany": "Microsoft Corporation",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "adnxs.com",
+   "*.adnxs.com",
+   "adnxs-simple.com",
+   "xandr.com"
+  ],
+  "scriptPatterns": [
+   "prebid*",
+   "an.js"
+  ],
+  "cookiePatterns": [
+   "uuid2",
+   "anj",
+   "icu",
+   "sess"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/pt",
+   "/pxj",
+   "/prebid/"
+  ],
+  "documentationUrl": "https://learn.microsoft.com/xandr",
+  "privacyPolicyUrl": "https://www.microsoft.com/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.91,
+  "aliases": [
+   "AppNexus",
+   "Xandr Monetize"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "adform",
+  "name": "Adform",
+  "vendorCompany": "Adform A/S",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "adform.net",
+   "*.adform.net",
+   "adform.com"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [
+   "uid",
+   "C",
+   "cid",
+   "adform_uid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/track",
+   "/Serving/"
+  ],
+  "documentationUrl": "https://www.adform.com",
+  "privacyPolicyUrl": "https://site.adform.com/privacy-center/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "smartadserver",
+  "name": "Equativ (SmartAdServer)",
+  "vendorCompany": "Equativ SAS",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "smartadserver.com",
+   "*.smartadserver.com",
+   "equativ.com"
+  ],
+  "scriptPatterns": [
+   "smarttag.js",
+   "sad.js"
+  ],
+  "cookiePatterns": [
+   "SAS_ALLTESTCOOKIES",
+   "TestIfCookie",
+   "TestIfCookieP",
+   "sasd"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/call/",
+   "/rcm"
+  ],
+  "documentationUrl": "https://help.eqtn.com",
+  "privacyPolicyUrl": "https://www.eqtn.com/privacy-policy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.89,
+  "aliases": [
+   "Smart",
+   "Equativ"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "sovrn",
+  "name": "Sovrn",
+  "vendorCompany": "Sovrn Holdings, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "sovrn.com",
+   "*.sovrn.com",
+   "lijit.com",
+   "*.lijit.com"
+  ],
+  "scriptPatterns": [
+   "sbeacon.js",
+   "lijit"
+  ],
+  "cookiePatterns": [
+   "ljt_reader",
+   "RandomAdCookie"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/rtb/",
+   "/bid/"
+  ],
+  "documentationUrl": "https://www.sovrn.com",
+  "privacyPolicyUrl": "https://www.sovrn.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.88,
+  "aliases": [
+   "Lijit"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "triplelift",
+  "name": "TripleLift",
+  "vendorCompany": "TripleLift, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "triplelift.com",
+   "*.triplelift.com",
+   "3lift.com",
+   "*.3lift.com"
+  ],
+  "scriptPatterns": [
+   "triplelift"
+  ],
+  "cookiePatterns": [
+   "tluid",
+   "TDCPM"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/v2/",
+   "/sync/"
+  ],
+  "documentationUrl": "https://triplelift.com",
+  "privacyPolicyUrl": "https://triplelift.com/privacy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.88,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "gumgum",
+  "name": "GumGum",
+  "vendorCompany": "GumGum, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "gumgum.com",
+   "*.gumgum.com",
+   "gumgum.net"
+  ],
+  "scriptPatterns": [
+   "gumgum.js",
+   "gg.js"
+  ],
+  "cookiePatterns": [
+   "ggvuid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/imp",
+   "/prebid"
+  ],
+  "documentationUrl": "https://gumgum.com",
+  "privacyPolicyUrl": "https://gumgum.com/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.87,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "sharethrough",
+  "name": "Sharethrough",
+  "vendorCompany": "Sharethrough, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "sharethrough.com",
+   "*.sharethrough.com"
+  ],
+  "scriptPatterns": [
+   "sfp.js",
+   "sharethrough"
+  ],
+  "cookiePatterns": [
+   "st_sends",
+   "STR_*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/b",
+   "/v9/"
+  ],
+  "documentationUrl": "https://www.sharethrough.com",
+  "privacyPolicyUrl": "https://www.sharethrough.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.86,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "33across",
+  "name": "33Across",
+  "vendorCompany": "33Across, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "33across.com",
+   "*.33across.com"
+  ],
+  "scriptPatterns": [
+   "tynt.js",
+   "33across"
+  ],
+  "cookiePatterns": [
+   "tuuid",
+   "UM_*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/bid/",
+   "/pixel/"
+  ],
+  "documentationUrl": "https://www.33across.com",
+  "privacyPolicyUrl": "https://www.33across.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.86,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "yieldmo",
+  "name": "Yieldmo",
+  "vendorCompany": "Yieldmo, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "yieldmo.com",
+   "*.yieldmo.com"
+  ],
+  "scriptPatterns": [
+   "ym.js",
+   "yieldmo"
+  ],
+  "cookiePatterns": [
+   "ymuid",
+   "y_account_id"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/exchange/",
+   "/prebid/"
+  ],
+  "documentationUrl": "https://www.yieldmo.com",
+  "privacyPolicyUrl": "https://www.yieldmo.com/privacy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "spotx",
+  "name": "SpotX (Magnite)",
+  "vendorCompany": "Magnite, Inc.",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "spotxchange.com",
+   "*.spotxchange.com",
+   "spotx.tv"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [
+   "spotxchange_uid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/bid",
+   "/ptv"
+  ],
+  "documentationUrl": "https://www.spotx.tv",
+  "privacyPolicyUrl": "https://magnite.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [
+   "SpotXchange"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "quantserve",
+  "name": "Quantcast Measure",
+  "vendorCompany": "Quantcast Corporation",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "quantserve.com",
+   "*.quantserve.com",
+   "quantcast.mgr.consensu.org"
+  ],
+  "scriptPatterns": [
+   "quant.js",
+   "pvalue.js"
+  ],
+  "cookiePatterns": [
+   "__qca",
+   "dextpuid"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/quant.js",
+   "/p.gif"
+  ],
+  "documentationUrl": "https://www.quantcast.com",
+  "privacyPolicyUrl": "https://www.quantcast.com/privacy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.92,
+  "aliases": [
+   "Quantcast"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "comscore",
+  "name": "Comscore",
+  "vendorCompany": "Comscore, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "comscore.com",
+   "scorecardresearch.com",
+   "*.scorecardresearch.com"
+  ],
+  "scriptPatterns": [
+   "beacon.js",
+   "cs.js"
+  ],
+  "cookiePatterns": [
+   "COMSCORE",
+   "UID_*",
+   "H_*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/b?",
+   "/p?"
+  ],
+  "documentationUrl": "https://www.comscore.com",
+  "privacyPolicyUrl": "https://www.comscore.com/About-COMSCORE/Privacy-Policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [
+   "ScorecardResearch"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "nielsen",
+  "name": "Nielsen",
+  "vendorCompany": "The Nielsen Company",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "nielsen.com",
+   "imrworldwide.com",
+   "*.imrworldwide.com",
+   "alexametrics.com"
+  ],
+  "scriptPatterns": [
+   "nlsn.js",
+   "atrk.js"
+  ],
+  "cookiePatterns": [
+   "imrworldwide"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/cgi-bin/",
+   "/dctrack"
+  ],
+  "documentationUrl": "https://www.nielsen.com",
+  "privacyPolicyUrl": "https://www.nielsen.com/privacy-statement/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [
+   "NetRatings",
+   "Alexa"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "chartbeat",
+  "name": "Chartbeat",
+  "vendorCompany": "Chartbeat, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "chartbeat.com",
+   "*.chartbeat.com",
+   "chartbeat.net",
+   "*.chartbeat.net"
+  ],
+  "scriptPatterns": [
+   "chartbeat.js",
+   "chartbeat_mab.js"
+  ],
+  "cookiePatterns": [
+   "_chartbeat2",
+   "_cb",
+   "_chartbeat"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/ping"
+  ],
+  "documentationUrl": "https://chartbeat.com",
+  "privacyPolicyUrl": "https://chartbeat.com/privacy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "parsely",
+  "name": "Parse.ly",
+  "vendorCompany": "Parse.ly, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "parsely.com",
+   "*.parsely.com"
+  ],
+  "scriptPatterns": [
+   "parsely.js",
+   "parsely-boomerang"
+  ],
+  "cookiePatterns": [
+   "_parsely_visitor",
+   "_parsely_session"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/pixel",
+   "/track"
+  ],
+  "documentationUrl": "https://www.parse.ly",
+  "privacyPolicyUrl": "https://www.parse.ly/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.88,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "braze",
+  "name": "Braze",
+  "vendorCompany": "Braze, Inc.",
+  "category": "MARKETING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "braze.com",
+   "*.braze.com",
+   "appboy.com",
+   "*.appboy.com",
+   "braze.eu"
+  ],
+  "scriptPatterns": [
+   "appboy.min.js",
+   "braze.min.js"
+  ],
+  "cookiePatterns": [
+   "ab.storage.*",
+   "braze_id",
+   "_bfuid"
+  ],
+  "storagePatterns": [
+   "ab_storage*",
+   "braze_*"
+  ],
+  "requestPathPatterns": [
+   "/data/",
+   "/content/"
+  ],
+  "documentationUrl": "https://www.braze.com/docs",
+  "privacyPolicyUrl": "https://www.braze.com/company/legal/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.92,
+  "aliases": [
+   "Appboy"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "launchdarkly",
+  "name": "LaunchDarkly",
+  "vendorCompany": "LaunchDarkly, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "launchdarkly.com",
+   "*.launchdarkly.com",
+   "ldflags.com"
+  ],
+  "scriptPatterns": [
+   "ld.js",
+   "flags.min.js"
+  ],
+  "cookiePatterns": [
+   "ld_status"
+  ],
+  "storagePatterns": [
+   "ld_*"
+  ],
+  "requestPathPatterns": [
+   "/events",
+   "/sdk/eval"
+  ],
+  "documentationUrl": "https://docs.launchdarkly.com",
+  "privacyPolicyUrl": "https://launchdarkly.com/legal/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.87,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "ab-tasty",
+  "name": "AB Tasty",
+  "vendorCompany": "AB Tasty SAS",
+  "category": "MARKETING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "abtasty.com",
+   "*.abtasty.com"
+  ],
+  "scriptPatterns": [
+   "try.abtasty.com"
+  ],
+  "cookiePatterns": [
+   "ABTasty",
+   "ABTastySession",
+   "ABTastyUID"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/event",
+   "/log"
+  ],
+  "documentationUrl": "https://docs.abtasty.com",
+  "privacyPolicyUrl": "https://www.abtasty.com/terms-privacy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.86,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "kameleoon",
+  "name": "Kameleoon",
+  "vendorCompany": "Kameleoon SAS",
+  "category": "MARKETING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "kameleoon.com",
+   "*.kameleoon.com"
+  ],
+  "scriptPatterns": [
+   "kameleoon.js",
+   "k2.js"
+  ],
+  "cookiePatterns": [
+   "kameleoonVisitorId",
+   "kameleoonData"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/maps",
+   "/events"
+  ],
+  "documentationUrl": "https://developers.kameleoon.com",
+  "privacyPolicyUrl": "https://www.kameleoon.com/en/legal/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "evidon",
+  "name": "Evidon",
+  "vendorCompany": "Evidon, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "evidon.com",
+   "*.evidon.com",
+   "betrad.com",
+   "c.betrad.com"
+  ],
+  "scriptPatterns": [
+   "beteverywhere.js",
+   "evidon-betasite"
+  ],
+  "cookiePatterns": [
+   "evidon-banner",
+   "evidon_notice"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/geo/",
+   "/notify"
+  ],
+  "documentationUrl": "https://www.evidon.com",
+  "privacyPolicyUrl": "https://www.evidon.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [
+   "betrad"
+  ],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "sourcepoint",
+  "name": "Sourcepoint",
+  "vendorCompany": "Sourcepoint Technologies, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "sourcepoint.com",
+   "*.sourcepoint.com"
+  ],
+  "scriptPatterns": [
+   "mms.js",
+   "wrapper.js",
+   "sp-message"
+  ],
+  "cookiePatterns": [
+   "sp_consent",
+   "_sp_*"
+  ],
+  "storagePatterns": [
+   "sp_*"
+  ],
+  "requestPathPatterns": [
+   "/mms",
+   "/pm"
+  ],
+  "documentationUrl": "https://docs.sourcepoint.com",
+  "privacyPolicyUrl": "https://www.sourcepoint.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.88,
+  "aliases": [
+   "Sourcepoint CMP"
+  ],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "whatsapp-widget",
+  "name": "WhatsApp Click-to-Chat",
+  "vendorCompany": "Meta Platforms, Inc.",
+  "category": "SOCIAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "wa.me",
+   "api.whatsapp.com"
+  ],
+  "scriptPatterns": [
+   "whatsapp"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/send"
+  ],
+  "documentationUrl": "https://faq.whatsapp.com",
+  "privacyPolicyUrl": "https://www.whatsapp.com/legal/privacy-policy-",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "disqus",
+  "name": "Disqus",
+  "vendorCompany": "Disqus, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "disqus.com",
+   "*.disqus.com",
+   "disquscdn.com",
+   "*.disquscdn.com"
+  ],
+  "scriptPatterns": [
+   "embed.js",
+   "disqus.com/embed"
+  ],
+  "cookiePatterns": [
+   "disqus_unique",
+   "disqusauth"
+  ],
+  "storagePatterns": [
+   "disqus_*"
+  ],
+  "requestPathPatterns": [
+   "/embed/",
+   "/api/"
+  ],
+  "documentationUrl": "https://disqus.com",
+  "privacyPolicyUrl": "https://disqus.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.88,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "gravatar",
+  "name": "Gravatar",
+  "vendorCompany": "Automattic, Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "gravatar.com",
+   "*.gravatar.com",
+   "secure.gravatar.com"
+  ],
+  "scriptPatterns": [],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/avatar/"
+  ],
+  "documentationUrl": "https://gravatar.com",
+  "privacyPolicyUrl": "https://automattic.com/privacy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "loox",
+  "name": "Loox",
+  "vendorCompany": "Loox Ltd.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "loox.io",
+   "*.loox.io",
+   "loox.app"
+  ],
+  "scriptPatterns": [
+   "widget.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [
+   "loox_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://help.loox.io",
+  "privacyPolicyUrl": "https://www.loox.io/privacy",
+  "dataProcessingLocation": "EU/US",
+  "baseConfidence": 0.84,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "stamped-io",
+  "name": "Stamped.io",
+  "vendorCompany": "Stamped Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "stamped.io",
+   "*.stamped.io"
+  ],
+  "scriptPatterns": [
+   "widget.min.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://help.stamped.io",
+  "privacyPolicyUrl": "https://stamped.io/privacy-policy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.83,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "consentmanager",
+  "name": "ConsentManager.net",
+  "vendorCompany": "CTM Impress GmbH",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "consentmanager.net",
+   "*.consentmanager.net"
+  ],
+  "scriptPatterns": [
+   "cmp.js",
+   "consentmanager"
+  ],
+  "cookiePatterns": [
+   "cmp_id",
+   "cmpconsent*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/cmp/"
+  ],
+  "documentationUrl": "https://help.consentmanager.net",
+  "privacyPolicyUrl": "https://www.consentmanager.net/privacy.php",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.87,
+  "aliases": [
+   "CMP"
+  ],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "sirdata",
+  "name": "Sirdata",
+  "vendorCompany": "Sirdata SAS",
+  "category": "ADVERTISING",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "sirdata.com",
+   "*.sirdata.com",
+   "sdlnr.net"
+  ],
+  "scriptPatterns": [
+   "sddan.js"
+  ],
+  "cookiePatterns": [
+   "sd-groups",
+   "sd-property",
+   "sddan"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/cm/",
+   "/pp/"
+  ],
+  "documentationUrl": "https://www.sirdata.com",
+  "privacyPolicyUrl": "https://www.sirdata.com/privacy-policy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.84,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "teads",
+  "name": "Teads",
+  "vendorCompany": "Teads SAS",
+  "category": "ADVERTISING",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "teads.tv",
+   "*.teads.tv",
+   "teads.com"
+  ],
+  "scriptPatterns": [
+   "teads.js",
+   "teads_"
+  ],
+  "cookiePatterns": [
+   "tf_uuid",
+   "TTDAPI"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/sync/",
+   "/inread/"
+  ],
+  "documentationUrl": "https://teads.com",
+  "privacyPolicyUrl": "https://teads.com/privacy-policy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "sentry",
+  "name": "Sentry",
+  "vendorCompany": "Functional Software, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "sentry.io",
+   "*.sentry.io"
+  ],
+  "scriptPatterns": [
+   "bundle.tracing",
+   "sentry.min.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [
+   "sentry_*"
+  ],
+  "requestPathPatterns": [
+   "/api/",
+   "/store/"
+  ],
+  "documentationUrl": "https://docs.sentry.io",
+  "privacyPolicyUrl": "https://sentry.io/privacy/",
+  "dataProcessingLocation": "US/EU",
+  "baseConfidence": 0.92,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "bugsnag",
+  "name": "Bugsnag",
+  "vendorCompany": "Bugsnag, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "bugsnag.com",
+   "*.bugsnag.com"
+  ],
+  "scriptPatterns": [
+   "bugsnag.min.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/sessions",
+   "/notify"
+  ],
+  "documentationUrl": "https://docs.bugsnag.com",
+  "privacyPolicyUrl": "https://www.bugsnag.com/legal/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.86,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "logrocket",
+  "name": "LogRocket",
+  "vendorCompany": "LogRocket, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "logrocket.com",
+   "*.logrocket.com",
+   "lr-ingest.io",
+   "cdn.lr-ingest.io"
+  ],
+  "scriptPatterns": [
+   "logrocket.min.js",
+   "LogRocket.init"
+  ],
+  "cookiePatterns": [
+   "_lr_uf",
+   "_lr_tabid"
+  ],
+  "storagePatterns": [
+   "_lr*"
+  ],
+  "requestPathPatterns": [
+   "/ingest",
+   "/log"
+  ],
+  "documentationUrl": "https://docs.logrocket.com",
+  "privacyPolicyUrl": "https://logrocket.com/privacy-policy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "smartlook",
+  "name": "Smartlook",
+  "vendorCompany": "Smartlook.com s.r.o.",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "smartlook.com",
+   "*.smartlook.com",
+   "web-sdk.smartlook.com"
+  ],
+  "scriptPatterns": [
+   "recorder.js",
+   "smartlook.key"
+  ],
+  "cookiePatterns": [
+   "SL_C_*",
+   "smartlook_cookie"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/track",
+   "/record"
+  ],
+  "documentationUrl": "https://docs.smartlook.com",
+  "privacyPolicyUrl": "https://www.smartlook.com/privacy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.89,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "inspectlet",
+  "name": "Inspectlet",
+  "vendorCompany": "Inspectlet, Inc.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "inspectlet.com",
+   "*.inspectlet.com"
+  ],
+  "scriptPatterns": [
+   "inspectlet.js",
+   "ws-inspectlet"
+  ],
+  "cookiePatterns": [
+   "__insp_*",
+   "__inspc"
+  ],
+  "storagePatterns": [
+   "__insp*"
+  ],
+  "requestPathPatterns": [
+   "/w.aspx"
+  ],
+  "documentationUrl": "https://www.inspectlet.com",
+  "privacyPolicyUrl": "https://www.inspectlet.com/legal/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "lucky-orange",
+  "name": "Lucky Orange",
+  "vendorCompany": "Lucky Orange, LLC",
+  "category": "ANALYTICS",
+  "riskLevel": "HIGH",
+  "domainPatterns": [
+   "luckyorange.com",
+   "*.luckyorange.net",
+   "*.luckyorange.com"
+  ],
+  "scriptPatterns": [
+   "livechat.js",
+   "luckyorange"
+  ],
+  "cookiePatterns": [
+   "_lo_uid",
+   "_lo_np_*"
+  ],
+  "storagePatterns": [
+   "_lo*"
+  ],
+  "requestPathPatterns": [
+   "/track",
+   "/socket"
+  ],
+  "documentationUrl": "https://www.luckyorange.com",
+  "privacyPolicyUrl": "https://www.luckyorange.com/privacy.php",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "shopify-analytics",
+  "name": "Shopify Web Pixels",
+  "vendorCompany": "Shopify International Ltd.",
+  "category": "ANALYTICS",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "myshopify.com",
+   "*.myshopify.com",
+   "monorail-edge.shopifysvc.com"
+  ],
+  "scriptPatterns": [
+   "web-pixels-manager",
+   "trekkie."
+  ],
+  "cookiePatterns": [
+   "_shopify_sa_*",
+   "_shopify_s",
+   "_shopify_y",
+   "_tracking_consent"
+  ],
+  "storagePatterns": [
+   "_shopify*"
+  ],
+  "requestPathPatterns": [
+   "/monorail/"
+  ],
+  "documentationUrl": "https://shopify.dev",
+  "privacyPolicyUrl": "https://www.shopify.com/legal/privacy",
+  "dataProcessingLocation": "US/EU",
+  "baseConfidence": 0.93,
+  "aliases": [
+   "Trekkie",
+   "Web Pixels"
+  ],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "adyen",
+  "name": "Adyen",
+  "vendorCompany": "Adyen N.V.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "adyen.com",
+   "*.adyen.com",
+   "checkoutshopper-live.adyen.com"
+  ],
+  "scriptPatterns": [
+   "adyen.js",
+   "checkoutshopper"
+  ],
+  "cookiePatterns": [
+   "AKA_A2",
+   "_adyen*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/v1/",
+   "/details/"
+  ],
+  "documentationUrl": "https://docs.adyen.com",
+  "privacyPolicyUrl": "https://www.adyen.com/privacy",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.9,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "square",
+  "name": "Square",
+  "vendorCompany": "Block, Inc.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "squareup.com",
+   "*.squareup.com"
+  ],
+  "scriptPatterns": [
+   "square.js",
+   "payment.js"
+  ],
+  "cookiePatterns": [
+   "_sqcid",
+   "SETTLED_ID"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/v2/",
+   "/api/v1/"
+  ],
+  "documentationUrl": "https://developer.squareup.com",
+  "privacyPolicyUrl": "https://squareup.com/legal/privacy",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.87,
+  "aliases": [
+   "Square Payments"
+  ],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "gocardless",
+  "name": "GoCardless",
+  "vendorCompany": "GoCardless Ltd.",
+  "category": "NECESSARY",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "gocardless.com",
+   "*.gocardless.com"
+  ],
+  "scriptPatterns": [
+   "gocardless.js"
+  ],
+  "cookiePatterns": [
+   "gcl_*"
+  ],
+  "storagePatterns": [],
+  "requestPathPatterns": [
+   "/api/"
+  ],
+  "documentationUrl": "https://gocardless.com/developers",
+  "privacyPolicyUrl": "https://gocardless.com/privacy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.84,
+  "aliases": [],
+  "isEssentialCandidate": true
+ },
+ {
+  "slug": "weglot",
+  "name": "Weglot",
+  "vendorCompany": "Weglot SAS",
+  "category": "FUNCTIONAL",
+  "riskLevel": "LOW",
+  "domainPatterns": [
+   "weglot.com",
+   "*.weglot.com",
+   "cdn.weglot.com"
+  ],
+  "scriptPatterns": [
+   "weglot.min.js"
+  ],
+  "cookiePatterns": [
+   "wg_translations"
+  ],
+  "storagePatterns": [
+   "wg_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://developers.weglot.com",
+  "privacyPolicyUrl": "https://weglot.com/privacy-policy/",
+  "dataProcessingLocation": "EU",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "accessibe",
+  "name": "accessiBe",
+  "vendorCompany": "accessiBe Inc.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "accessibe.com",
+   "acsbapp.com",
+   "*.acsbapp.com"
+  ],
+  "scriptPatterns": [
+   "acsbapp.js",
+   "acsb.js"
+  ],
+  "cookiePatterns": [],
+  "storagePatterns": [
+   "acsb_*"
+  ],
+  "requestPathPatterns": [
+   "/apps/"
+  ],
+  "documentationUrl": "https://accessibe.com",
+  "privacyPolicyUrl": "https://accessibe.com/privacy-policy",
+  "dataProcessingLocation": "US/IL",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ },
+ {
+  "slug": "userway",
+  "name": "UserWay",
+  "vendorCompany": "UserWay.org Ltd.",
+  "category": "FUNCTIONAL",
+  "riskLevel": "MEDIUM",
+  "domainPatterns": [
+   "userway.org",
+   "*.userway.org",
+   "userway.com"
+  ],
+  "scriptPatterns": [
+   "widgetV2.js",
+   "userway"
+  ],
+  "cookiePatterns": [
+   "UW_*",
+   "uw_state"
+  ],
+  "storagePatterns": [
+   "uw_*"
+  ],
+  "requestPathPatterns": [],
+  "documentationUrl": "https://userway.org",
+  "privacyPolicyUrl": "https://userway.org/privacy/",
+  "dataProcessingLocation": "US",
+  "baseConfidence": 0.85,
+  "aliases": [],
+  "isEssentialCandidate": false
+ }
 ]

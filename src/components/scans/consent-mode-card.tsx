@@ -47,19 +47,19 @@ export function ConsentModeCard({ audit }: { audit?: ConsentModeAuditData | null
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {issues.includes("PDM-R051") ? (
+                  {issues.includes("PDM-X03") ? (
                     <SeverityBadge severity="CRITICAL" />
                   ) : null}
-                  {issues.includes("PDM-R052") ? (
+                  {issues.includes("PDM-X04") ? (
                     <SeverityBadge severity="HIGH" />
                   ) : null}
                 </div>
                 <p className="text-caption text-muted-foreground">
-                  {issues.includes("PDM-R051")
+                  {issues.includes("PDM-X03")
                     ? "Default consent parameters were set to 'granted' prior to visitor consent."
                     : null}
-                  {issues.includes("PDM-R051") && issues.includes("PDM-R052") ? " " : null}
-                  {issues.includes("PDM-R052")
+                  {issues.includes("PDM-X03") && issues.includes("PDM-X04") ? " " : null}
+                  {issues.includes("PDM-X04")
                     ? "Reject All action failed to update all parameters to 'denied'."
                     : null}
                 </p>

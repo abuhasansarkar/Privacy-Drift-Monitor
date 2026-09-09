@@ -47,6 +47,11 @@ export interface ScoreResult {
  * findings matters far less than the difference between none and one, and a
  * site with twelve Mediums should not score below a site with one Critical.
  * The caps below encode that.
+ *
+ * ⚠️ THE NUMBERS ARE THE DOCUMENTED MODEL (NEW-PLAN.md §1): CRITICAL 25, HIGH
+ * 12, MEDIUM 5, LOW 2 — capped at 50/30/15/6. An earlier draft of the plan
+ * recorded HIGH as 15; the shipping value is 12, so the docs were corrected to
+ * match the code (G-08). Change both together or the "why 64?" breakdown lies.
  */
 const PENALTY: Record<Severity, number> = {
   CRITICAL: 25,

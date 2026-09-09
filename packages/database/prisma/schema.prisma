@@ -1812,7 +1812,7 @@ model ConsentModeAudit {
   postRejectAnalytics   String?
   postRejectUserData    String?
   postRejectPersonalize String?
-  issuesDetected        String[] // ["PDM-R051", "PDM-R052"]
+  issuesDetected        String[] // ["PDM-X03", "PDM-X04"]
   rawEvents             Json?    // Array of recorded consent calls
   createdAt             DateTime @default(now())
 

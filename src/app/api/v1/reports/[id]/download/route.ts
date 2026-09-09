@@ -3,6 +3,7 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { objectStore } from "@pdm/storage";
 import { toAppError } from "@pdm/shared/errors";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
+import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
 import { requirePermission } from "@/server/auth/context";
 
 /**
@@ -45,6 +46,7 @@ export async function GET(
     if (apiAuth) {
       const scopeError = requireApiScope(apiAuth, "read");
       if (scopeError) return scopeError;
+      await enforceApiRateLimit(apiAuth.keyId);
       agencyId = apiAuth.agencyId;
     } else if (request.headers.get("authorization")) {
       // A Bearer header that `authenticateApiKey` rejected is a bad key, not an

@@ -1,6 +1,6 @@
 # T02 — চারটা contract test
 
-**Priority:** P0 · **Status:** TODO · **Depends on:** T01
+**Priority:** P0 · **Status:** DONE · **Depends on:** T01
 
 ## কেন এগুলোই আগে
 
@@ -41,3 +41,26 @@ match করে। ছয়টা marketing page একবার login wall-এ
 
 প্রতিটা test **ইচ্ছে করে ভাঙলে fail করে** — এটাই আসল পরীক্ষা। একটা rule id
 rename করে `npm test` চালান; fail না করলে test-টা অকেজো।
+
+## Evidence — 2026-09-09
+
+ছয়টা contract test-ই restore (git `2a192cf^`) বা verify করা হয়েছে:
+
+| Contract | Test file | ফলাফল |
+|---|---|---|
+| ১. Rule id | `packages/analysis/src/__tests__/rules.test.ts` | 55/55 ✅ (R001–R050 coverage, disjoint, reserved/dormant accounting) |
+| ২. Prompt version | `packages/ai/src/__tests__/prompts.test.ts` | 16/16 ✅ (version pattern, schema/grounding pairing, placeholder/$& injection) |
+| ৩. Fixture id | `packages/scanner/src/testing/__tests__/fixture-matrix.test.ts` | 12/12 ✅ (F01–F30, X-fixtures আলাদা, distinct descriptions) |
+| ৪. Queue/job id | `packages/scanner/src/queue/__tests__/queue-contract.test.ts` | 25/25 ✅ (`:` নিষিদ্ধ, toJobId rewrite, idempotency keys, retry budgets) |
+| ৫. Tenant isolation | `packages/database/src/__tests__/tenancy.test.ts` | 19/19 ✅ (আসল Postgres `drift_monitor_test`-এ; registry completeness DMMF-driven) |
+| ৬. Marketing route | `src/__tests__/marketing-routes.test.ts` | 53/53 ✅ (nav.ts ↔ PUBLIC_ROUTE_PATTERNS প্রতিটা path) |
+
+**মোট: 6 files / 180 tests passed, 0 failed.**
+
+**Negative test (acceptance-এর আসল শর্ত) — RUN করা হয়েছে:** `PDM-R001`-কে
+`PDM-R999` rename করে `rules.test.ts` চালানো হয়েছে → **5 failed | 50 passed** —
+অর্থাৎ rename করলে build fail করে। পরে ফাইল restore করে suite আবার 55/55 green।
+
+**নোট:** G-07 fix হিসেবে `PDM-R051/R052` এখন `PDM-X03/X04` (নিচের T09/G-07
+নোট দেখুন); rule-coverage test এখনও পাস করে কারণ সেটা R001–R050 coverage
+assert করে এবং X-prefix rules-কে আলাদা চিনে।

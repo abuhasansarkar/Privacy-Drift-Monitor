@@ -20,13 +20,18 @@ import type { TrendPoint } from "@/server/queries/dashboard";
  * the axis to "make the trend visible" turns a 4-point wobble into a cliff —
  * the most common way a chart lies (anti-patterns: truncated axis).
  *
+ * ⚠️ THE CONTAINER OWNS THE SCROLL, NOT THE CHROME. The SVG keeps its aspect
+ * ratio and stretches to the card width down to a floor; the horizontal
+ * scrollbar lives on the svg wrapper (where the SVG can actually overflow),
+ * so the figure never forces a nested scroll inside the card.
+ *
  * ⚠️ A table view is rendered for screen readers and for anyone the chart does
  * not serve; the SVG itself is `aria-hidden`.
  */
 
 const WIDTH = 720;
 const HEIGHT = 180;
-const PAD = { top: 12, right: 12, bottom: 22, left: 30 };
+const PAD = { top: 12, right: 16, bottom: 28, left: 36 };
 
 export function HealthTrend({ points }: { points: TrendPoint[] }) {
   const gradientId = useId();
@@ -66,12 +71,18 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
 
   const active = hover === null ? null : coords[hover];
 
+  // Tooltip pinned inside the plot: near the right edge it would overflow the
+  // card, so it flips to the left of the crosshair instead. Computed inside
+  // the guard — `active` is null until the pointer enters a hit target.
+  const tooltipLeftPct = (point: NonNullable<typeof active>) =>
+    Math.min(85, Math.max(15, (point.cx / WIDTH) * 100));
+
   return (
-    <figure className="m-0">
-      <div className="relative overflow-x-auto px-2">
+    <figure className="m-0 px-2 pb-3">
+      <div className="relative overflow-x-auto">
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="h-44 w-full min-w-[24rem]"
+          className="block h-auto w-full min-w-[24rem]"
           // The table below is the accessible representation; the drawing adds
           // nothing a screen reader can use.
           aria-hidden="true"
@@ -79,12 +90,12 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.16" />
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.1" />
               <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
-          {/* Recessive gridlines: dotted, border-coloured, behind everything. */}
+          {/* Recessive gridlines: solid hairlines, one shade off the surface. */}
           {[0, 25, 50, 75, 100].map((value) => (
             <g key={value}>
               <line
@@ -93,11 +104,10 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
                 y1={y(value)}
                 y2={y(value)}
                 stroke="var(--border)"
-                strokeDasharray="2 3"
                 strokeWidth="1"
               />
               <text
-                x={PAD.left - 6}
+                x={PAD.left - 8}
                 y={y(value) + 3.5}
                 textAnchor="end"
                 fontSize="10"
@@ -107,6 +117,25 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
               </text>
             </g>
           ))}
+
+          {/* First/last day under the ends of the plot — time needs two anchors. */}
+          <text
+            x={PAD.left}
+            y={HEIGHT - 8}
+            fontSize="10"
+            fill="var(--muted-foreground)"
+          >
+            {points[0]!.day}
+          </text>
+          <text
+            x={WIDTH - PAD.right}
+            y={HEIGHT - 8}
+            textAnchor="end"
+            fontSize="10"
+            fill="var(--muted-foreground)"
+          >
+            {points[points.length - 1]!.day}
+          </text>
 
           <path d={area} fill={`url(#${gradientId})`} />
           <path
@@ -118,15 +147,27 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
             strokeLinecap="round"
           />
 
-          {/* The endpoint is emphasised — "where are we now" is the question. */}
+          {/* The endpoint is emphasised — "where are we now" is the question —
+              and direct-labeled: the current value readable without hover. */}
           <circle
             cx={coords[coords.length - 1]!.cx}
             cy={coords[coords.length - 1]!.cy}
-            r="3.5"
+            r="4"
             fill="var(--primary)"
-            stroke="var(--background)"
+            stroke="var(--card)"
             strokeWidth="2"
           />
+          <text
+            x={coords[coords.length - 1]!.cx}
+            y={coords[coords.length - 1]!.cy - 10}
+            textAnchor="end"
+            fontSize="11"
+            fontWeight="500"
+            fill="var(--foreground)"
+            className="tabular-nums"
+          >
+            {points[points.length - 1]!.score}
+          </text>
 
           {active ? (
             <>
@@ -143,7 +184,7 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
                 cy={active.cy}
                 r="4"
                 fill="var(--primary)"
-                stroke="var(--background)"
+                stroke="var(--card)"
                 strokeWidth="2"
               />
             </>
@@ -165,8 +206,8 @@ export function HealthTrend({ points }: { points: TrendPoint[] }) {
 
         {active ? (
           <div
-            className="pointer-events-none absolute top-2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-caption shadow-sm"
-            style={{ left: `${(active.cx / WIDTH) * 100}%` }}
+            className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-caption shadow-sm"
+            style={{ left: `${tooltipLeftPct(active)}%` }}
           >
             <span className="block font-medium tabular-nums">{active.score}</span>
             <span className="block text-muted-foreground">{active.day}</span>

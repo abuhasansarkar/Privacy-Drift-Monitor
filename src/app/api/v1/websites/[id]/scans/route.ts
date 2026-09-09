@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { SCAN_STATUS_LABEL } from "@pdm/shared/copy/labels";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
+import { enforceApiWriteRateLimit } from "@/server/services/api-rate-limit";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getScanChoices } from "@/server/queries/reports";
 import { toAppError } from "@pdm/shared/errors";
@@ -78,6 +79,8 @@ export async function POST(
 
   const scopeError = requireApiScope(auth, "write");
   if (scopeError) return scopeError;
+
+  await enforceApiWriteRateLimit(auth.keyId);
 
   const { id: websiteId } = await context.params;
 

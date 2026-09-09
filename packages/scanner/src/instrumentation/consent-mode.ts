@@ -231,16 +231,16 @@ export function parseConsentModeEvents(
 
   const issuesDetected: string[] = [];
 
-  // PDM-R051: Default state set to granted before consent
+  // PDM-X03: Default state set to granted before consent
   if (preConsentAdStorage === "granted" || preConsentAnalytics === "granted") {
-    issuesDetected.push("PDM-R051");
+    issuesDetected.push("PDM-X03");
   }
 
-  // PDM-R052: Reject All journey executed, but update missing or un-denied
+  // PDM-X04: Reject All journey executed, but update missing or un-denied
   const ranRejectAll = phaseEvents.some((p) => p.phase === "REJECT_ALL");
   if (ranRejectAll) {
     if (!lastRejectUpdate) {
-      issuesDetected.push("PDM-R052");
+      issuesDetected.push("PDM-X04");
     } else {
       const anyNotDenied =
         postRejectAdStorage === "granted" ||
@@ -248,7 +248,7 @@ export function parseConsentModeEvents(
         postRejectUserData === "granted" ||
         postRejectPersonalize === "granted";
       if (anyNotDenied) {
-        issuesDetected.push("PDM-R052");
+        issuesDetected.push("PDM-X04");
       }
     }
   }

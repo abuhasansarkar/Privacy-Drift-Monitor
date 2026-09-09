@@ -94,9 +94,16 @@ export async function checkRateLimit(
  */
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
   return {
+    // The draft IETF `RateLimit-*` fields…
     "RateLimit-Limit": String(result.limit),
     "RateLimit-Remaining": String(result.remaining),
     "RateLimit-Reset": String(result.resetSeconds),
+    // …and the de-facto `X-RateLimit-*` aliases older clients and API
+    // consumers (including our own docs) actually read. Both sets travel
+    // together so neither can drift from the other.
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(result.remaining),
+    "X-RateLimit-Reset": String(result.resetSeconds),
     ...(result.allowed ? {} : { "Retry-After": String(result.resetSeconds) }),
   };
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { IssueStatus, Severity } from "@pdm/database";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
+import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
 
 /**
  * PUBLIC REST API v1 — Issues List
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
   const scopeError = requireApiScope(auth, "read");
   if (scopeError) return scopeError;
 
+  await enforceApiRateLimit(auth.keyId);
   const url = new URL(request.url);
   const limit = Math.min(Math.max(1, Number(url.searchParams.get("limit") ?? 50)), 100);
   const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0));

@@ -257,7 +257,7 @@ export async function runPhase(
 
       /*
        * ⚠️ UNROUTE BEFORE CLOSING, or the pool leaks a context and hangs.
-       * `installMediaBlocking` registers a `page.route("**​/*")` handler, and
+       * `installRouteGuard` registers a `page.route("**​/*")` handler, and
        * closing a page with routes still registered makes Playwright wait for
        * in-flight route handlers that will never resolve — which showed up as a
        * scan of an HTTP-500 page hanging forever and `activeContexts` stuck at 1.

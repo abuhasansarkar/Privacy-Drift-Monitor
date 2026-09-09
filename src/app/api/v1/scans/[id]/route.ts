@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
+import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
 
 /**
  * Get detailed scan results via public API.
@@ -19,6 +20,8 @@ export async function GET(
 
   const scopeError = requireApiScope(auth, "read");
   if (scopeError) return scopeError;
+
+  await enforceApiRateLimit(auth.keyId);
 
   const { id: scanId } = await context.params;
   const db = forAgency(auth.agencyId);

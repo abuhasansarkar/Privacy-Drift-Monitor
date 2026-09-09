@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { repositoriesFor } from "@pdm/database/repositories";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
+import {
+  enforceApiRateLimit,
+  enforceApiWriteRateLimit,
+} from "@/server/services/api-rate-limit";
 import { validateWebsiteUrl } from "@/server/services/website-validation";
 import { requireAllowedValue } from "@/server/services/entitlement-guard";
 import { childLogger } from "@pdm/shared/logger";
@@ -24,6 +28,8 @@ export async function GET(request: Request) {
 
   const scopeError = requireApiScope(auth, "read");
   if (scopeError) return scopeError;
+
+  await enforceApiRateLimit(auth.keyId);
 
   const url = new URL(request.url);
   const limit = Math.min(Math.max(1, Number(url.searchParams.get("limit") ?? 50)), 100);
@@ -111,6 +117,8 @@ export async function POST(request: Request) {
 
   const scopeError = requireApiScope(auth, "write");
   if (scopeError) return scopeError;
+
+  await enforceApiWriteRateLimit(auth.keyId);
 
   let body: Record<string, unknown>;
   try {

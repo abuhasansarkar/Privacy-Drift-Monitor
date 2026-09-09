@@ -35,12 +35,12 @@ env:
 
 jobs:
   # ⚠️ THIS JOB RAN THREE GATES AND DEPLOYED. `pr.yml` runs lint, typecheck,
-  # terminology, migrations, the coverage gate, the build and E2E — but this
-  # workflow triggers on `push: branches: [main]`, so anything pushed straight
-  # to main reached production having never run a single one of the 1,072
-  # tests. "PRs are gated" is only a safety property if every path to main is a
-  # PR, and a repository where maintainers push directly is exactly where the
-  # assumption quietly stops holding.
+  # terminology, migrations, the unit/integration suite (`npm test`), the build
+  # and E2E — but this workflow triggers on `push: branches: [main]`, so
+  # anything pushed straight to main reached production having never run a
+  # single test. "PRs are gated" is only a safety property if every path to
+  # main is a PR, and a repository where maintainers push directly is exactly
+  # where the assumption quietly stops holding.
   #
   # The services and env below mirror `pr.yml` deliberately: two definitions
   # that can drift is how a gate passes in one workflow and cannot even start
