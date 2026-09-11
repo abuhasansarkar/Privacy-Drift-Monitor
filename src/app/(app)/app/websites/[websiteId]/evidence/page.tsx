@@ -104,7 +104,13 @@ export default async function EvidencePage({
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-small">
           <span className="text-muted-foreground">{t("evidence.scanLabel")}</span>
-          <ScanSelector base={base} scans={scans} selectedId={selected.id} kind={filters.kind} />
+          <ScanSelector
+            base={base}
+            scans={scans}
+            selectedId={selected.id}
+            kind={filters.kind}
+            timezone={ctx.timezone}
+          />
         </label>
         <StatusBadge
           tone={selected.status === "COMPLETED" ? "success" : selected.status === "PARTIAL" ? "warning" : "danger"}
@@ -182,11 +188,13 @@ function ScanSelector({
   scans,
   selectedId,
   kind,
+  timezone,
 }: {
   base: string;
   scans: readonly { id: string; status: string; createdAt: Date; finishedAt: Date | null }[];
   selectedId: string;
   kind: string;
+  timezone: string;
 }) {
   /*
    * A list of links rather than a <select>: a select needs client JS to
@@ -207,7 +215,7 @@ function ScanSelector({
               : "whitespace-nowrap rounded-md px-2 py-1 font-mono text-mono text-muted-foreground hover:text-foreground"
           }
         >
-          {(scan.finishedAt ?? scan.createdAt).toISOString().slice(0, 16).replace("T", " ")}
+          {formatDateTime(scan.finishedAt ?? scan.createdAt, timezone)}
         </Link>
       ))}
       {scans.length === 0 ? <MutedBadge>{t("evidence.noScans")}</MutedBadge> : null}

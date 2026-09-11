@@ -31,6 +31,7 @@ export default async function WebsiteCrawlPage({
     <CrawlSettingsView
       websiteId={website.id}
       websiteUrl={website.url}
+      timezone={ctx.timezone}
       sitemapConfig={
         website.sitemapConfig
           ? {

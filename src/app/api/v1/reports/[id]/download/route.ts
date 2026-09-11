@@ -3,8 +3,12 @@ import { repositoriesFor } from "@pdm/database/repositories";
 import { objectStore } from "@pdm/storage";
 import { toAppError } from "@pdm/shared/errors";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
-import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
+import {
+  ApiRateLimitError,
+  enforceApiRateLimit,
+} from "@/server/services/api-rate-limit";
 import { requirePermission } from "@/server/auth/context";
+import { withApiErrors } from "../../../_lib/with-errors";
 
 /**
  * REPORT DOWNLOAD — PLAN.md §6.8, §10.7.
@@ -25,7 +29,7 @@ import { requirePermission } from "@/server/auth/context";
  * another agency simply does not match, and comes back as 404 — never 403,
  * which would confirm the id exists (§6.2).
  */
-export async function GET(
+async function handleGET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -43,6 +47,8 @@ export async function GET(
     let agencyId: string;
     let auditUserId: string | null = null;
 
+    let userCtx: Awaited<ReturnType<typeof requirePermission>> | null = null;
+
     if (apiAuth) {
       const scopeError = requireApiScope(apiAuth, "read");
       if (scopeError) return scopeError;
@@ -56,9 +62,9 @@ export async function GET(
         { status: 401 },
       );
     } else {
-      const ctx = await requirePermission("report:read");
-      agencyId = ctx.agencyId;
-      auditUserId = ctx.userId;
+      userCtx = await requirePermission("report:read");
+      agencyId = userCtx.agencyId;
+      auditUserId = userCtx.userId;
     }
 
     const repos = repositoriesFor(agencyId);
@@ -69,6 +75,16 @@ export async function GET(
         { error: { code: "NOT_FOUND", message: "We couldn't find that report." } },
         { status: 404 },
       );
+    }
+
+    // Member website-scope check (F-014)
+    if (userCtx && report.websiteId && userCtx.websiteScope.length > 0) {
+      if (!userCtx.websiteScope.includes(report.websiteId)) {
+        return NextResponse.json(
+          { error: { code: "NOT_FOUND", message: "We couldn't find that report." } },
+          { status: 404 },
+        );
+      }
     }
 
     // The viewer embeds the PDF rather than downloading it, and a shorter-lived
@@ -121,6 +137,7 @@ export async function GET(
      */
     return NextResponse.redirect(url, { status: 302 });
   } catch (error) {
+    if (error instanceof ApiRateLimitError) throw error;
     const appError = toAppError(error);
     return NextResponse.json(
       { error: { code: appError.code, message: appError.expose ? appError.message : undefined } },
@@ -128,3 +145,6 @@ export async function GET(
     );
   }
 }
+
+export const GET = withApiErrors(handleGET);
+

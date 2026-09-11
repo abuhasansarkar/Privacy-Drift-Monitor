@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import type { IssueStatus, Severity } from "@pdm/database";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
 import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
+import { withApiErrors } from "../_lib/with-errors";
 
 /**
  * PUBLIC REST API v1 — Issues List
@@ -16,6 +18,11 @@ import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
  * bound (same defence-in-depth shape as `scans/[id]/route.ts`).
  */
 
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"] as const;
 const STATUSES = [
   "NEW",
@@ -27,7 +34,7 @@ const STATUSES = [
   "REOPENED",
 ] as const;
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const auth = await authenticateApiKey(request);
   if (!auth) {
     return NextResponse.json(
@@ -41,8 +48,10 @@ export async function GET(request: Request) {
 
   await enforceApiRateLimit(auth.keyId);
   const url = new URL(request.url);
-  const limit = Math.min(Math.max(1, Number(url.searchParams.get("limit") ?? 50)), 100);
-  const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0));
+  const { limit, offset } = paginationQuerySchema.parse({
+    limit: url.searchParams.get("limit") ?? undefined,
+    offset: url.searchParams.get("offset") ?? undefined,
+  });
 
   const severityParam = url.searchParams.get("severity");
   if (severityParam && !SEVERITIES.includes(severityParam as (typeof SEVERITIES)[number])) {
@@ -122,3 +131,6 @@ export async function GET(request: Request) {
     pagination: { total, limit, offset },
   });
 }
+
+export const GET = withApiErrors(handleGET);
+

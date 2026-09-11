@@ -29,6 +29,7 @@ const MAX_BROWSER_AGE_MS = Number(process.env.REPORT_BROWSER_MAX_AGE_MS ?? 30 * 
 const RENDER_TIMEOUT_MS = Number(process.env.REPORT_RENDER_TIMEOUT_MS ?? 90_000);
 
 let browser: Browser | null = null;
+let launchPromise: Promise<Browser> | null = null;
 let launchedAt = 0;
 
 const log = childLogger({ component: "reports" });
@@ -39,26 +40,40 @@ async function getBrowser(): Promise<Browser> {
   if (browser && (!browser.isConnected() || now - launchedAt > MAX_BROWSER_AGE_MS)) {
     const stale = browser;
     browser = null;
+    launchPromise = null;
     // Not awaited into the render path: recycling is maintenance, and a slow
     // close should not add latency to the report someone is waiting for.
     void stale.close().catch((error) => log.warn({ err: error }, "stale browser close failed"));
   }
 
-  if (!browser) {
-    browser = await chromium.launch({
-      args: [
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        // ⚠️ No `--no-sandbox` here. §10.5 keeps the Chromium sandbox on, and a
-        // report renderer loads our OWN markup — it has even less reason to
-        // drop it than the scanner does.
-      ],
-    });
-    launchedAt = now;
-    log.info("report browser launched");
+  if (browser) {
+    return browser;
   }
 
-  return browser;
+  if (!launchPromise) {
+    launchPromise = chromium
+      .launch({
+        args: [
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          // ⚠️ No `--no-sandbox` here. §10.5 keeps the Chromium sandbox on, and a
+          // report renderer loads our OWN markup — it has even less reason to
+          // drop it than the scanner does.
+        ],
+      })
+      .then((b) => {
+        browser = b;
+        launchedAt = Date.now();
+        log.info("report browser launched");
+        return b;
+      })
+      .catch((error) => {
+        launchPromise = null;
+        throw error;
+      });
+  }
+
+  return launchPromise;
 }
 
 export interface PdfResult {
@@ -147,9 +162,10 @@ export function countPdfPages(buffer: Buffer): number {
 
 /** Called from the worker's SIGTERM path, after the queue has drained. */
 export async function closeReportBrowser(): Promise<void> {
-  if (!browser) return;
-  const instance = browser;
+  const instance = browser ?? (launchPromise ? await launchPromise.catch(() => null) : null);
   browser = null;
+  launchPromise = null;
+  if (!instance) return;
   await instance.close().catch((error) => log.warn({ err: error }, "browser close failed"));
 }
 

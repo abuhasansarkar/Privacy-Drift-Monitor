@@ -41,19 +41,34 @@ async function handleGET(request: Request) {
   const { db } = repositoriesFor(ctx.agencyId);
   const contains = { contains: term, mode: "insensitive" as const };
 
+  const scopedWebsiteFilter = ctx.websiteScope.length > 0 ? { id: { in: ctx.websiteScope } } : {};
+  const scopedIssueFilter = ctx.websiteScope.length > 0 ? { websiteId: { in: ctx.websiteScope } } : {};
+  const scopedClientFilter =
+    ctx.websiteScope.length > 0
+      ? { websites: { some: { id: { in: ctx.websiteScope }, archivedAt: null } } }
+      : {};
+
   const [websites, clients, issues] = await Promise.all([
     db.website.findMany({
-      where: { archivedAt: null, OR: [{ url: contains }, { label: contains }] },
+      where: {
+        archivedAt: null,
+        ...scopedWebsiteFilter,
+        OR: [{ url: contains }, { label: contains }],
+      },
       select: { id: true, url: true, label: true },
       take: PER_TYPE,
     }),
     db.client.findMany({
-      where: { archivedAt: null, name: contains },
+      where: { archivedAt: null, name: contains, ...scopedClientFilter },
       select: { id: true, name: true },
       take: PER_TYPE,
     }),
     db.issue.findMany({
-      where: { title: contains, status: { notIn: ["IGNORED"] } },
+      where: {
+        title: contains,
+        status: { notIn: ["IGNORED"] },
+        ...scopedIssueFilter,
+      },
       select: { id: true, title: true, website: { select: { url: true } } },
       orderBy: { lastSeenAt: "desc" },
       take: PER_TYPE,

@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
 import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
 import { childLogger } from "@pdm/shared/logger";
+import { withApiErrors } from "../_lib/with-errors";
 
 const log = childLogger({ component: "api-v1-reports" });
+
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 
 /**
  * PUBLIC REST API v1 — Reports List
@@ -30,7 +37,7 @@ const REPORT_TYPES = [
 ] as const;
 const REPORT_STATUSES = ["QUEUED", "GENERATING", "READY", "FAILED"] as const;
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const auth = await authenticateApiKey(request);
   if (!auth) {
     return NextResponse.json(
@@ -45,8 +52,10 @@ export async function GET(request: Request) {
   await enforceApiRateLimit(auth.keyId);
 
   const url = new URL(request.url);
-  const limit = Math.min(Math.max(1, Number(url.searchParams.get("limit") ?? 50)), 100);
-  const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0));
+  const { limit, offset } = paginationQuerySchema.parse({
+    limit: url.searchParams.get("limit") ?? undefined,
+    offset: url.searchParams.get("offset") ?? undefined,
+  });
 
   const typeParam = url.searchParams.get("type");
   if (typeParam && !REPORT_TYPES.includes(typeParam as (typeof REPORT_TYPES)[number])) {
@@ -151,3 +160,6 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export const GET = withApiErrors(handleGET);
+

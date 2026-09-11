@@ -26,5 +26,13 @@ export {
   type DriftEvent,
   type ScanFingerprint,
 } from "./drift";
-export * from "./remediation";
+export {
+  generateGtmRecipe,
+  generateCmpSnippet,
+  type GtmRecipeOptions,
+  type GtmContainerExport,
+  type SupportedCmp,
+  type CmpSnippetOptions,
+  type CmpSnippetResult,
+} from "./remediation";
 

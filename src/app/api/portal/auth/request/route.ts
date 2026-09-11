@@ -5,13 +5,10 @@ import { resolveBranding } from "@pdm/reports/branding";
 import { enqueueEmail } from "@pdm/scanner/queue/queues";
 import { portal as portalSchemas } from "@pdm/schemas";
 import { childLogger } from "@pdm/shared/logger";
-import {
-  checkRateLimit,
-  memoryRateLimitStore,
-  rateLimitKey,
-} from "@pdm/shared/rate-limit";
+import { checkRateLimit, rateLimitKey } from "@pdm/shared/rate-limit";
 import { issueMagicLink } from "@/server/portal/session";
-import { emailQueue } from "@/server/services/queues";
+import { emailQueue, rateLimitStore } from "@/server/services/queues";
+import { getClientIp } from "@/server/client-ip";
 
 /**
  * MAGIC-LINK REQUEST — PLAN.md §6.10.
@@ -27,16 +24,14 @@ import { emailQueue } from "@/server/services/queues";
  *
  * ⚠️ NO CLERK. This route is excluded in `proxy.ts` and imports nothing from
  * it — portal sign-in has to work during a Clerk outage.
+ *
+ * ⚠️ THE LIMITER IS THE SHARED REDIS STORE (F-009's second half). The previous
+ * `memoryRateLimitStore()` was per-replica and reset on every deploy — the
+ * exact failure the limiter's own header documents — so the 5/hour budget was
+ * "5 per hour per replica since the last push".
  */
 
 const log = childLogger({ component: "portal" });
-
-/**
- * In-memory for now, which is honest about what it is: single-instance only.
- * Redis-backed limiting arrives with the rest of the abuse controls in Phase 7
- * (§10.4); the interface here does not change.
- */
-const store = memoryRateLimitStore();
 
 const RULE = { limit: 5, windowSeconds: 60 * 60 };
 
@@ -51,10 +46,11 @@ export async function POST(request: Request) {
     if (!parsed.success) return noContent;
 
     const email = parsed.data.email;
-    const forwarded = request.headers.get("x-forwarded-for");
-    const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
+    // Rightmost trusted hop, not the client-controlled leftmost entry (F-009).
+    const ip = getClientIp(request.headers) ?? "unknown";
     const ipHash = createHash("sha256").update(ip).digest("hex");
 
+    const store = rateLimitStore();
     const [byEmail, byIp] = await Promise.all([
       checkRateLimit(store, rateLimitKey("portal-magic-link:email", email), RULE),
       checkRateLimit(store, rateLimitKey("portal-magic-link:ip", ipHash), RULE),

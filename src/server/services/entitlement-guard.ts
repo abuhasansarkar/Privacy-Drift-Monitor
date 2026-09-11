@@ -144,6 +144,7 @@ function limitMessage(metric: UsageMetric, used: number, limit: number | null): 
 const METRIC_NOUN: Record<UsageMetric, string> = {
   WEBSITES: "websites",
   SEATS: "team members",
+  CLIENTS: "clients",
   SCANS: "scans this period",
   AI_CREDITS: "AI credits this period",
   REPORTS: "reports this period",

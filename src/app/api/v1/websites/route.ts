@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { repositoriesFor } from "@pdm/database/repositories";
 import { forAgency } from "@pdm/database/tenant";
+import { website as websiteSchemas } from "@pdm/schemas";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
 import {
   enforceApiRateLimit,
@@ -8,16 +10,23 @@ import {
 } from "@/server/services/api-rate-limit";
 import { validateWebsiteUrl } from "@/server/services/website-validation";
 import { requireAllowedValue } from "@/server/services/entitlement-guard";
+import { getEntitlements } from "@/server/entitlements";
 import { childLogger } from "@pdm/shared/logger";
+import { withApiErrors } from "../_lib/with-errors";
 
 const log = childLogger({ component: "api-v1-websites" });
+
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 
 /**
  * PUBLIC REST API v1 — Websites List & Create
  * Spec: dev-doc3/phases/phase-16-public-api-webhooks.md
  */
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const auth = await authenticateApiKey(request);
   if (!auth) {
     return NextResponse.json(
@@ -32,8 +41,10 @@ export async function GET(request: Request) {
   await enforceApiRateLimit(auth.keyId);
 
   const url = new URL(request.url);
-  const limit = Math.min(Math.max(1, Number(url.searchParams.get("limit") ?? 50)), 100);
-  const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0));
+  const { limit, offset } = paginationQuerySchema.parse({
+    limit: url.searchParams.get("limit") ?? undefined,
+    offset: url.searchParams.get("offset") ?? undefined,
+  });
 
   const db = forAgency(auth.agencyId);
   const [websites, total] = await Promise.all([
@@ -106,7 +117,7 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const auth = await authenticateApiKey(request);
   if (!auth) {
     return NextResponse.json(
@@ -120,9 +131,9 @@ export async function POST(request: Request) {
 
   await enforceApiWriteRateLimit(auth.keyId);
 
-  let body: Record<string, unknown>;
+  let rawJson: unknown;
   try {
-    body = await request.json();
+    rawJson = await request.json();
   } catch {
     return NextResponse.json(
       { error: { code: "BAD_REQUEST", message: "Invalid JSON body" } },
@@ -130,17 +141,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const rawUrl = typeof body.url === "string" ? body.url.trim() : "";
-  if (!rawUrl) {
-    return NextResponse.json(
-      { error: { code: "VALIDATION_ERROR", message: "URL is required" } },
-      { status: 400 },
-    );
-  }
+  const body = websiteSchemas.createWebsiteSchema.parse(rawJson);
 
   const outcome = await validateWebsiteUrl(
     { agencyId: auth.agencyId, userId: auth.keyId },
-    rawUrl,
+    body.url,
   );
   if (!outcome.ok) {
     return NextResponse.json(
@@ -154,14 +159,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const frequency = typeof body.scanFrequency === "string" ? body.scanFrequency : "WEEKLY";
   try {
-    await requireAllowedValue(auth.agencyId, "scanFrequencies", frequency);
+    await requireAllowedValue(auth.agencyId, "scanFrequencies", body.scanFrequency);
   } catch {
     return NextResponse.json(
       { error: { code: "PLAN_LIMIT_REACHED", message: "Requested scan frequency is not allowed on current plan" } },
       { status: 403 },
     );
+  }
+
+  /*
+   * ⚠️ ENTITLEMENT ENFORCEMENT (F-004) AND VALIDATION (F-038).
+   * Validated against the schema enum, then entitlement-checked.
+   */
+  if (body.scanPriority === "HIGH") {
+    const entitlements = await getEntitlements(auth.agencyId);
+    if (entitlements.scanPriority !== "HIGH") {
+      return NextResponse.json(
+        { error: { code: "PLAN_LIMIT_REACHED", message: "HIGH scan priority is not allowed on current plan" } },
+        { status: 403 },
+      );
+    }
   }
 
   const { normalized } = outcome;
@@ -171,21 +189,16 @@ export async function POST(request: Request) {
     const created = await repos.websites.create(
       {
         url: normalized.url,
-        originalUrl: rawUrl,
+        originalUrl: body.url,
         host: normalized.host,
         registrableDomain: normalized.registrableDomain,
-        label: typeof body.label === "string" ? body.label.trim() : null,
-        scanFrequency: frequency as never,
-        scanPriority: typeof body.scanPriority === "string" ? (body.scanPriority as never) : "NORMAL",
-        monitoredPaths: Array.isArray(body.monitoredPaths)
-          ? body.monitoredPaths.filter((p): p is string => typeof p === "string")
-          : ["/"],
-        alertProfile:
-          body.alertProfile === "CRITICAL_ONLY" || body.alertProfile === "SILENT"
-            ? body.alertProfile
-            : "DEFAULT",
-        respectRobots: typeof body.respectRobots === "boolean" ? body.respectRobots : null,
-        nextScanAt: frequency === "MANUAL" ? null : new Date(),
+        label: body.label ?? null,
+        scanFrequency: body.scanFrequency,
+        scanPriority: body.scanPriority,
+        monitoredPaths: body.monitoredPaths,
+        alertProfile: body.alertProfile,
+        respectRobots: body.respectRobots ?? null,
+        nextScanAt: body.scanFrequency === "MANUAL" ? null : new Date(),
       },
       { userId: null },
     );
@@ -201,3 +214,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const GET = withApiErrors(handleGET);
+export const POST = withApiErrors(handlePOST);
+

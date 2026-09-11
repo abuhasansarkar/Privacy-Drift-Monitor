@@ -43,14 +43,19 @@ export function HealthScore({
 
   const band = bandFor(score);
   return (
-    <span className="inline-flex items-center gap-2 font-semibold tabular-nums">
-      <span className={`size-2 shrink-0 rounded-full ${band.color}`} />
-      {formatNumber(score)}
+    <span
+      className="inline-flex items-center gap-2 font-semibold tabular-nums"
+      title={`${band.label} (${formatNumber(score)}/100)`}
+    >
+      <span className={`size-2 shrink-0 rounded-full ${band.color}`} aria-hidden="true" />
+      <span>{formatNumber(score)}</span>
       {showBand ? (
         <span className="text-caption font-medium text-muted-foreground">
           {band.label}
         </span>
-      ) : null}
+      ) : (
+        <span className="sr-only">({band.label})</span>
+      )}
     </span>
   );
 }

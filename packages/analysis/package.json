@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pdm/scanner": "*"
+    "@pdm/scanner": "*",
+    "@pdm/shared": "*"
   },
   "devDependencies": {
     "@pdm/config": "*",

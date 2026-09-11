@@ -105,11 +105,15 @@ export async function getDashboardOverview(
     db.website.count({ where: { ...live, monitoringStatus: "PAUSED" } }),
     db.website.count({ where: { ...live, lastScanAt: null } }),
     db.client.count({ where: { archivedAt: null } }),
-    // Averaged over SCANNED sites only. Including never-scanned sites as 0
-    // would misreport a healthy portfolio — the same trap the client
-    // repository's `averageHealth()` guards.
+    // Averaged over SCANNED sites with FULL confidence only (F-074). Including
+    // never-scanned sites as 0 would misreport a healthy portfolio, and including
+    // PARTIAL-confidence scores would contradict the portal's exclusion (P5).
     db.website.aggregate({
-      where: { ...live, healthScore: { not: null } },
+      where: {
+        ...live,
+        healthScore: { not: null },
+        scoreConfidence: { not: "PARTIAL" },
+      },
       _avg: { healthScore: true },
     }),
     db.website.aggregate({

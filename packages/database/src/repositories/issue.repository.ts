@@ -207,36 +207,57 @@ export function issueRepository(db: TenantClient, agencyId: string) {
             where: { websiteId: params.websiteId, fingerprint: finding.fingerprint },
           });
 
-          if (!existing) {
-            const created = await tx.issue.create({
-              data: {
-                agencyId,
-                websiteId: params.websiteId,
-                firstScanId: params.scanId,
-                lastScanId: params.scanId,
-                firstDetectedAt: params.detectedAt,
-                lastSeenAt: params.detectedAt,
-                occurrenceCount: 1,
-                status: "NEW",
-                ...toIssueColumns(finding),
-              },
-            });
-            await writeEvidence(created.id, finding);
-            result.created += 1;
-            continue;
+          let targetIssue = existing;
+
+          if (!targetIssue) {
+            try {
+              const created = await tx.issue.create({
+                data: {
+                  agencyId,
+                  websiteId: params.websiteId,
+                  firstScanId: params.scanId,
+                  lastScanId: params.scanId,
+                  firstDetectedAt: params.detectedAt,
+                  lastSeenAt: params.detectedAt,
+                  occurrenceCount: 1,
+                  status: "NEW",
+                  ...toIssueColumns(finding),
+                },
+              });
+              await writeEvidence(created.id, finding);
+              result.created += 1;
+              continue;
+            } catch (err: unknown) {
+              // ⚠️ P2002 UNIQUE RACE HANDLING (F-060).
+              // If a concurrent process inserted the same (websiteId, fingerprint)
+              // between findFirst and create, recover by looking it up and updating.
+              if (
+                err &&
+                typeof err === "object" &&
+                "code" in err &&
+                (err as { code: string }).code === "P2002"
+              ) {
+                targetIssue = await tx.issue.findFirst({
+                  where: { websiteId: params.websiteId, fingerprint: finding.fingerprint },
+                });
+                if (!targetIssue) throw err;
+              } else {
+                throw err;
+              }
+            }
           }
 
           // An issue the user explicitly ignored stays ignored, even though the
           // behaviour is still happening. That is what ignoring means.
-          if (existing.status === "IGNORED") {
+          if (targetIssue.status === "IGNORED") {
             result.suppressed += 1;
             continue;
           }
 
-          const reopening = CLOSED.includes(existing.status);
+          const reopening = CLOSED.includes(targetIssue.status);
 
           await tx.issue.update({
-            where: { id: existing.id },
+            where: { id: targetIssue.id },
             data: {
               lastScanId: params.scanId,
               lastSeenAt: params.detectedAt,
@@ -261,12 +282,12 @@ export function issueRepository(db: TenantClient, agencyId: string) {
           // issue seen across ten scans must carry ten scans' proof: "when did
           // this last actually happen" is answered by the evidence, and an
           // issue whose only evidence is from its first scan cannot answer it.
-          await writeEvidence(existing.id, finding);
+          await writeEvidence(targetIssue.id, finding);
 
           if (reopening) result.reopened += 1;
           else result.updated += 1;
         }
-      });
+      }, { timeout: 60_000, maxWait: 10_000 });
 
       return result;
     },

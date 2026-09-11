@@ -28,6 +28,23 @@ export function createMcpServer(options: McpServerOptions = {}): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name: toolName, arguments: args } = request.params;
+
+    if (!options.context) {
+      // F-002: a server without a resolved tenant refuses every call. This is
+      // unreachable through `createMcpServer()` in `index.ts` (the tenant is
+      // resolved at startup), but a host constructing the server directly must
+      // not get a global-database fallback.
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: "MCP server has no tenant context. Construct it with a context resolved via resolveTenant().",
+          },
+        ],
+      };
+    }
+
     try {
       const result = await executeTool(
         toolName,

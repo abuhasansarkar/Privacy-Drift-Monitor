@@ -1,4 +1,4 @@
-import { assertSafeUrl } from "../net/guard";
+import { guardedFetch } from "../net/guarded-fetch";
 
 /**
  * SITEMAP PARSER & ARCHETYPE SPIDER — Phase 17 task 17.1.
@@ -30,6 +30,11 @@ export interface SitemapDiscoveryResult {
 
 export interface SitemapSpiderOptions {
   maxPages?: number;
+  /**
+   * Injected by tests. ⚠️ A custom fetch here must honour `redirect: "manual"`
+   * and `signal` — the SSRF guard (F-008) relies on following redirects one
+   * guarded hop at a time.
+   */
   fetchFn?: typeof fetch;
   maxSubSitemaps?: number;
   timeoutMs?: number;
@@ -138,7 +143,6 @@ export async function fetchAndParseSitemap(
   targetUrl: string,
   options: SitemapSpiderOptions = {},
 ): Promise<SitemapDiscoveryResult> {
-  const fetchFn = options.fetchFn ?? fetch;
   const maxPages = options.maxPages ?? 5;
   const maxSubSitemaps = options.maxSubSitemaps ?? 3;
   const timeoutMs = options.timeoutMs ?? 10_000;
@@ -149,56 +153,61 @@ export async function fetchAndParseSitemap(
     new URL("/sitemap_index.xml", base.origin).toString(),
   ];
 
-  const discoveredUrls: string[] = [];
+  let discoveredUrls: string[];
 
-  for (const sitemapUrl of candidatePaths) {
-    try {
-      await assertSafeUrl(sitemapUrl);
-    } catch {
-      continue;
-    }
+  /*
+   * ⚠️ EVERY FETCH GOES THROUGH `guardedFetch` (F-008). The first version
+   * validated the entry URL and then fetched with the default
+   * `redirect: "follow"` — a 302 to an internal address was followed
+   * unguarded, and the sitemap body flowed back to the agency as "discovered
+   * URLs". Redirects are now re-guarded per hop and responses are size-capped.
+   */
+  {
+    const results: string[] = [];
+    for (const sitemapUrl of candidatePaths) {
+      try {
+        const res = await guardedFetch(sitemapUrl, {
+          timeoutMs,
+          maxBytes: 4 * 1024 * 1024,
+          fetchFn: options.fetchFn,
+          headers: { "User-Agent": "PrivacyDriftMonitor/1.0 (+https://privacydrift.com)" },
+        });
 
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const res = await fetchFn(sitemapUrl, {
-        signal: controller.signal,
-        headers: { "User-Agent": "PrivacyDriftMonitor/1.0 (+https://privacydrift.com)" },
-      });
-      clearTimeout(timer);
+        if (res.status < 200 || res.status >= 300) continue;
 
-      if (!res.ok) continue;
+        const xml = res.body;
+        const locs = extractLocsFromXml(xml);
 
-      const xml = await res.text();
-      const locs = extractLocsFromXml(xml);
-
-      if (isSitemapIndex(xml)) {
-        // Nested sitemap index: fetch up to maxSubSitemaps children
-        const subSitemaps = locs.slice(0, maxSubSitemaps);
-        for (const subUrl of subSitemaps) {
-          try {
-            await assertSafeUrl(subUrl);
-            const subRes = await fetchFn(subUrl, {
-              headers: { "User-Agent": "PrivacyDriftMonitor/1.0 (+https://privacydrift.com)" },
-            });
-            if (subRes.ok) {
-              const subXml = await subRes.text();
-              discoveredUrls.push(...extractLocsFromXml(subXml));
+        if (isSitemapIndex(xml)) {
+          // Nested sitemap index: fetch up to maxSubSitemaps children
+          const subSitemaps = locs.slice(0, maxSubSitemaps);
+          for (const subUrl of subSitemaps) {
+            try {
+              const subRes = await guardedFetch(subUrl, {
+                timeoutMs,
+                maxBytes: 4 * 1024 * 1024,
+                fetchFn: options.fetchFn,
+                headers: { "User-Agent": "PrivacyDriftMonitor/1.0 (+https://privacydrift.com)" },
+              });
+              if (subRes.status >= 200 && subRes.status < 300) {
+                results.push(...extractLocsFromXml(subRes.body));
+              }
+            } catch {
+              // Tolerate single sub-sitemap failure
             }
-          } catch {
-            // Tolerate single sub-sitemap failure
           }
+        } else {
+          results.push(...locs);
         }
-      } else {
-        discoveredUrls.push(...locs);
-      }
 
-      if (discoveredUrls.length > 0) {
-        break; // Successfully got sitemap entries
+        if (results.length > 0) {
+          break; // Successfully got sitemap entries
+        }
+      } catch {
+        // Continue to next candidate
       }
-    } catch {
-      // Continue to next candidate
     }
+    discoveredUrls = results;
   }
 
   // If no sitemap found or empty, fallback to base URL

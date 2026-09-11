@@ -1,7 +1,7 @@
 import "server-only";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { cache } from "react";
-import { prisma } from "@pdm/database";
+import { unsafeGlobalClient } from "@pdm/database";
 // Subpaths, not the `@pdm/shared` barrel: the barrel re-exports the logger and
 // `url/normalize`, so importing it here would put pino and tldts on the auth
 // path of every authenticated request for no reason.
@@ -103,10 +103,11 @@ export const requireAgencyContext = cache(async (): Promise<AgencyContext> => {
 
   const { clerkUserId, clerkOrgId } = await requireUser();
   let activeOrgId = clerkOrgId;
+  const db = unsafeGlobalClient("resolving pre-tenant user and agency membership");
 
   if (!activeOrgId) {
     // 1. Check if the user is already an active member of an agency in our database
-    const existingMembership = await prisma.agencyMember.findFirst({
+    const existingMembership = await db.agencyMember.findFirst({
       where: {
         user: { clerkUserId },
         status: "ACTIVE",
@@ -141,7 +142,7 @@ export const requireAgencyContext = cache(async (): Promise<AgencyContext> => {
   }
 
   const findMembership = () =>
-    prisma.agencyMember.findFirst({
+    db.agencyMember.findFirst({
       where: {
         user: { clerkUserId },
         agency: { clerkOrgId: activeOrgId },
@@ -278,7 +279,8 @@ async function resolveImpersonatedContext(): Promise<AgencyContext | null> {
   const ticket = await currentImpersonation();
   if (!ticket) return null;
 
-  const agency = await prisma.agency.findUnique({
+  const db = unsafeGlobalClient("resolving impersonated agency context");
+  const agency = await db.agency.findUnique({
     where: { id: ticket.agencyId },
     select: { id: true, name: true, timezone: true },
   });

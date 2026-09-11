@@ -54,6 +54,7 @@ const eslintConfig = defineConfig([
     // Ours:
     "coverage/**",
     "**/dist/**",
+    "tmp-*",
   ]),
 
   {
@@ -90,8 +91,8 @@ const eslintConfig = defineConfig([
     files: [
       "src/app/**/*.ts",
       "src/app/**/*.tsx",
-      "src/server/actions/**/*.ts",
-      "src/server/services/**/*.ts",
+      "src/server/**/*.ts",
+      "src/server/**/*.tsx",
       "src/components/**/*.tsx",
     ],
     /*

@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, useTransition } from "react";
+import { formatDate } from "@/lib/format";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -292,10 +293,10 @@ export function ApiSettingsView({ apiKeys, webhooks }: Props) {
                         </div>
                       </TableCell>
                       <TableCell className="text-small text-muted-foreground">
-                        {new Date(key.createdAt).toLocaleDateString()}
+                        {formatDate(new Date(key.createdAt), "UTC")}
                       </TableCell>
                       <TableCell className="text-small text-muted-foreground">
-                        {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
+                        {key.lastUsedAt ? formatDate(new Date(key.lastUsedAt), "UTC") : "Never"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button

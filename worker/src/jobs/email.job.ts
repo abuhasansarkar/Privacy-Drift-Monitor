@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { repositoriesFor } from "@pdm/database/repositories";
 import {
   createResendTransport,
@@ -9,8 +10,23 @@ import {
   type EmailTransport,
 } from "@pdm/email";
 import { resolveBranding } from "@pdm/reports/branding";
-import type { EmailJobData } from "@pdm/scanner/queue/queues";
+import type { EmailJobData, QueuedNotificationType } from "@pdm/scanner/queue/queues";
 import { childLogger } from "@pdm/shared/logger";
+
+const emailJobSchema = z.object({
+  agencyId: z.string().min(1),
+  to: z.string().email(),
+  idempotencyKey: z.string().min(1),
+  message: z.object({
+    template: z.string().min(1),
+    data: z.record(z.string(), z.unknown()),
+  }),
+  userId: z.string().nullable().default(null),
+  alertRuleId: z.string().nullable().default(null),
+  notificationType: z.string().nullable().default(null) as z.ZodType<QueuedNotificationType | null>,
+  entityType: z.string().nullable().default(null),
+  entityId: z.string().nullable().default(null),
+});
 
 /**
  * EMAIL JOB — PLAN.md Part IX §9.5, Phase 4 task 4.3.
@@ -60,9 +76,20 @@ export interface SendEmailJobResult {
 }
 
 export async function processEmailJob(
-  data: EmailJobData,
+  raw: EmailJobData,
   deps: { transport?: EmailTransport } = {},
 ): Promise<SendEmailJobResult> {
+  const parsed = emailJobSchema.safeParse(raw);
+  if (!parsed.success) {
+    const log = childLogger({ agencyId: raw?.agencyId ?? "unknown", component: "email" });
+    log.error(
+      { errors: parsed.error.issues, raw },
+      "email job payload failed validation; rejecting",
+    );
+    return { sent: false, skipped: "rejected" };
+  }
+  const data = parsed.data;
+
   const log = childLogger({ agencyId: data.agencyId, component: "email" });
   const repos = repositoriesFor(data.agencyId);
 
@@ -71,7 +98,7 @@ export async function processEmailJob(
     return { sent: false, skipped: "already_sent" };
   }
 
-  const message = data.message as EmailMessage;
+  const message = data.message as unknown as EmailMessage;
 
   /*
    * ⚠️ THE RESOLVER DECIDES THE ENTITLEMENT (§6.9); this job only decides

@@ -13,6 +13,7 @@ import {
 } from "@pdm/shared";
 import { NotFoundError, ValidationError } from "@pdm/shared/errors";
 import { childLogger } from "@pdm/shared/logger";
+import { requireFeature } from "@/server/services/entitlement-guard";
 
 const log = childLogger({ component: "webhook-service" });
 
@@ -67,6 +68,15 @@ export async function createWebhookEndpoint(
   if (!url) {
     throw new ValidationError("Webhook destination URL is required", { details: { field: "url" } });
   }
+
+  /*
+   * ⚠️ ENTITLEMENT ENFORCEMENT (F-004). `webhooks` is a paid feature (Agency
+   * and Scale) that nothing checked: any plan could register an endpoint and
+   * receive signed event deliveries forever. Checked at endpoint creation —
+   * existing endpoints keep delivering (revoking silently is hostile), but the
+   * feature converges on the plan as endpoints are added.
+   */
+  await requireFeature(agencyId, "webhooks");
 
   // 1. SSRF Safety Check: prevent customer from probing internal/loopback infrastructure
   await assertSafeUrl(url);

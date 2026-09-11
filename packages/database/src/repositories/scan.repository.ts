@@ -152,17 +152,36 @@ export function scanRepository(db: TenantClient, agencyId: string) {
      * ⚠️ NO QUEUE JOB IS ENQUEUED FROM IN HERE (§5.6). Analysis is enqueued by
      * the caller after this commits — a job created inside a transaction that
      * later rolls back would operate on data that was never committed.
+     *
+     * ⚠️ THE WRITE IS COMPARE-AND-SET ON `RUNNING` (F-031). The 30-minute reaper
+     * force-fails rows it believes are stuck; without a status guard, a slow
+     * scan finishing AFTER the reaper fired would overwrite FAILED with
+     * COMPLETED and resurrect a row the state machine already buried —
+     * duplicating counters and re-triggering alerts. The `updateMany` guarded
+     * by `status: "RUNNING"` makes the transition atomic; a reaped row simply
+     * matches zero rows, and the evidence write is skipped rather than
+     * resurrecting a corpse. Returns false when the row was not RUNNING — the
+     * caller logs it and discards the job's result.
      */
     async complete(
       scanId: string,
       completion: ScanCompletion,
       evidence: ScanEvidence,
-    ): Promise<void> {
+    ): Promise<boolean> {
       const thirdPartyDomains = new Set(
         evidence.requests
           .filter((request) => request.isThirdParty)
           .map((request) => request.registrableDomain),
       );
+
+      const claim = await db.scan.updateMany({
+        where: { id: scanId, status: "RUNNING" },
+        data: { status: completion.status },
+      });
+      if (claim.count === 0) {
+        // The reaper (or an admin) already ended this scan. Never resurrect.
+        return false;
+      }
 
       await db.$transaction(
         async (tx) => {
@@ -276,16 +295,24 @@ export function scanRepository(db: TenantClient, agencyId: string) {
         // through an outage.
         { timeout: 120_000 },
       );
+      return true;
     },
 
-    /** Terminal failure that produced no evidence — a crash, not a scan. */
+    /**
+     * Terminal failure that produced no evidence — a crash, not a scan.
+     *
+     * ⚠️ COMPARE-AND-SET ON `RUNNING` (F-031), for the same reason `complete`
+     * is: a reaper that already failed the row must not be overwritten, and a
+     * `fail()` racing a genuine completion must not win. Returns false when the
+     * row was no longer RUNNING.
+     */
     async fail(
       scanId: string,
       errorCode: string,
       errorMessage: string,
-    ): Promise<void> {
-      await db.scan.update({
-        where: { id: scanId },
+    ): Promise<boolean> {
+      const { count } = await db.scan.updateMany({
+        where: { id: scanId, status: "RUNNING" },
         data: {
           status: "FAILED",
           finishedAt: new Date(),
@@ -293,6 +320,7 @@ export function scanRepository(db: TenantClient, agencyId: string) {
           errorMessage,
         },
       });
+      return count > 0;
     },
 
     async findById(scanId: string): Promise<Scan | null> {

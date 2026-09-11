@@ -81,6 +81,15 @@ export const TENANT_MODELS = [
   "consentModeAudit",
   "apiKey",
   "webhookEndpoint",
+  /*
+   * Credential-bearing crawl/scan configuration (F-011). These used to be
+   * GLOBAL, which meant the table holding AES-256-GCM login credentials had
+   * no `agencyId` and could not be scoped at any layer — every access was
+   * guarded only by a prior ownership check at its call site. Both now carry
+   * `agencyId`, and the DMMF-driven tenancy test enforces this entry forever.
+   */
+  "sitemapCrawlConfig",
+  "authenticatedScanConfig",
 ] as const;
 
 export type TenantModel = (typeof TENANT_MODELS)[number];
@@ -107,8 +116,6 @@ export const GLOBAL_MODELS = [
    */
   "freeScanBlocklist",
   "webhookDelivery",
-  "sitemapCrawlConfig",
-  "authenticatedScanConfig",
 ] as const;
 
 const TENANT_MODEL_SET: ReadonlySet<string> = new Set(
@@ -268,11 +275,17 @@ export type TenantClient = ReturnType<typeof forAgency>;
  * Every call site must be justified in review. If you are reaching for this from
  * a route handler or a Server Action, you almost certainly want `forAgency()`.
  */
+const loggedBypasses = new Set<string>();
+
 export function unsafeGlobalClient(reason: string) {
   if (!reason) {
     throw new TenantIsolationError(
       "unsafeGlobalClient() requires a written reason",
     );
+  }
+  if (process.env.NODE_ENV !== "test" && !loggedBypasses.has(reason)) {
+    loggedBypasses.add(reason);
+    console.info(`[tenant-isolation-bypass] unsafeGlobalClient acquired: ${reason}`);
   }
   return prisma;
 }

@@ -3,6 +3,7 @@ import type { BrowserPool } from "./browser/pool";
 import { resolveAdapter, type ConsentAdapter } from "./consent/adapter";
 import { CMP_ADAPTERS } from "./consent/cmp-adapters";
 import { GENERIC_ADAPTER } from "./consent/generic-adapter";
+import { runSyntheticFormInteraction } from "./consent/interactive-runner";
 import { DEFAULT_BUDGET, type NavigationBudget, type UrlGuard } from "./navigate";
 import { runPhase, type ConsentAction } from "./phase-runner";
 import { checkCnameCloaking, type CnameResolutionResult } from "./net/cname";
@@ -74,15 +75,14 @@ export interface ScanDeps {
  * failure, or drops a transient one that would have succeeded.
  */
 function scanErrorFor(message: string | null): ScanErrorCode {
+  if (!message) return "NETWORK_RESET";
   if (message === "NAV_TIMEOUT") return "NAV_TIMEOUT";
-  if (message === "HTTP_ERROR") return "HTTP_CLIENT_ERROR";
-  /*
-   * ⚠️ SSRF_BLOCKED IS DETERMINISTIC AND MUST NEVER BE RETRIED. §4.4's split
-   * decides how many browser slots a failure costs, and the answer for a
-   * refused address is one: it will be refused identically on every attempt,
-   * and three tries against an address someone is probing is three times the
-   * log noise for the same non-event.
-   */
+  if (message === "HTTP_SERVER_ERROR") return "HTTP_SERVER_ERROR";
+  if (message === "HTTP_CLIENT_ERROR" || message === "HTTP_ERROR") return "HTTP_CLIENT_ERROR";
+  if (message === "DNS_NXDOMAIN") return "DNS_NXDOMAIN";
+  if (message === "NETWORK_RESET") return "NETWORK_RESET";
+  if (message === "TLS_NAME_MISMATCH") return "TLS_NAME_MISMATCH";
+  if (message === "TLS_INVALID_CERT") return "TLS_INVALID_CERT";
   if (message === "SSRF_BLOCKED") return "SSRF_BLOCKED";
   return "NETWORK_RESET";
 }
@@ -91,6 +91,14 @@ function scanErrorFor(message: string | null): ScanErrorCode {
 function defaultAdapters(): readonly ConsentAdapter[] {
   return [...CMP_ADAPTERS, GENERIC_ADAPTER];
 }
+
+/**
+ * The window after a synthetic form submission during which a third-party
+ * burst is attributed to the submission (PDM-R043). Long enough to catch
+ * conversion pixels' deferred beacons; bounded so a poller cannot stretch the
+ * phase indefinitely.
+ */
+const FORM_BURST_WINDOW_MS = 3_000;
 
 /**
  * Builds the consent action for a phase.
@@ -125,6 +133,18 @@ function actionFor(
           )
           .catch(() => {});
         await page.waitForTimeout(500).catch(() => {});
+
+        /*
+         * Synthetic form interaction (PDM-R043). The DOM facts come from the
+         * runner; the burst count is filled in by the PHASE RUNNER from its own
+         * network recorder across the bounded post-submission window — the
+         * recorder is the only thing that can see the requests (P1/P6). Until
+         * then the burst fields carry neutral values, and the phase runner
+         * overwrites `formSubmission` on the result before finishing.
+         */
+        const form = await runSyntheticFormInteraction(page);
+        await page.waitForTimeout(FORM_BURST_WINDOW_MS).catch(() => {});
+
         return {
           performed: true,
           method: "dom_heuristic" as const,
@@ -135,6 +155,7 @@ function actionFor(
           bannerDismissed: true,
           errorCode: null,
           errorMessage: null,
+          formInteraction: form,
         };
       },
     };
@@ -165,7 +186,6 @@ function actionFor(
     },
   };
 }
-
 /**
  * Resolves the CNAME chain for every FIRST-PARTY host the scan actually
  * contacted — PLAN-V2 Part III, dev-doc2 Module 22.
@@ -238,12 +258,44 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
   let errorMessage: string | null = null;
   let errorPhase: ConsentPhase | null = null;
 
+  /*
+   * ⚠️ THE SCAN DEADLINE (F-007), HONOURED HERE — FOR THE FIRST TIME. The free
+   * scanner passed `timeoutMs: 45_000` and the field was silently dropped; a
+   * hostile page (an anti-bot `while(true){}` inside an evaluate) could hang a
+   * phase forever, holding the pool permit and the BullMQ slot indefinitely
+   * while the database-side reaper failed only the ROW. The deadline now bounds
+   * the phase loop itself.
+   *
+   * ⚠️ HOW IT FAILS, AND WHAT IT DOES NOT DO. On expiry the loop stops and the
+   * scan is returned PARTIAL with `SCAN_TIMEOUT` — the phases that ran keep
+   * their evidence (P5: an incomplete scan reports what it saw). The deadline
+   * does NOT close the browser context: that is the phase runner's `finally`,
+   * which owns cleanup and cannot be raced from outside. A phase stuck INSIDE
+   * the loop is terminated by its own budget timeouts; the deadline bounds how
+   * long we keep STARTING work, and `remainingMs` shrinks the budget of later
+   * phases so a slow first phase cannot hand the last phase an unbounded run.
+   */
+  const deadline = input.timeoutMs
+    ? startedAt.getTime() + input.timeoutMs
+    : Number.POSITIVE_INFINITY;
+
   for (const phase of phasesToRun) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      errorCode = "SCAN_TIMEOUT";
+      errorMessage = `scan deadline (${input.timeoutMs}ms) reached before phase ${phase}`;
+      break;
+    }
+
     const result = await runPhase(deps.pool, {
       phase,
       url: input.url,
       registrableDomain: input.registrableDomain,
-      budget,
+      budget: {
+        ...budget,
+        // Later phases inherit the remaining time, never the full budget.
+        navTimeoutMs: Math.max(1_000, Math.min(budget.navTimeoutMs, remainingMs)),
+      },
       blockMedia: input.blockMedia,
       urlGuard: deps.urlGuard,
       action: actionFor(phase, adapters, (detection) => {
@@ -265,20 +317,29 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
     }
 
     navigationSucceeded = true;
+
+    if (Date.now() >= deadline) {
+      errorCode = "SCAN_TIMEOUT";
+      errorMessage = `scan deadline (${input.timeoutMs}ms) reached after phase ${phase}`;
+      break;
+    }
   }
 
   /*
    * Recorded only when navigation worked. A scan that never loaded the page
    * observed no hosts, and resolving the entry URL alone would produce a fact
-   * about a site we failed to reach.
+   * about a site we failed to reach. Skipped on deadline expiry — the scan is
+   * already ending, and DNS is the slowest step in the pipeline.
    */
-  const cnameResolutions = navigationSucceeded
-    ? await resolveCnames(
-        phases,
-        input.registrableDomain,
-        deps.cnameChecker ?? checkCnameCloaking,
-      )
-    : [];
+  const deadlineExpired = errorCode === "SCAN_TIMEOUT";
+  const cnameResolutions =
+    navigationSucceeded && !deadlineExpired
+      ? await resolveCnames(
+          phases,
+          input.registrableDomain,
+          deps.cnameChecker ?? checkCnameCloaking,
+        )
+      : [];
 
   const consentModeAudit = navigationSucceeded
     ? parseConsentModeEvents(
@@ -305,7 +366,13 @@ export async function runScan(input: ScanInput, deps: ScanDeps): Promise<ScanRes
     cmp,
     phases,
     pagesScanned: navigationSucceeded
-      ? Math.max(1, input.sitemapConfig?.selectedUrls?.length ?? 1)
+      ? Math.max(
+          1,
+          Math.min(
+            input.maxPagesPerScan ?? input.sitemapConfig?.selectedUrls?.length ?? 1,
+            input.sitemapConfig?.selectedUrls?.length ?? 1,
+          ),
+        )
       : 0,
     errorCode,
     errorMessage,

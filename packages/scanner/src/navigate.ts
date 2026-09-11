@@ -29,7 +29,17 @@ export type NavigationOutcome =
   | { ok: true; status: number; settled: boolean }
   | {
       ok: false;
-      reason: "NAV_TIMEOUT" | "NAV_FAILED" | "HTTP_ERROR" | "SSRF_BLOCKED";
+      reason:
+        | "NAV_TIMEOUT"
+        | "NAV_FAILED"
+        | "HTTP_ERROR"
+        | "HTTP_SERVER_ERROR"
+        | "HTTP_CLIENT_ERROR"
+        | "DNS_NXDOMAIN"
+        | "NETWORK_RESET"
+        | "TLS_NAME_MISMATCH"
+        | "TLS_INVALID_CERT"
+        | "SSRF_BLOCKED";
       status: number | null;
     };
 
@@ -174,7 +184,12 @@ export async function navigate(
 
     const status = response.status();
     // 4xx/5xx is a real answer about the site, and it is NOT scannable content.
-    if (status >= 400) return { ok: false, reason: "HTTP_ERROR", status };
+    if (status >= 400) {
+      if (status === 408 || status === 425 || status === 429 || status >= 500) {
+        return { ok: false, reason: "HTTP_SERVER_ERROR", status };
+      }
+      return { ok: false, reason: "HTTP_CLIENT_ERROR", status };
+    }
 
     const settled = await settle(page, budget.settleMaxMs);
     return { ok: true, status, settled };
@@ -183,9 +198,28 @@ export async function navigate(
       return { ok: false, reason: "SSRF_BLOCKED", status: null };
     }
     const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("ERR_NAME_NOT_RESOLVED") || message.includes("ENOTFOUND")) {
+      return { ok: false, reason: "DNS_NXDOMAIN", status: null };
+    }
+    if (message.includes("Timeout")) {
+      return { ok: false, reason: "NAV_TIMEOUT", status: null };
+    }
+    if (message.includes("ERR_CERT_COMMON_NAME_INVALID")) {
+      return { ok: false, reason: "TLS_NAME_MISMATCH", status: null };
+    }
+    if (message.includes("ERR_CERT_") || message.includes("CERT_HAS_EXPIRED")) {
+      return { ok: false, reason: "TLS_INVALID_CERT", status: null };
+    }
+    if (
+      message.includes("RESET") ||
+      message.includes("REFUSED") ||
+      message.includes("ECONNRESET")
+    ) {
+      return { ok: false, reason: "NETWORK_RESET", status: null };
+    }
     return {
       ok: false,
-      reason: message.includes("Timeout") ? "NAV_TIMEOUT" : "NAV_FAILED",
+      reason: "NAV_FAILED",
       status: null,
     };
   }

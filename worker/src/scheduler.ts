@@ -46,6 +46,13 @@ const SCANNER_VERSION = process.env.SCANNER_VERSION ?? "1.0.0";
 /** How long a RUNNING scan may go without finishing before it is reclaimed. */
 const STUCK_AFTER_MS = Number(process.env.SCAN_STUCK_AFTER_MS ?? 30 * 60 * 1000);
 
+/**
+ * How long a QUEUED scan may sit before it is reclaimed (F-006). Well past any
+ * enqueue latency, well short of the RUNNING window: a row still QUEUED after
+ * five minutes lost its job.
+ */
+const QUEUED_STUCK_AFTER_MS = Number(process.env.SCAN_QUEUED_STUCK_AFTER_MS ?? 5 * 60 * 1000);
+
 /** Cap per sweep, so one enormous agency cannot monopolise the queue. */
 const BATCH = Number(process.env.SCHEDULER_BATCH ?? 100);
 
@@ -175,29 +182,66 @@ export async function sweepDueWebsites(connection: IORedis): Promise<number> {
 }
 
 /**
- * Reclaims scans stuck in RUNNING (§7.4).
+ * Reclaims scans stuck in RUNNING — and, with a shorter grace window, QUEUED
+ * rows whose job was lost (§7.4).
  *
  * ⚠️ THIS IS WHY THE STATE MACHINE MATTERS. A worker killed mid-scan leaves a
  * row saying RUNNING forever, and the in-flight check above then refuses to
  * schedule that website EVER AGAIN. The site silently stops being monitored,
  * and nothing in the UI says so — the worst failure this system can have,
  * because it looks exactly like everything working.
+ *
+ * ⚠️ QUEUED ROWS ARE RECLAIMED TOO (F-006), AND THE PREVIOUS COMMENT CLAIMING
+ * SO WAS FALSE. Both the web app and the scheduler write the row BEFORE
+ * publishing the job (the safe order — a job without a row crashes the
+ * worker, a row without a job is recoverable), so a Redis outage in between —
+ * or a worker crash after publish but before pickup — strands a QUEUED row
+ * forever. The in-flight checks treat QUEUED as busy, so the website was
+ * then unscannable PERMANENTLY: one Redis blip stops a site's monitoring
+ * silently. Rows older than `QUEUED_STUCK_AFTER_MS` (well past any enqueue
+ * latency) are failed with a stable errorCode, which frees the website to be
+ * scheduled again on the next sweep. Requeueing the job was considered and
+ * rejected: a row that has sat in QUEUED this long means we cannot trust that
+ * the job isn't a duplicate the worker already consumed (its idempotency key
+ * is the scan id), and failing loudly beats re-running ambiguously.
  */
 export async function recoverStuckScans(): Promise<number> {
-  const cutoff = new Date(Date.now() - STUCK_AFTER_MS);
+  const runningCutoff = new Date(Date.now() - STUCK_AFTER_MS);
+  const queuedCutoff = new Date(Date.now() - QUEUED_STUCK_AFTER_MS);
 
-  const { count } = await db.scan.updateMany({
-    where: { status: "RUNNING", startedAt: { lt: cutoff } },
-    data: {
-      status: "FAILED",
-      finishedAt: new Date(),
-      errorCode: "SCAN_TIMEOUT",
-      errorMessage: "Scan did not report back and was reclaimed",
-    },
-  });
+  const [{ count: runningCount }, { count: queuedCount }, { count: freeRunningCount }] = await Promise.all([
+    db.scan.updateMany({
+      where: { status: "RUNNING", startedAt: { lt: runningCutoff } },
+      data: {
+        status: "FAILED",
+        finishedAt: new Date(),
+        errorCode: "SCAN_TIMEOUT",
+        errorMessage: "Scan did not report back and was reclaimed",
+      },
+    }),
+    db.scan.updateMany({
+      where: { status: "QUEUED", queuedAt: { lt: queuedCutoff } },
+      data: {
+        status: "FAILED",
+        finishedAt: new Date(),
+        errorCode: "SCAN_TIMEOUT",
+        errorMessage: "Scan never left the queue and was reclaimed",
+      },
+    }),
+    db.freeScan.updateMany({
+      where: { status: "RUNNING", startedAt: { lt: runningCutoff } },
+      data: {
+        status: "FAILED",
+        finishedAt: new Date(),
+        errorCode: "TIMEOUT",
+      },
+    }),
+  ]);
 
-  if (count > 0) logger.warn({ count }, "reclaimed stuck scans");
-  return count;
+  if (runningCount > 0) logger.warn({ count: runningCount }, "reclaimed stuck RUNNING scans");
+  if (queuedCount > 0) logger.warn({ count: queuedCount }, "reclaimed stuck QUEUED scans");
+  if (freeRunningCount > 0) logger.warn({ count: freeRunningCount }, "reclaimed stuck RUNNING free scans");
+  return runningCount + queuedCount + freeRunningCount;
 }
 
 /**

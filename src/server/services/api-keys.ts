@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes, createHash } from "node:crypto";
 import { forAgency } from "@pdm/database/tenant";
 import { NotFoundError, ValidationError } from "@pdm/shared/errors";
+import { requireFeature } from "@/server/services/entitlement-guard";
 
 export interface CreateApiKeyInput {
   name: string;
@@ -49,6 +50,20 @@ export async function generateApiKey(
   if (!trimmedName) {
     throw new ValidationError("API key name is required", { details: { field: "name" } });
   }
+
+  /*
+   * ⚠️ ENTITLEMENT ENFORCEMENT (F-004). `apiAccess` is a paid feature (Agency
+   * and Scale); a service that verifies nothing minted `pdm_live_` keys — full
+   * read/write API v1, scan triggering included — for every plan. The check
+   * lives at generation because that is the moment the capability is granted;
+   * key *use* is verified against `keyHash`, which cannot carry a plan.
+   *
+   * ⚠️ EXISTING KEYS ARE NOT GRANDFATHERED. A key that predates this check
+   * still authenticates (revoking working credentials silently is worse), but
+   * no new key can be created without the entitlement — so the feature
+   * converges on the plan as keys rotate.
+   */
+  await requireFeature(agencyId, "apiAccess");
 
   const rawBytes = randomBytes(24).toString("hex");
   const secretToken = `pdm_live_${rawBytes}`;

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { logger } from "@pdm/shared/logger";
 import { submitFreeScan } from "@/server/services/free-scan";
+import { getClientIp } from "@/server/client-ip";
 
 /**
  * `POST /api/public/free-scan` — PLAN.md §3.2, §10.4, Phase 6 task 6.5.
@@ -21,13 +22,6 @@ const schema = z.object({
   url: z.string().min(4).max(2_048),
   turnstileToken: z.string().max(4_096).default(""),
 });
-
-/** ⚠️ Trusted only as far as the platform's proxy — see the note in §10.4. */
-function clientIp(request: NextRequest): string | null {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() ?? null;
-  return request.headers.get("x-real-ip");
-}
 
 const STATUS: Record<string, number> = {
   INVALID_URL: 400,
@@ -49,7 +43,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const outcome = await submitFreeScan({
       url: parsed.data.url,
       turnstileToken: parsed.data.turnstileToken,
-      ip: clientIp(request),
+      ip: getClientIp(request.headers),
     });
 
     if (outcome.ok) return Response.json({ token: outcome.token }, { status: 202 });

@@ -13,7 +13,23 @@
 import type { ConsentModeFact, RecordedConsentEvent } from "./instrumentation/consent-mode";
 import type { DomGatingFact, ButtonGeometryFact } from "./instrumentation/dom-gating";
 import type { FingerprintFact } from "./instrumentation/fingerprint-trap";
-import type { FormSubmissionFact } from "./consent/interactive-runner";
+
+/**
+ * Synthetic form-interaction facts (PDM-R043). Measured by the phase runner:
+ * `formFound`/`formSubmitted` come from the DOM via the interactive runner,
+ * the burst counts from the phase's own network recorder over the
+ * post-submission window.
+ *
+ * ⚠️ ABSENT IS NOT "NO BURST". A phase that never ran the form interaction has
+ * no fact at all — the field is `null` or missing, never a zero presented as a
+ * completed check (P5).
+ */
+export interface FormSubmissionFact {
+  formFound: boolean;
+  formSubmitted: boolean;
+  burstRequestsDetected: number;
+  burstTrackerDomains: string[];
+}
 
 export type {
   ConsentModeFact,
@@ -21,7 +37,6 @@ export type {
   DomGatingFact,
   ButtonGeometryFact,
   FingerprintFact,
-  FormSubmissionFact,
 };
 
 /** The consent journeys. Every recorded artifact carries one. */
@@ -266,7 +281,21 @@ export interface ScanInput {
   blockMedia: boolean;
   /** The free public scanner runs ONE phase with a tighter budget (§10.4). */
   phases?: readonly ConsentPhase[];
+  /**
+   * ⚠️ THE SCAN'S HARD DEADLINE (F-007), and it is now honoured. When set,
+   * `runScan` races the phases against this deadline and returns whatever was
+   * recorded when it fires — the pool permit is released by the phase's own
+   * `finally`, never by the deadline itself. A scan without a deadline runs
+   * unbounded, which is why the paid path always sets one.
+   */
   timeoutMs?: number;
+  /**
+   * ⚠️ THE PLAN'S PAGE CEILING (F-004), carried end to end. `runScan` clamps
+   * multi-page execution to this; the single-URL default scan ignores it. The
+   * value is resolved from the plan at enqueue time and clamped again here, so
+   * a job payload cannot widen it.
+   */
+  maxPagesPerScan?: number;
   /** Crawl configuration for multi-page sitemap execution (§17.1, §17.2). */
   sitemapConfig?: {
     maxPages?: number;

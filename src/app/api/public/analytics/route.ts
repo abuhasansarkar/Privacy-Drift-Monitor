@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ANALYTICS_EVENTS, track, type AnalyticsEvent } from "@pdm/shared/analytics";
 import { checkRateLimit, rateLimitKey } from "@pdm/shared";
 import { rateLimitStore } from "@/server/services/queues";
+import { getClientIp } from "@/server/client-ip";
 
 /**
  * `POST /api/public/analytics` — PLAN.md §9.6, Phase 6 task 6.8.
@@ -40,13 +41,13 @@ const PER_IP = { limit: 120, windowSeconds: 3_600 };
 /**
  * The rate-limit key is a SALTED HASH of the address, never the address.
  * §9.6 keeps raw IPs out of stored telemetry, and a Redis key is storage.
+ *
+ * ⚠️ THE ADDRESS COMES FROM `getClientIp` (F-009). The leftmost XFF entry here
+ * was client-controlled, so the 120/hour budget never bound for anyone willing
+ * to rotate a header.
  */
 function ipKey(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip =
-    (forwarded ? forwarded.split(",")[0]?.trim() : null) ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getClientIp(request.headers) ?? "unknown";
   const salt = process.env.ANALYTICS_SALT ?? process.env.PORTAL_TOKEN_SECRET ?? "";
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex").slice(0, 32);
 }

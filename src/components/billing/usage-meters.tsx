@@ -25,6 +25,7 @@ import { formatBytes, formatDate, formatNumber } from "@/lib/format";
 const METRIC_LABEL: Record<UsageMetric, string> = {
   WEBSITES: t("billing.metricWebsites"),
   SEATS: t("billing.metricSeats"),
+  CLIENTS: t("billing.metricClients"),
   SCANS: t("billing.metricScans"),
   AI_CREDITS: t("billing.metricAiCredits"),
   REPORTS: t("billing.metricReports"),

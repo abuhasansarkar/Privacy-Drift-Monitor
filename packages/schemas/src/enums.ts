@@ -262,6 +262,7 @@ export const usageMetric = z.enum([
   "STORAGE_BYTES",
   "WEBSITES",
   "SEATS",
+  "CLIENTS",
 ]);
 
 export const aiModelTier = z.enum(["STANDARD", "ADVANCED"]);

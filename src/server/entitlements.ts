@@ -124,6 +124,7 @@ async function currentUsage(agencyId: string, metric: UsageMetric): Promise<numb
     const counts = await repos.billing.liveCounts();
     if (metric === "WEBSITES") return counts.websites;
     if (metric === "SEATS") return counts.seats;
+    if (metric === "CLIENTS") return counts.clients;
     return 0; // STORAGE_BYTES — not yet metered.
   }
 
@@ -197,6 +198,7 @@ export async function getUsageSummary(agencyId: string): Promise<UsageSummary[]>
   const metrics: UsageMetric[] = [
     "WEBSITES",
     "SEATS",
+    "CLIENTS",
     "SCANS",
     "AI_CREDITS",
     "REPORTS",
@@ -210,7 +212,9 @@ export async function getUsageSummary(agencyId: string): Promise<UsageSummary[]>
         ? counts.websites
         : metric === "SEATS"
           ? counts.seats
-          : 0;
+          : metric === "CLIENTS"
+            ? counts.clients
+            : 0;
 
     const key = METRIC_LIMIT_KEY[metric];
     const check =

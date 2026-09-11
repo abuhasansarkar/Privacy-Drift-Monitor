@@ -2,6 +2,8 @@ import type { ConsentPhase } from "@pdm/scanner/types";
 import {
   executed,
   fingerprint,
+  isEssential,
+  isMarketing,
   type Finding,
   type Rule,
   type RuleContext,
@@ -128,28 +130,70 @@ export const R042: Rule = {
     const phase: ConsentPhase = "INTERACTIVE_ACTION";
     if (!executed(context, phase)) return [];
 
-    const interactiveRequests = context.requests.filter((r) => r.consentPhase === phase && r.isThirdParty);
-    if (interactiveRequests.length >= 5) {
-      return [
-        {
-          ruleId: "PDM-R042",
-          category: "INTERACTION",
-          severity: "HIGH",
-          fingerprint: fingerprint(["PDM-R042", "interactive-spike"]),
-          title: "Surge of third-party trackers fired immediately upon user scroll/interaction",
-          subject: "Interactive Tracker Surge",
-          consentPhase: phase,
-          evidenceRefs: {
-            requestUrls: interactiveRequests.slice(0, 5).map((r) => r.url),
-            cookieNames: [],
-            storageKeys: [],
+    /*
+     * ⚠️ MARKETING-VENDOR FILTER + ACCEPT-PHASE BASELINE (F-022).
+     * Counting any ≥5 third-party requests in INTERACTIVE_ACTION (which accepted
+     * consent first) flagged innocent assets/fonts/CDNs as rogue trackers.
+     * We filter to marketing/advertising vendors and check if they represent a
+     * surge above what was observed in the standard accept-all phase.
+     */
+    const interactiveMarketingDetections = context.detections.filter((d) => {
+      if (d.consentPhase !== phase) return false;
+      const vendor = d.vendorId ? context.vendorsById.get(d.vendorId) : undefined;
+      if (isEssential(vendor)) return false;
+      return isMarketing(vendor);
+    });
+
+    const acceptPhaseVendors = new Set(
+      context.detections
+        .filter((d) => d.consentPhase === "ACCEPT_ALL")
+        .map((d) => d.vendorId ?? d.unknownDomain),
+    );
+
+    const novelMarketingTrackers = interactiveMarketingDetections.filter(
+      (d) => !acceptPhaseVendors.has(d.vendorId ?? d.unknownDomain),
+    );
+
+    const marketingRequestCount = interactiveMarketingDetections.reduce(
+      (acc, d) => acc + d.requestCount,
+      0,
+    );
+
+    if (novelMarketingTrackers.length > 0 || marketingRequestCount >= 5) {
+      const interactiveRequests = context.requests.filter(
+        (r) => r.consentPhase === phase && r.isThirdParty,
+      );
+      const evidenceUrls = interactiveRequests
+        .filter((r) =>
+          interactiveMarketingDetections.some((d) =>
+            d.evidenceSummary?.hosts?.some((h) => r.url.includes(h)),
+          ) || r.isThirdParty,
+        )
+        .slice(0, 5)
+        .map((r) => r.url);
+
+      if (evidenceUrls.length > 0) {
+        return [
+          {
+            ruleId: "PDM-R042",
+            category: "INTERACTION",
+            severity: "HIGH",
+            fingerprint: fingerprint(["PDM-R042", "interactive-spike"]),
+            title: "Surge of third-party marketing trackers fired immediately upon user scroll/interaction",
+            subject: "Interactive Tracker Surge",
+            consentPhase: phase,
+            evidenceRefs: {
+              requestUrls: evidenceUrls,
+              cookieNames: [],
+              storageKeys: [],
+            },
+            rationale:
+              "Third-party marketing trackers dynamically fired upon user interaction that were not observed during standard page evaluation.",
+            recommendedAction:
+              "Ensure lazy-loaded tags respect user consent state and are not injected dynamically on scroll events.",
           },
-          rationale:
-            "Multiple third-party marketing tags loaded dynamically upon initial page scroll without explicit consent.",
-          recommendedAction:
-            "Ensure lazy-loaded tags respect user consent state rather than triggering automatically on scroll.",
-        },
-      ];
+        ];
+      }
     }
     return [];
   },
@@ -161,30 +205,45 @@ export const R044: Rule = {
   category: "TAG_MANAGER",
   precedence: 96,
   evaluate(context: RuleContext): Finding[] {
-    const gtmContainers = context.requests.filter(
-      (r) => r.url.includes("googletagmanager.com/gtm.js?id=GTM-") || r.url.includes("tagmanager.google.com"),
-    );
+    /*
+     * ⚠️ PER-REQUEST PHASE ATTRIBUTION (F-020).
+     * R044 used to scan GTM requests across all phases but hardcode
+     * consentPhase: "NO_CONSENT". When the second container was injected in
+     * ACCEPT_ALL or REJECT_ALL, resolveEvidence() filtered by "NO_CONSENT",
+     * found no matching request rows, and shipped a CRITICAL finding with
+     * empty evidence. We check per phase and attribute findings to the phase
+     * where the container requests actually happened.
+     */
+    const findings: Finding[] = [];
+    const phases = [...new Set(context.requests.map((r) => r.consentPhase))];
 
-    // If multiple distinct GTM container IDs are injected
-    const uniqueIds = new Set(
-      gtmContainers.map((r) => {
-        const match = r.url.match(/id=(GTM-[A-Z0-9]+)/);
-        return match ? match[1] : null;
-      }).filter(Boolean),
-    );
+    for (const phase of phases) {
+      const gtmInPhase = context.requests.filter(
+        (r) =>
+          r.consentPhase === phase &&
+          (r.url.includes("googletagmanager.com/gtm.js?id=GTM-") || r.url.includes("tagmanager.google.com")),
+      );
 
-    if (uniqueIds.size > 1) {
-      return [
-        {
+      const uniqueIds = new Set(
+        gtmInPhase
+          .map((r) => {
+            const match = r.url.match(/id=(GTM-[A-Z0-9]+)/);
+            return match ? match[1] : null;
+          })
+          .filter(Boolean),
+      );
+
+      if (uniqueIds.size > 1) {
+        findings.push({
           ruleId: "PDM-R044",
           category: "TAG_MANAGER",
           severity: "CRITICAL",
-          fingerprint: fingerprint(["PDM-R044", "multiple-gtm-containers"]),
+          fingerprint: fingerprint(["PDM-R044", phase, ...[...uniqueIds].sort()]),
           title: `Multiple distinct Google Tag Manager containers injected (${[...uniqueIds].join(", ")})`,
           subject: "GTM Container Governance",
-          consentPhase: "NO_CONSENT",
+          consentPhase: phase,
           evidenceRefs: {
-            requestUrls: gtmContainers.map((r) => r.url),
+            requestUrls: gtmInPhase.map((r) => r.url),
             cookieNames: [],
             storageKeys: [],
           },
@@ -192,11 +251,59 @@ export const R044: Rule = {
             "Multiple secondary tag manager containers detected on page, which frequently circumvents primary CMP blocking rules.",
           recommendedAction:
             "Consolidate all tag deployment into a single governed container with enforced Consent Mode v2 triggers.",
-        },
-      ];
+        });
+      }
     }
 
-    return [];
+    if (findings.length === 0) {
+      const allGtm = context.requests.filter(
+        (r) =>
+          r.url.includes("googletagmanager.com/gtm.js?id=GTM-") || r.url.includes("tagmanager.google.com"),
+      );
+      const uniqueIds = new Set(
+        allGtm
+          .map((r) => {
+            const match = r.url.match(/id=(GTM-[A-Z0-9]+)/);
+            return match ? match[1] : null;
+          })
+          .filter(Boolean),
+      );
+      if (uniqueIds.size > 1) {
+        const firstOccurrenceByPhase = new Map<string, typeof allGtm[0]>();
+        for (const req of allGtm) {
+          const match = req.url.match(/id=(GTM-[A-Z0-9]+)/);
+          const id = match ? match[1] : null;
+          if (id && !firstOccurrenceByPhase.has(id)) {
+            firstOccurrenceByPhase.set(id, req);
+          }
+        }
+        const reqs = [...firstOccurrenceByPhase.values()];
+        const secondary = reqs[reqs.length - 1];
+        if (secondary) {
+          const matchingReqs = allGtm.filter((r) => r.consentPhase === secondary.consentPhase);
+          findings.push({
+            ruleId: "PDM-R044",
+            category: "TAG_MANAGER",
+            severity: "CRITICAL",
+            fingerprint: fingerprint(["PDM-R044", secondary.consentPhase, ...[...uniqueIds].sort()]),
+            title: `Multiple distinct Google Tag Manager containers injected (${[...uniqueIds].join(", ")})`,
+            subject: "GTM Container Governance",
+            consentPhase: secondary.consentPhase,
+            evidenceRefs: {
+              requestUrls: matchingReqs.map((r) => r.url),
+              cookieNames: [],
+              storageKeys: [],
+            },
+            rationale:
+              "Multiple secondary tag manager containers detected across consent phases, which frequently circumvents primary CMP blocking rules.",
+            recommendedAction:
+              "Consolidate all tag deployment into a single governed container with enforced Consent Mode v2 triggers.",
+          });
+        }
+      }
+    }
+
+    return findings;
   },
 };
 
@@ -359,20 +466,43 @@ export const R029: Rule = {
   },
 };
 
+/**
+ * The EEA + EEA-adjacent jurisdictions whose answer to "is this a
+ * cross-border transfer out of the EEA?" is no. Derived from one constant so
+ * the list is testable against a reference set rather than re-typed per rule.
+ *
+ * ⚠️ GB POST-BREXIT IS DELIBERATE. The UK is not in the EEA; the finding's
+ * title says what it says, and GB belongs on the non-EEA side of the list.
+ */
+export const EEA_COUNTRIES: readonly string[] = [
+  // EEA members
+  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
+  "HU", "IS", "IE", "IT", "LV", "LI", "LT", "LU", "MT", "NL", "NO", "PL",
+  "PT", "RO", "SK", "SI", "ES", "SE",
+];
+
 /** PDM-R040 — Cross-Border Data Transfer to Non-EEA Destination. */
 export const R040: Rule = {
   id: "PDM-R040",
   category: "TRANSPORT_SECURITY",
   precedence: 80,
   evaluate(context: RuleContext): Finding[] {
+    /*
+     * ⚠️ ONLY A RESOLVED COUNTRY PRODUCES A FINDING. `destinationCountry` is
+     * recorded by a GeoIP resolver at scan time; with no resolver wired the
+     * column is null everywhere and this rule emits nothing — which is the
+     * honest output. The previous behaviour (null → treated as a missing
+     * filter, plus a resolver that answered "US" for every address on earth)
+     * published "Cross-Border Transfer (US)" for essentially every scanned
+     * site: a fact no instrument recorded (P1/P6).
+     */
     const preConsentRequests = context.requests.filter(
       (r) =>
         r.consentPhase === "NO_CONSENT" &&
         r.isThirdParty &&
-        r.destinationCountry &&
-        !["DE", "FR", "IE", "NL", "IT", "ES", "SE", "DK", "FI", "BE", "AT", "PL", "PT"].includes(
-          r.destinationCountry,
-        ),
+        r.destinationCountry != null &&
+        r.destinationCountry !== "" &&
+        !EEA_COUNTRIES.includes(r.destinationCountry),
     );
 
     if (preConsentRequests.length === 0) return [];

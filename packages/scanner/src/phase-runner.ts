@@ -20,8 +20,10 @@ import { capture, type ScreenshotPolicy } from "./record/screenshots";
 import type {
   ConsentMethod,
   ConsentPhase,
+  FormSubmissionFact,
   PhaseResult,
   RecordedCookie,
+  RecordedRequest,
   RecordedScreenshot,
 } from "./types";
 import {
@@ -79,6 +81,12 @@ export interface ConsentActionResult {
   bannerDismissed: boolean | null;
   errorCode: PhaseResult["errorCode"];
   errorMessage: string | null;
+  /**
+   * The DOM half of the synthetic form interaction (PDM-R043), set by the
+   * INTERACTIVE_ACTION action. The burst half is counted by the phase runner
+   * from its own recorder before the result is finished.
+   */
+  formInteraction?: { formFound: boolean; formSubmitted: boolean };
 }
 
 export interface PhaseRunInput {
@@ -133,10 +141,12 @@ export async function runPhase(
     const consoleRecorder = new ConsoleRecorder();
     const detachNetwork = network.attach(context);
     const detachConsole = consoleRecorder.attach(page);
+    const burstCounter = makeBurstCounter(network);
 
     const cookies: RecordedCookie[] = [];
     const screenshots: RecordedScreenshot[] = [];
     let consentEvents: RecordedConsentEvent[] = [];
+    let formSubmission: FormSubmissionFact | null = null;
     const shot = {
       policy: input.screenshotPolicy ?? "ON_CHANGE",
       changed: input.screenshotChanged,
@@ -197,6 +207,12 @@ export async function runPhase(
       if (initial) screenshots.push(initial);
 
       if (input.action) {
+        // The burst window starts HERE, before the action runs: any request the
+        // synthetic submission (or the consent action) triggers after this
+        // moment is attributable to it. Recording the marker first means the
+        // count cannot miss requests that race the action's own return.
+        const burstStartedAtMs = Date.now();
+
         action = await input.action.perform(page);
         if (!action.performed) {
           // Could not click Reject. NOT a pass — the phase is UNDETERMINED and
@@ -227,6 +243,31 @@ export async function runPhase(
 
         const after = await capture(page, input.phase, "post-reject", shot);
         if (after) screenshots.push(after);
+
+        /*
+         * THE BURST COUNT (PDM-R043) — counted HERE, from the phase's own
+         * network recorder, over the bounded post-action window. The runner
+         * that submits the form cannot see the network; a burst counted inside
+         * the page would be a fact no instrument recorded (P1/P6).
+         *
+         * Only the INTERACTIVE_ACTION phase runs the synthetic form
+         * interaction, and only third-party requests within the window count —
+         * first-party responses and the page's own origin are not a tracker
+         * burst.
+         */
+        if (input.phase === "INTERACTIVE_ACTION" && action.formInteraction) {
+          formSubmission = {
+            ...action.formInteraction,
+            burstRequestsDetected: burstCounter.count(
+              burstStartedAtMs,
+              recorderCtx.startedAt,
+            ),
+            burstTrackerDomains: burstCounter.domains(
+              burstStartedAtMs,
+              recorderCtx.startedAt,
+            ),
+          };
+        }
       }
 
       consentEvents = await page
@@ -305,7 +346,49 @@ export async function runPhase(
         domGating: extraFacts?.domGating ?? null,
         buttonGeometry: extraFacts?.buttonGeometry ?? null,
         fingerprint: extraFacts?.fingerprint ?? null,
+        formSubmission,
       };
     }
   }, contextOptions);
+}
+
+/**
+ * Third-party request count recorded after the burst window opened, for the
+ * form-submission fact (PDM-R043).
+ *
+ * ⚠️ THE RECORDER IS THE ONLY SOURCE. The phase's `NetworkRecorder` holds the
+ * requests; counting from it is reading recorded evidence. The `Date.now()`
+ * marker taken before the action is converted to the recorder's own offset
+ * timeline (its `startedAt` is the recorder context's clock) so the comparison
+ * is against `RecordedRequest.timestampMs`, which is an offset from navigation
+ * start.
+ */
+function makeBurstCounter(network: NetworkRecorder) {
+  function burstRequests(
+    sinceWallClockMs: number,
+    recorderStartMs: number,
+  ): RecordedRequest[] {
+    const sinceOffsetMs = sinceWallClockMs - recorderStartMs;
+    return network.drain().filter(
+      (request) =>
+        request.timestampMs >= sinceOffsetMs &&
+        request.isThirdParty &&
+        request.registrableDomain !== "",
+    );
+  }
+
+  return {
+    count(sinceWallClockMs: number, recorderStartMs: number): number {
+      return burstRequests(sinceWallClockMs, recorderStartMs).length;
+    },
+    domains(sinceWallClockMs: number, recorderStartMs: number): string[] {
+      return [
+        ...new Set(
+          burstRequests(sinceWallClockMs, recorderStartMs).map(
+            (request) => request.registrableDomain,
+          ),
+        ),
+      ];
+    },
+  };
 }

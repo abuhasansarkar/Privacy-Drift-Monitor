@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/context";
+import { requireFeature } from "@/server/services/entitlement-guard";
 import { generateApiKey, revokeApiKey } from "@/server/services/api-keys";
 import {
   createWebhookEndpoint,
@@ -15,6 +16,7 @@ export async function createApiKeyAction(input: {
 }): Promise<ActionResult<{ id: string; name: string; prefix: string; rawKey: string }>> {
   try {
     const ctx = await requirePermission("settings:update");
+    await requireFeature(ctx.agencyId, "apiAccess");
     const created = await generateApiKey(ctx.agencyId, {
       name: input.name,
       scopes: input.scopes,
@@ -59,6 +61,7 @@ export async function createWebhookAction(input: {
 > {
   try {
     const ctx = await requirePermission("settings:update");
+    await requireFeature(ctx.agencyId, "webhooks");
     const endpoint = await createWebhookEndpoint(ctx.agencyId, input);
     revalidatePath("/app/settings/api");
     return actionOk({

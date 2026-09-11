@@ -7,6 +7,7 @@ import {
   resolveSafePolicyUrl,
   extractCleanText,
   COMMON_POLICY_PATHS,
+  guardedFetch,
 } from "@pdm/scanner";
 import {
   filterGroundedVendors,
@@ -58,18 +59,22 @@ async function loadVendors(): Promise<VendorPattern[]> {
 }
 
 /**
- * Safely fetches HTML from a URL with timeout and size limits.
+ * Safely fetches HTML from a URL with timeout, size, and SSRF-redirect limits.
+ *
+ * ⚠️ GOES THROUGH `guardedFetch` (F-008). The first version validated the URL
+ * once via `resolveSafePolicyUrl` and then fetched with the default
+ * `redirect: "follow"` — a policy URL answering 302 to an internal address was
+ * followed unguarded, and the fetched body became "policy text" shown to the
+ * agency. Redirects are re-guarded per hop; the body is capped mid-stream.
  */
 async function fetchSafeHtml(url: string): Promise<string | null> {
   const safeUrl = await resolveSafePolicyUrl(url);
   if (!safeUrl) return null;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const res = await fetch(safeUrl, {
-      signal: controller.signal,
+    const res = await guardedFetch(safeUrl, {
+      timeoutMs: 10_000,
+      maxBytes: 2 * 1024 * 1024,
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 PrivacyDriftMonitor/1.0",
@@ -77,12 +82,8 @@ async function fetchSafeHtml(url: string): Promise<string | null> {
       },
     });
 
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-
-    const html = await res.text();
-    // Cap raw HTML size at 2MB
-    return html.slice(0, 2 * 1024 * 1024);
+    if (res.status < 200 || res.status >= 300) return null;
+    return res.body;
   } catch {
     return null;
   }
@@ -115,13 +116,14 @@ async function findPolicyUrl(
       const candidate = new URL(path, baseUrl.origin).toString();
       const safeCandidate = await resolveSafePolicyUrl(candidate);
       if (safeCandidate) {
-        // Quick HEAD/GET probe
-        const probeRes = await fetch(safeCandidate, {
+        // Quick HEAD probe — per-hop guarded like every other fetch (F-008).
+        const probe = await guardedFetch(safeCandidate, {
           method: "HEAD",
+          timeoutMs: 10_000,
           headers: { "User-Agent": "PrivacyDriftMonitor/1.0" },
         }).catch(() => null);
 
-        if (probeRes && probeRes.ok) {
+        if (probe && probe.status >= 200 && probe.status < 300) {
           return safeCandidate;
         }
       }

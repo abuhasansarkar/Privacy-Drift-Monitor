@@ -86,7 +86,9 @@ export function WebsiteGrid({
                     <SeverityBadge severity="CRITICAL" count={site.criticalIssueCount} />
                   ) : null}
                   {site.openIssueCount > site.criticalIssueCount ? (
-                    <MutedBadge>
+                    <MutedBadge
+                      label={`${formatNumber(site.openIssueCount - site.criticalIssueCount)} non-critical issues`}
+                    >
                       {formatNumber(site.openIssueCount - site.criticalIssueCount)}
                     </MutedBadge>
                   ) : null}

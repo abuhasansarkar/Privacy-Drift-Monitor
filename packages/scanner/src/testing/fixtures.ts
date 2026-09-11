@@ -674,6 +674,94 @@ export const FIXTURES: Record<string, Fixture> = {
       </script>`,
     ),
   },
+
+  /*
+   * ── Ours: the Phase-15 fact fixtures (F-001) ────────────────────────────
+   *
+   * One fixture per measured fact, so the fact's path — measured in the
+   * phase runner, persisted on ScanPhase, read by the rule — is exercised
+   * end to end. X-numbered because they are ours, not §4.15 rows.
+   */
+
+  X06: {
+    id: "X06",
+    describes:
+      "Cookie wall — full-viewport fixed backdrop with scroll lock and no dismiss; must measure isCookieWall (PDM-R029)",
+    html: page(
+      `<h1>Cookie wall</h1><p>Content underneath the gate.</p>
+       <div id="wall" role="dialog" aria-label="Consent required" style="position:fixed;inset:0;z-index:100;background:rgba(255,255,255,0.98)">
+         <p>We require consent to continue.</p>
+       </div>`,
+      `<script>
+        document.addEventListener("DOMContentLoaded", function () {
+          // Scroll lock, as a real cookie wall applies it.
+          document.body.style.overflow = "hidden";
+        });
+      </script>`,
+    ),
+  },
+
+  X07: {
+    id: "X07",
+    describes:
+      "Asymmetric consent buttons — Accept 6x the area of Reject; must measure isAsymmetric (PDM-R041)",
+    html: page(
+      `<h1>Asymmetric banner</h1>
+       <div data-pdm-banner id="cookie-banner" role="dialog" aria-label="Cookie consent">
+         <p>We use cookies.</p>
+         <button id="accept" style="width:240px;height:50px">Accept all</button>
+         <button id="reject" style="width:70px;height:28px">Reject all</button>
+       </div>`,
+    ),
+  },
+
+  X08: {
+    id: "X08",
+    describes:
+      "Canvas fingerprinting on load — the trap must record canvas API calls (PDM-R045)",
+    html: page(
+      "<h1>Fingerprint probe</h1>",
+      `<script>
+        // A minimal canvas fingerprint, the pattern real probes use: draw,
+        // read back, hash. The init-script trap records the getImageData call.
+        try {
+          var c = document.createElement("canvas");
+          c.width = 200; c.height = 40;
+          var ctx = c.getContext("2d");
+          if (ctx) {
+            ctx.textBaseline = "top";
+            ctx.font = "14px 'Arial'";
+            ctx.fillStyle = "#f60";
+            ctx.fillRect(0, 0, 100, 20);
+            ctx.fillStyle = "#06f";
+            ctx.fillText("pdm-fp,\\u0645", 2, 2);
+            ctx.getImageData(0, 0, 200, 40);
+          }
+        } catch (e) {}
+      </script>`,
+    ),
+  },
+
+  X09: {
+    id: "X09",
+    describes:
+      "Form that fires a third-party beacon on submit — the synthetic submission must catch the burst (PDM-R043)",
+    html: page(
+      `<h1>Newsletter</h1>
+       <form id="signup" onsubmit="return false">
+         <input type="email" name="email" required>
+         <button type="submit">Subscribe</button>
+       </form>`,
+      `<script>
+        document.addEventListener("DOMContentLoaded", function () {
+          document.getElementById("signup").addEventListener("submit", function () {
+            var i = new Image();
+            i.src = "__THIRD_PARTY__/convert.gif?lead=1";
+          });
+        });
+      </script>`,
+    ),
+  },
 };
 
 /** The 30 rows §4.15 fixes, in order. Used by the CI contract check. */

@@ -1,4 +1,7 @@
 import { dependencyHealth } from "@/server/admin/health";
+import { childLogger } from "@pdm/shared/logger";
+
+const log = childLogger({ component: "health-ready" });
 
 /**
  * READINESS — PLAN.md Part X §10.8, §10.11, Phase 0 acceptance ("health
@@ -23,14 +26,23 @@ export async function GET() {
   const fatalFailure = checks.some((check) => !check.ok && check.fatal);
   const degraded = checks.some((check) => !check.ok && !check.fatal);
 
+  for (const check of checks) {
+    if (!check.ok) {
+      log.error(
+        { dependency: check.name, error: check.error, fatal: check.fatal },
+        "dependency health check failed",
+      );
+    }
+  }
+
   return Response.json(
     {
       status: fatalFailure ? "unready" : degraded ? "degraded" : "ok",
-      checks: checks.map(({ name, ok, ms, error, configured }) => ({
+      checks: checks.map(({ name, ok, ms, configured }) => ({
         name,
         ok,
         ms,
-        error,
+        error: ok ? undefined : "UNAVAILABLE",
         configured,
       })),
       time: new Date().toISOString(),
@@ -38,3 +50,4 @@ export async function GET() {
     { status: fatalFailure ? 503 : 200 },
   );
 }
+

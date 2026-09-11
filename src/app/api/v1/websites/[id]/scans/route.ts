@@ -4,10 +4,10 @@ import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
 import { enforceApiWriteRateLimit } from "@/server/services/api-rate-limit";
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { getScanChoices } from "@/server/queries/reports";
-import { toAppError } from "@pdm/shared/errors";
+import { ConflictError, EntitlementExceededError, toAppError } from "@pdm/shared/errors";
 import { triggerScan } from "@/server/services/scan-service";
-import { ConflictError, EntitlementExceededError } from "@pdm/shared/errors";
 import { childLogger } from "@pdm/shared/logger";
+import { withApiErrors } from "../../../_lib/with-errors";
 
 const log = childLogger({ component: "api-v1-trigger-scan" });
 
@@ -27,7 +27,7 @@ const log = childLogger({ component: "api-v1-trigger-scan" });
  * ⚠️ NOT CACHED, and no `dynamic` export. Route Handler GET is uncached by
  * default in Next 16; `force-dynamic` here would be cargo-cult.
  */
-export async function GET(
+async function handleGET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -65,7 +65,7 @@ export async function GET(
  * Trigger an on-demand scan for a website via public API.
  * Returns 202 Accepted with scanId and status.
  */
-export async function POST(
+async function handlePOST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -126,3 +126,7 @@ export async function POST(
     );
   }
 }
+
+export const GET = withApiErrors(handleGET);
+export const POST = withApiErrors(handlePOST);
+

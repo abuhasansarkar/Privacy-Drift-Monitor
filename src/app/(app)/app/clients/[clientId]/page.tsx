@@ -47,8 +47,8 @@ export default async function ClientDetailPage({
 
   const now = new Date();
   const scored = client.websites
-    .map((site) => site.healthScore)
-    .filter((score): score is number => score !== null);
+    .filter((site) => site.healthScore !== null && site.scoreConfidence !== "PARTIAL")
+    .map((site) => site.healthScore as number);
   const averageHealth =
     scored.length === 0
       ? null

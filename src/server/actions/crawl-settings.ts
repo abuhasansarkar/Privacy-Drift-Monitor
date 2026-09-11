@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { unsafeGlobalClient } from "@pdm/database";
+import { repositoriesFor } from "@pdm/database/repositories";
 import {
   assertSafeUrl,
   encryptCredentials,
@@ -11,7 +11,23 @@ import {
 import { requireWebsiteAccess } from "@/server/auth/context";
 import { actionError, actionFromError, actionOk, type ActionResult } from "./result";
 
-const db = unsafeGlobalClient("crawl and auth scan settings");
+/**
+ * CRAWL & AUTH-SCAN SETTINGS (F-011).
+ *
+ * ⚠️ EVERY ACCESS HERE IS TENANT-SCOPED, NOT JUST OWNERSHIP-CHECKED. These
+ * tables used to be GLOBAL — no `agencyId`, so `forAgency()` could not scope
+ * them and each access was guarded only by the `requireWebsiteAccess` call
+ * above it. `AuthenticatedScanConfig` holds AES-256-GCM login credentials;
+ * "the check happens to be in every caller today" is not how this product
+ * protects credentials. Both models now carry `agencyId`, the tenancy test
+ * enforces their listing, and every statement below runs through
+ * `repositoriesFor(agencyId)` — which injects the predicate regardless of
+ * what the caller remembered.
+ *
+ * ⚠️ `upsert` with a unique `websiteId` selector: the repository's tenant
+ * extension injects `agencyId` into the unique `where`, so an upsert aimed at
+ * another tenant's websiteId fails to match rather than crossing tenants.
+ */
 
 export interface DiscoveredSitemapOutput {
   discoveredUrls: string[];
@@ -28,8 +44,9 @@ export async function discoverSitemapAction(
 ): Promise<ActionResult<DiscoveredSitemapOutput>> {
   try {
     const ctx = await requireWebsiteAccess(websiteId, "website:update");
+    const repos = repositoriesFor(ctx.agencyId);
 
-    const website = await db.website.findFirstOrThrow({
+    const website = await repos.db.website.findFirstOrThrow({
       where: { id: websiteId, agencyId: ctx.agencyId },
       select: { id: true, url: true },
     });
@@ -38,10 +55,11 @@ export async function discoverSitemapAction(
       maxPages,
     });
 
-    await db.sitemapCrawlConfig.upsert({
+    await repos.db.sitemapCrawlConfig.upsert({
       where: { websiteId },
       create: {
         websiteId,
+        agencyId: ctx.agencyId,
         maxPages,
         discoveredUrls: result.discoveredUrls,
         selectedUrls: result.selectedUrls,
@@ -75,17 +93,19 @@ export async function saveSitemapConfigAction(
 ): Promise<ActionResult<{ success: boolean }>> {
   try {
     const ctx = await requireWebsiteAccess(websiteId, "website:update");
+    const repos = repositoriesFor(ctx.agencyId);
 
     // Verify website ownership
-    await db.website.findFirstOrThrow({
+    await repos.db.website.findFirstOrThrow({
       where: { id: websiteId, agencyId: ctx.agencyId },
       select: { id: true },
     });
 
-    await db.sitemapCrawlConfig.upsert({
+    await repos.db.sitemapCrawlConfig.upsert({
       where: { websiteId },
       create: {
         websiteId,
+        agencyId: ctx.agencyId,
         maxPages: input.maxPages,
         selectedUrls: input.selectedUrls,
       },
@@ -120,6 +140,7 @@ export async function saveAuthConfigAction(
 ): Promise<ActionResult<{ success: boolean }>> {
   try {
     const ctx = await requireWebsiteAccess(websiteId, "website:update");
+    const repos = repositoriesFor(ctx.agencyId);
 
     try {
       await assertSafeUrl(input.loginUrl);
@@ -128,13 +149,13 @@ export async function saveAuthConfigAction(
     }
 
     // Verify website ownership
-    await db.website.findFirstOrThrow({
+    await repos.db.website.findFirstOrThrow({
       where: { id: websiteId, agencyId: ctx.agencyId },
       select: { id: true },
     });
 
     // Check existing config to preserve password if not provided
-    const existing = await db.authenticatedScanConfig.findUnique({
+    const existing = await repos.db.authenticatedScanConfig.findUnique({
       where: { websiteId },
     });
 
@@ -149,10 +170,11 @@ export async function saveAuthConfigAction(
       });
     }
 
-    await db.authenticatedScanConfig.upsert({
+    await repos.db.authenticatedScanConfig.upsert({
       where: { websiteId },
       create: {
         websiteId,
+        agencyId: ctx.agencyId,
         loginUrl: input.loginUrl,
         usernameSelector: input.usernameSelector,
         passwordSelector: input.passwordSelector,
@@ -186,13 +208,14 @@ export async function toggleAuthConfigAction(
 ): Promise<ActionResult<{ success: boolean }>> {
   try {
     const ctx = await requireWebsiteAccess(websiteId, "website:update");
+    const repos = repositoriesFor(ctx.agencyId);
 
-    await db.website.findFirstOrThrow({
+    await repos.db.website.findFirstOrThrow({
       where: { id: websiteId, agencyId: ctx.agencyId },
       select: { id: true },
     });
 
-    await db.authenticatedScanConfig.update({
+    await repos.db.authenticatedScanConfig.update({
       where: { websiteId },
       data: { isActive },
     });

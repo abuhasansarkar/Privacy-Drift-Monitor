@@ -4,27 +4,32 @@ import type { Page } from "playwright";
  * SYNTHETIC FORM INTERACTION RUNNER — Module 22 (Phase 15).
  *
  * Runs during the INTERACTIVE_ACTION phase to discover forms, inject dummy
- * data, trigger submission, and detect unconsented tracker spikes (PDM-R043).
+ * data, and trigger submission. The burst of requests that follows is counted
+ * by the PHASE RUNNER from its own network recorder — this module deliberately
+ * reports only what the DOM can tell it.
  */
 
-export interface FormSubmissionFact {
-  formDetected: boolean;
+export interface FormDomFacts {
+  formFound: boolean;
   formSubmitted: boolean;
-  unconsentedTrackersTriggered: string[];
 }
 
 /**
- * Discovers forms, fills dummy values, submits, and records conversion burst events.
+ * Discovers a form, fills dummy values, and submits it.
+ *
+ * Returns only what the DOM could tell us. `formFound: false` covers both "no
+ * form on the page" and "the page could not be evaluated" — neither is an
+ * observation of absence, and the rule treats both as no finding.
  */
 export async function runSyntheticFormInteraction(
   page: Page,
-): Promise<FormSubmissionFact> {
+): Promise<FormDomFacts> {
   try {
     const result = (await page.evaluate(`
       (async () => {
         const form = document.querySelector('form:not([action*="login"]):not([action*="auth"])');
         if (!form) {
-          return { formDetected: false, formSubmitted: false, unconsentedTrackersTriggered: [] };
+          return { formFound: false, formSubmitted: false };
         }
 
         // Fill dummy fields
@@ -58,19 +63,14 @@ export async function runSyntheticFormInteraction(
         }
 
         return {
-          formDetected: true,
-          formSubmitted: submitted,
-          unconsentedTrackersTriggered: []
+          formFound: true,
+          formSubmitted: submitted
         };
       })()
-    `)) as FormSubmissionFact;
+    `)) as { formFound: boolean; formSubmitted: boolean };
 
     return result;
   } catch {
-    return {
-      formDetected: false,
-      formSubmitted: false,
-      unconsentedTrackersTriggered: [],
-    };
+    return { formFound: false, formSubmitted: false };
   }
 }

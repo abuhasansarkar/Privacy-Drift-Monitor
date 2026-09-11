@@ -46,8 +46,21 @@ const OPTIONAL: Record<string, string> = {
  *
  * An empty value is the dangerous case for these: each one silently weakens a
  * control rather than failing, which is how the original defect survived.
+ *
+ * ⚠️ PRODUCTION-ONLY REQUIREMENTS (F-009) are checked separately below, because
+ * this gate runs in local development where a Turnstile secret legitimately
+ * does not exist (the challenge is allowed to be off in dev — but not to be
+ * silently off in production).
  */
 const MUST_BE_SET = ["PORTAL_TOKEN_SECRET", "DATABASE_URL", "REDIS_URL"];
+
+/** Required in production; optional in development with a logged warning. */
+const PRODUCTION_REQUIRED: Record<string, string> = {
+  TURNSTILE_SECRET_KEY:
+    "Without it the free scanner's Turnstile challenge silently disables — the remaining abuse controls are the per-domain limit and the (now unspoofable) per-IP budgets.",
+  FREE_SCAN_IP_SALT:
+    "Without it hashIp falls back to an empty salt, making the free scanner's per-IP identity unsalted.",
+};
 
 function parseKeys(path: string): Map<string, string> {
   const out = new Map<string, string>();
@@ -99,6 +112,33 @@ if (missing.length > 0 || empty.length > 0) {
       `  reason it is safe to omit.`,
   );
   process.exit(1);
+}
+
+/*
+ * ⚠️ PRODUCTION GATE (F-009). The free scanner's abuse controls depend on the
+ * Turnstile secret and the IP salt being set; unset, the challenge silently
+ * disables and per-IP hashes degrade to unsalted. Development keeps working —
+ * the keys are optional there by design — but a production deployment without
+ * them is a configuration failure, not a default.
+ */
+if (process.env.NODE_ENV === "production") {
+  const prodMissing = Object.keys(PRODUCTION_REQUIRED).filter((k) => !env.get(k));
+  for (const key of prodMissing) {
+    console.error(`✖ ${key} is required in production — ${PRODUCTION_REQUIRED[key]}`);
+  }
+  if (prodMissing.length > 0) {
+    console.error(
+      `\n✖ ${prodMissing.length} production-required variable(s) unset. The free\n` +
+        `  scanner's abuse controls fail open without them.`,
+    );
+    process.exit(1);
+  }
+} else {
+  for (const key of Object.keys(PRODUCTION_REQUIRED)) {
+    if (!env.get(key)) {
+      console.warn(`• ${key} unset — acceptable in development, REQUIRED in production.`);
+    }
+  }
 }
 
 console.log(

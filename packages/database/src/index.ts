@@ -9,6 +9,42 @@ export {
 } from "./tenant";
 export type { TenantClient, TenantModel } from "./tenant";
 
-// Re-export every generated model type and enum so consumers import from one place:
-//   import { type Website, ScanStatus, forAgency } from "@pdm/database";
-export * from "@prisma/client";
+export {
+  AgencyStatus,
+  AgencyRole,
+  MemberStatus,
+  ScreenshotPolicy,
+  AiModelTier,
+  MonitoringStatus,
+  ScanFrequency,
+  ScanPriority,
+  AlertProfile,
+  ScoreConfidence,
+  ScanStatus,
+  ScanTrigger,
+  ConsentPhase,
+  PhaseStatus,
+  TrackerCategory,
+  RiskLevel,
+  IssueCategory,
+  Severity,
+  IssueStatus,
+  IssueResolution,
+  EvidenceKind,
+  DriftChangeType,
+  ReportType,
+  ReportStatus,
+  NotificationType,
+  DigestFrequency,
+  PortalUserStatus,
+  SubscriptionStatus,
+  BillingInterval,
+  UsageMetric,
+  AIFeature,
+  AIRequestStatus,
+  Jurisdiction,
+  GeoEgressRegion,
+  DeliveryStatus,
+} from "@prisma/client";
+
+export type * from "@prisma/client";

@@ -197,10 +197,11 @@ export function FreeScanResult({ token }: { token: string }) {
 
   const summary = payload.summary;
   const displayHost = payload.url.replace(/^https?:\/\//i, "").replace(/\/$/, "");
-  const scanDate = new Intl.DateTimeFormat("en-US", {
+  const scanDate = new Intl.DateTimeFormat("en-GB", {
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   }).format(new Date());
 
   const score = payload.healthScore ?? 100;

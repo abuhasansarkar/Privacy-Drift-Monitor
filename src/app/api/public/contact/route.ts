@@ -12,11 +12,7 @@ import { contactSchema, submitContact } from "@/server/services/contact";
  * filled honeypot; telling a bot it was caught is telling whoever wrote it what
  * to change.
  */
-function clientIp(request: NextRequest): string | null {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() ?? null;
-  return request.headers.get("x-real-ip");
-}
+import { getClientIp } from "@/server/client-ip";
 
 export async function POST(request: NextRequest): Promise<Response> {
   const parsed = contactSchema.safeParse(await request.json().catch(() => null));
@@ -24,7 +20,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ error: "INVALID" }, { status: 400 });
   }
 
-  const outcome = await submitContact(parsed.data, clientIp(request));
+  const outcome = await submitContact(parsed.data, getClientIp(request.headers));
   if (outcome.ok) return Response.json({ ok: true });
 
   return Response.json(

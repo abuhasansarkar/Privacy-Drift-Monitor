@@ -99,6 +99,13 @@ export interface ScanJobData {
   respectRobots: boolean;
   blockMedia: boolean;
   /**
+   * ⚠️ THE PLAN'S PAGE CEILING (F-004), resolved by the enqueueing side and
+   * clamped to it here. `runScan` visits at most this many URLs once multi-page
+   * execution is wired; until then the value is carried so the contract exists
+   * end to end and cannot be "added later" without this seam.
+   */
+  maxPagesPerScan?: number;
+  /**
    * Mirrors the Prisma `ScanTrigger` enum character for character.
    *
    * ⚠️ Restated rather than imported: `packages/scanner` must stay testable

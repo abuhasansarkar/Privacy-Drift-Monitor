@@ -175,12 +175,34 @@ export class BrowserPool {
     if (this.closing) throw new Error("browser pool is shutting down");
 
     await this.semaphore.acquire();
+
+    /*
+     * ⚠️ THE COUNTER LEAD THAT BRICKED THE POOL (F-005), AND WHY THE FIX IS
+     * PLACEMENT, NOT A SECOND `finally`.
+     *
+     * The first version incremented `activeContexts` BEFORE `newContext()` and
+     * decremented it only when `context` was non-null afterwards. If
+     * `newContext()` threw — a crashed or disconnected Chromium does exactly
+     * this — `context` stayed null, the decrement was skipped, and the counter
+     * was permanently inflated by one. From then on `ensureBrowser`'s
+     * `activeContexts > 0` guard refused to replace the dead browser, every
+     * future scan failed until process restart, and `close()` burned its full
+     * timeout waiting for a context that never existed.
+     *
+     * The contract now: the counter counts CHECK-OUT ATTEMPTS that got as far
+     * as being allowed to try, and `inFlight` is decremented unconditionally in
+     * this `finally` — before the semaphore release, in every path, including
+     * the throw. `context` is still tracked separately for the close() call,
+     * which is a best-effort cleanup and not the accounting.
+     */
+    let checkedOut = false;
     let context: BrowserContext | null = null;
 
     try {
       const browser = await this.ensureBrowser();
       this.uses += 1;
       this.activeContexts += 1;
+      checkedOut = true;
 
       context = await browser.newContext({
         // A fresh context per phase means no cookie, storage or cache state
@@ -199,6 +221,8 @@ export class BrowserPool {
       // pool overshoots its own concurrency limit.
       if (context) {
         await context.close().catch(() => {});
+      }
+      if (checkedOut) {
         this.activeContexts -= 1;
       }
       this.semaphore.release();

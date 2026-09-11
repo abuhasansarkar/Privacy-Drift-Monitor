@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { classifyUrlArchetype, type UrlArchetype } from "@pdm/scanner/spider/archetypes";
+import { formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
 interface CrawlSettingsViewProps {
   websiteId: string;
   websiteUrl: string;
+  timezone?: string;
   sitemapConfig: {
     maxPages: number;
     discoveredUrls: string[];
@@ -43,6 +45,7 @@ const ARCHETYPE_BADGE_STYLES: Record<UrlArchetype, string> = {
 export function CrawlSettingsView({
   websiteId,
   websiteUrl,
+  timezone,
   sitemapConfig,
   authConfig,
 }: CrawlSettingsViewProps) {
@@ -226,7 +229,7 @@ export function CrawlSettingsView({
 
           {sitemapConfig?.lastCrawledAt ? (
             <p className="mt-3 text-caption text-muted-foreground">
-              Last crawled: {new Date(sitemapConfig.lastCrawledAt).toLocaleString()}
+              Last crawled: {formatDateTime(new Date(sitemapConfig.lastCrawledAt), timezone ?? "UTC")}
             </p>
           ) : null}
 

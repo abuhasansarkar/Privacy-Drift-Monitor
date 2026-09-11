@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { toAppError } from "@pdm/shared/errors";
 import {
   ApiRateLimitError,
@@ -31,6 +32,18 @@ export function withApiErrors<A extends unknown[]>(
       // documented 429 envelope before the generic AppError conversion turns
       // it into a 500.
       if (error instanceof ApiRateLimitError) return apiRateLimitResponse(error);
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+              details: error.flatten(),
+            },
+          },
+          { status: 422 },
+        );
+      }
       const appError = toAppError(error);
       return NextResponse.json(
         {

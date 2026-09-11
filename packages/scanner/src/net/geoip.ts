@@ -3,79 +3,62 @@ import ipaddr from "ipaddr.js";
 /**
  * GEO-IP DESTINATION RESOLVER — Module 22 (Phase 15).
  *
- * Resolves destination country code (e.g. "US", "DE", "IE", "GB") for remote
- * server IP addresses to detect cross-border PII exfiltration (PDM-R040).
+ * ⚠️ THIS MODULE NO LONGER FABRICATES A COUNTRY (F-003).
+ *
+ * The first version matched a handful of hard-coded IP prefixes and TLDs and
+ * returned `"US"` for everything that did not match — including every public IP
+ * on earth. PDM-R040 then published "Cross-Border Data Transfer to Non-EEA
+ * Destination (US)" for essentially any site with a pre-consent third-party
+ * request. That is defect #13's exact shape: a rule asserting a fact no
+ * instrument recorded, shipped as a customer-visible finding.
+ *
+ * The honest contract now:
+ *
+ *   - WITH an injected resolver (a real GeoIP data source — MaxMind GeoLite2
+ *     self-hosted is the intended one; a privacy product cannot ship its
+ *     users' IPs to a lookup CDN), the resolver's answer is returned as-is.
+ *   - WITHOUT one, this returns `null` for every input. `null` is recorded,
+ *     and PDM-R040 reads absent as "could not be determined" and emits
+ *     nothing. A country we did not resolve is never a country we named.
+ *
+ * Until a resolver is wired, `PDM-R040` sits in `DORMANT_RULE_IDS`
+ * (packages/analysis/src/rules.ts) with its evidence requirement written next
+ * to it, and `NetworkRequest.destinationCountry` stays null.
  */
 
 export interface GeoIpOptions {
+  /**
+   * A real GeoIP lookup. Injected by the caller that owns the data source.
+   * Receives an IP address (or, for the hostname fallback path, a hostname)
+   * and returns an ISO-3166 alpha-2 code, or null when it cannot determine one.
+   */
   resolver?: (ipOrHost: string) => Promise<string | null>;
 }
 
 /**
- * Well-known subnets commonly associated with US cloud/CDN points of presence.
- */
-const US_IP_PREFIXES = [
-  "142.250.", // Google US
-  "142.251.",
-  "172.217.",
-  "157.240.", // Meta US
-  "31.13.",
-  "13.", // AWS US
-  "52.",
-  "54.",
-  "20.", // Azure US
-  "40.",
-  "34.", // GCP US
-  "35.",
-];
-
-export const COUNTRY_CODE_MAP: Record<string, string> = {
-  de: "DE",
-  uk: "GB",
-  fr: "FR",
-  ie: "IE",
-  us: "US",
-  ca: "CA",
-  au: "AU",
-  jp: "JP",
-  nl: "NL",
-};
-
-/**
- * Resolves destination country code for an IP address or hostname.
+ * Resolves the destination country for an IP address or hostname.
+ *
+ * Returns `null` — never a guess — when no resolver is configured or when the
+ * resolver cannot answer. Private, reserved and non-unicast ranges are null
+ * regardless of the resolver: they have no country, and a resolver that
+ * answers for them is wrong about the question.
  */
 export async function resolveDestinationCountry(
   ipOrHost: string,
   options?: GeoIpOptions,
 ): Promise<string | null> {
-  if (options?.resolver) {
-    return options.resolver(ipOrHost);
-  }
+  if (!options?.resolver) return null;
 
-  // 1. If string is an IP address
+  // Non-unicast ranges have no destination country. Checked here, once, so a
+  // resolver cannot be tricked into labelling loopback or link-local traffic.
   if (ipaddr.isValid(ipOrHost)) {
     const parsed = ipaddr.parse(ipOrHost);
-    const range = parsed.range();
-    if (range !== "unicast") {
-      return null;
-    }
-
-    const ipStr = parsed.toString();
-    if (US_IP_PREFIXES.some((prefix) => ipStr.startsWith(prefix))) {
-      return "US";
-    }
-
-    // Default public fallback based on standard routing
-    return "US";
+    if (parsed.range() !== "unicast") return null;
   }
 
-  // 2. If hostnames like .us, .de, etc.
-  const lower = ipOrHost.toLowerCase();
-  for (const [tld, code] of Object.entries(COUNTRY_CODE_MAP)) {
-    if (lower.endsWith(`.${tld}`) || lower.endsWith(`.co.${tld}`)) {
-      return code;
-    }
+  try {
+    return await options.resolver(ipOrHost);
+  } catch {
+    return null;
   }
-
-  return "US";
 }

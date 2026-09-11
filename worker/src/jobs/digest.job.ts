@@ -203,7 +203,7 @@ async function digestForAgency(params: {
 
     await repos.alerts.recordHistory({
       alertRuleId: null,
-      type: "PRIVACY_DRIFT",
+      type: null,
       channel: "email",
       recipients: [member.user.email],
       entityType: "digest",
@@ -274,7 +274,11 @@ async function averageScore(
   repos: ReturnType<typeof repositoriesFor>,
 ): Promise<number | null> {
   const result = await repos.db.website.aggregate({
-    where: { archivedAt: null, healthScore: { not: null } },
+    where: {
+      archivedAt: null,
+      healthScore: { not: null },
+      scoreConfidence: { not: "PARTIAL" },
+    },
     _avg: { healthScore: true },
   });
   const value = result._avg?.healthScore ?? null;

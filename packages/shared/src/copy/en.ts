@@ -598,6 +598,7 @@ export const en = {
     trialBannerTitle: "Trial",
     metricWebsites: "Websites",
     metricSeats: "Team members",
+    metricClients: "Clients",
     metricScans: "Scans this period",
     metricAiCredits: "AI credits",
     metricReports: "Reports this period",

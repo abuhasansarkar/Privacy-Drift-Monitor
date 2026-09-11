@@ -7,10 +7,11 @@ import {
   enforceApiWriteRateLimit,
 } from "@/server/services/api-rate-limit";
 import { childLogger } from "@pdm/shared/logger";
+import { withApiErrors } from "../../_lib/with-errors";
 
 const log = childLogger({ component: "api-v1-website-detail" });
 
-export async function GET(
+async function handleGET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -85,7 +86,7 @@ export async function GET(
   });
 }
 
-export async function DELETE(
+async function handleDELETE(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -118,3 +119,7 @@ export async function DELETE(
 
   return NextResponse.json({ success: true, message: "Website archived successfully" });
 }
+
+export const GET = withApiErrors(handleGET);
+export const DELETE = withApiErrors(handleDELETE);
+

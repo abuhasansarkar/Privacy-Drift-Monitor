@@ -21,6 +21,12 @@ export {
 } from "./net/guard";
 
 export {
+  guardedFetch,
+  type GuardedFetchOptions,
+  type GuardedFetchResult,
+} from "./net/guarded-fetch";
+
+export {
   checkCnameCloaking,
   resolveCnameChain,
   clearCnameCache,
@@ -87,7 +93,6 @@ export {
 
 export {
   resolveDestinationCountry,
-  COUNTRY_CODE_MAP,
 } from "./net/geoip";
 
 export {

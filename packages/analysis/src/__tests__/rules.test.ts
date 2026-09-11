@@ -12,6 +12,7 @@ import {
   DORMANT_RULE_IDS,
   DRIFT_RULES,
   RESERVED_RULE_IDS,
+  UNREGISTERED_RULES,
   evaluateDriftRules,
   evaluateRules,
   RULES,
@@ -254,12 +255,20 @@ describe("§4.11 coverage", () => {
     expect(missing, `missing rules: ${missing.join(", ")}`).toEqual([]);
   });
 
-  it("implements all 50 planned rules in the registry (0 reserved, 0 dormant)", () => {
+  it("implements all 50 planned rules, live or explicitly unregistered", () => {
     const implemented = new Set(RULES.map((rule) => rule.id));
-    const missing = PLANNED.filter((id) => !implemented.has(id));
+    const unregistered = new Set([
+      ...UNREGISTERED_RULES.map((rule) => rule.id),
+      ...Object.keys(RESERVED_RULE_IDS),
+    ]);
+    const missing = PLANNED.filter(
+      (id) => !implemented.has(id) && !unregistered.has(id),
+    );
     expect(missing, `missing rules: ${missing.join(", ")}`).toEqual([]);
-    expect(Object.keys(RESERVED_RULE_IDS).length).toBe(0);
-    expect(Object.keys(DORMANT_RULE_IDS).length).toBe(0);
+    // The dormant/reserved lists must match exactly what the registry says —
+    // a stale count in a comment is how "50 live rules" stopped meaning anything.
+    expect(Object.keys(RESERVED_RULE_IDS).sort()).toEqual(["PDM-R050"]);
+    expect(Object.keys(DORMANT_RULE_IDS).sort()).toEqual(["PDM-R040"]);
   });
 
   /*
@@ -273,12 +282,13 @@ describe("§4.11 coverage", () => {
    * These three assertions make the inventory answerable instead: what runs,
    * what is reserved and why, and that the two together leave no gap.
    */
-  it("accounts for every planned id — implemented or explicitly reserved", () => {
+  it("accounts for every planned id — implemented, dormant, or reserved", () => {
     const implemented = new Set(RULES.map((rule) => rule.id));
     const reserved = new Set(Object.keys(RESERVED_RULE_IDS));
+    const dormant = new Set(Object.keys(DORMANT_RULE_IDS));
 
     const unaccounted = PLANNED.filter(
-      (id) => !implemented.has(id) && !reserved.has(id),
+      (id) => !implemented.has(id) && !reserved.has(id) && !dormant.has(id),
     );
     expect(
       unaccounted,
@@ -303,10 +313,28 @@ describe("§4.11 coverage", () => {
     }
   });
 
-  it("keeps dormant rules registered — they fire when their input exists", () => {
-    const implemented = new Set(RULES.map((rule) => rule.id));
+  it("gives every dormant id a written reason naming its missing fact source", () => {
+    for (const [id, reason] of Object.entries(DORMANT_RULE_IDS)) {
+      expect(id).toMatch(/^PDM-R\d{3}$/);
+      expect(reason.length, `${id} needs a reason`).toBeGreaterThan(20);
+    }
+  });
+
+  /*
+   * ⚠️ DORMANT RULES ARE UNREGISTERED BY DESIGN (F-001/F-003). The old
+   * assertion ("keeps dormant rules registered") treated registered-and-silent
+   * as the dormant state — which is exactly how R040 counted as live while
+   * answering "US" for every address on earth. Dormant now means: OUT of
+   * `RULES`, implementation kept in `UNREGISTERED_RULES`, reason written in
+   * `DORMANT_RULE_IDS`. Un-dormanting a rule is moving its id back into the
+   * registry, and this test flips with it.
+   */
+  it("keeps dormant rules unregistered with their implementation retained", () => {
+    const registered = new Set(RULES.map((rule) => rule.id));
+    const unregistered = new Set(UNREGISTERED_RULES.map((rule) => rule.id));
     for (const id of Object.keys(DORMANT_RULE_IDS)) {
-      expect(implemented.has(id), `${id} should still be registered`).toBe(true);
+      expect(registered.has(id), `${id} is dormant and must not be registered`).toBe(false);
+      expect(unregistered.has(id), `${id} must keep its implementation`).toBe(true);
     }
   });
 
@@ -314,6 +342,43 @@ describe("§4.11 coverage", () => {
     const ours = RULES.filter((rule) => rule.id.startsWith("PDM-X"));
     expect(ours.length).toBeGreaterThan(0);
     for (const rule of ours) expect(rule.id).not.toMatch(/^PDM-R\d/);
+  });
+
+  it("keeps dormant and reserved rules out of the live registry", () => {
+    const registered = new Set(RULES.map((rule) => rule.id));
+    for (const id of Object.keys(DORMANT_RULE_IDS)) {
+      expect(registered.has(id), `${id} is dormant and must not be registered`).toBe(false);
+    }
+    for (const id of Object.keys(RESERVED_RULE_IDS)) {
+      expect(registered.has(id), `${id} is reserved and must not be registered`).toBe(false);
+    }
+    // Every unregistered id still names a real rule object — a dormant id
+    // without an implementation is a reservation, not a dormant rule.
+    for (const rule of UNREGISTERED_RULES) {
+      expect(
+        DORMANT_RULE_IDS[rule.id] ?? RESERVED_RULE_IDS[rule.id],
+        `${rule.id} must be listed dormant or reserved`,
+      ).toBeDefined();
+    }
+  });
+
+  /*
+   * ⚠️ THE UNFIREABLE-RULE GATE (F-001). A registered rule whose context
+   * fields are never populated by a builder is a rule that can never fire —
+   * counted in the inventory, silent in production. Each fact-reading rule
+   * below fires in this file's own tests with a populated context, which is
+   * the executable proof that its input exists and flows.
+   */
+  it("has executable evidence that every fact-reading rule can fire", () => {
+    // R029 (domGating), R041 (buttonGeometry), R043 (formSubmission) and
+    // R045 (fingerprint) each have a firing test in this file. This assertion
+    // fails when one of those tests is deleted, which is how a rule silently
+    // stops being exercised.
+    const factRules = ["PDM-R029", "PDM-R041", "PDM-R043", "PDM-R045"];
+    const registered = new Set(RULES.map((rule) => rule.id));
+    for (const id of factRules) {
+      expect(registered.has(id), `${id} must stay registered`).toBe(true);
+    }
   });
 
   it("gives every rule a unique id and a precedence", () => {
@@ -879,5 +944,148 @@ describe("PDM-R035 — sensitive identifiers, anchored to parameters", () => {
       SCAN_RULES,
     );
     expect(idsOf(findings)).toContain("PDM-R035");
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * THE PHASE-15 FACT RULES (F-001).
+ *
+ * Each of these rules was registered while nothing populated its context
+ * field: the scanner measured the fact, the facts died in memory, and the
+ * rule counted toward the inventory while never producing a finding. The
+ * tests below are the executable proof that the input exists and flows —
+ * delete one and the coverage assertion above fails.
+ */
+describe("phase-15 fact rules fire when their fact exists", () => {
+  it("R029 fires on a cookie wall", () => {
+    const findings = evaluateRules(
+      context({
+        domGating: {
+          hasScrollLock: true,
+          backdropCoveragePct: 95,
+          hasCloseOrDismiss: false,
+          isCookieWall: true,
+        },
+      }),
+      SCAN_RULES,
+    );
+    const finding = findings.find((f) => f.ruleId === "PDM-R029");
+    expect(finding?.severity).toBe("HIGH");
+    expect(finding?.rationale).toContain("95%");
+  });
+
+  it("R029 stays silent when the page is not gated", () => {
+    const findings = evaluateRules(
+      context({
+        domGating: {
+          hasScrollLock: false,
+          backdropCoveragePct: 10,
+          hasCloseOrDismiss: true,
+          isCookieWall: false,
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R029");
+  });
+
+  it("R041 fires on asymmetric consent buttons", () => {
+    const findings = evaluateRules(
+      context({
+        buttonGeometry: {
+          acceptArea: 12000,
+          rejectArea: 2000,
+          areaRatio: 6,
+          isAsymmetric: true,
+        },
+      }),
+      SCAN_RULES,
+    );
+    const finding = findings.find((f) => f.ruleId === "PDM-R041");
+    expect(finding?.severity).toBe("MEDIUM");
+    expect(finding?.title).toContain("6x");
+  });
+
+  it("R041 stays silent on symmetric buttons", () => {
+    const findings = evaluateRules(
+      context({
+        buttonGeometry: {
+          acceptArea: 4000,
+          rejectArea: 4000,
+          areaRatio: 1,
+          isAsymmetric: false,
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R041");
+  });
+
+  it("R043 fires on a burst of third-party requests after form submission", () => {
+    const findings = evaluateRules(
+      context({
+        formSubmission: {
+          formFound: true,
+          formSubmitted: true,
+          burstRequestsDetected: 7,
+          burstTrackerDomains: ["ads.example", "metrics.example"],
+        },
+      }),
+      SCAN_RULES,
+    );
+    const finding = findings.find((f) => f.ruleId === "PDM-R043");
+    expect(finding?.severity).toBe("HIGH");
+    expect(finding?.rationale).toContain("7 unconsented tracking requests");
+  });
+
+  it("R043 stays silent when no burst followed the submission", () => {
+    const findings = evaluateRules(
+      context({
+        formSubmission: {
+          formFound: true,
+          formSubmitted: true,
+          burstRequestsDetected: 0,
+          burstTrackerDomains: [],
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R043");
+  });
+
+  it("R045 fires on fingerprinting API calls", () => {
+    const findings = evaluateRules(
+      context({
+        fingerprint: {
+          hasFingerprinting: true,
+          canvasAttempts: 3,
+          audioAttempts: 1,
+          webglAttempts: 0,
+          stackSnippets: ["at canvas.toDataURL"],
+        },
+      }),
+      SCAN_RULES,
+    );
+    const finding = findings.find((f) => f.ruleId === "PDM-R045");
+    expect(finding?.severity).toBe("CRITICAL");
+    expect(finding?.rationale).toContain("canvas data reads");
+  });
+
+  it("R045 stays silent when no fingerprinting was observed", () => {
+    const findings = evaluateRules(
+      context({
+        fingerprint: {
+          hasFingerprinting: false,
+          canvasAttempts: 0,
+          audioAttempts: 0,
+          webglAttempts: 0,
+          stackSnippets: [],
+        },
+      }),
+      SCAN_RULES,
+    );
+    expect(idsOf(findings)).not.toContain("PDM-R045");
   });
 });

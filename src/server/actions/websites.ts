@@ -9,6 +9,8 @@ import { ConflictError, ValidationError } from "@pdm/shared/errors";
 import { childLogger } from "@pdm/shared/logger";
 import { requirePermission, requireWebsiteAccess } from "@/server/auth/context";
 import { requireAllowedValue } from "@/server/services/entitlement-guard";
+import { getEntitlements } from "@/server/entitlements";
+import { EntitlementExceededError } from "@pdm/shared/errors";
 import { triggerScan } from "@/server/services/scan-service";
 import { validateWebsiteUrl } from "@/server/services/website-validation";
 import { actionFromError, actionOk, type ActionResult } from "./result";
@@ -87,6 +89,23 @@ export async function createWebsite(
       "scanFrequencies",
       parsed.data.scanFrequency,
     );
+
+    /*
+     * ⚠️ ENTITLEMENT ENFORCEMENT (F-004). `scanPriority` is a plan dimension —
+     * the scheduler orders the queue by it, so a Starter site writing HIGH
+     * would queue ahead of every Growth customer's sites. `requireAllowedValue`
+     * needs an array entitlement; HIGH is not a list, so the check is direct:
+     * HIGH requires the plan's own resolved priority to be HIGH, NORMAL is
+     * always allowed, LOW is always allowed (self-throttling harms nobody).
+     */
+    if (parsed.data.scanPriority === "HIGH") {
+      const entitlements = await getEntitlements(ctx.agencyId);
+      if (entitlements.scanPriority !== "HIGH") {
+        throw new EntitlementExceededError(t("billing.optionNotOnPlan"), {
+          reason: `OPTION:scanPriority=HIGH:agency=${ctx.agencyId}`,
+        });
+      }
+    }
 
     const created = await repos.websites.create(
       {

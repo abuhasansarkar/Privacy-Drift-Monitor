@@ -82,7 +82,9 @@ export default async function WebsiteDetailPage({
                   />
                 ) : null}
                 {website.openIssueCount > website.criticalIssueCount ? (
-                  <MutedBadge>
+                  <MutedBadge
+                    label={`${formatNumber(website.openIssueCount - website.criticalIssueCount)} non-critical issues`}
+                  >
                     {formatNumber(website.openIssueCount - website.criticalIssueCount)}
                   </MutedBadge>
                 ) : null}

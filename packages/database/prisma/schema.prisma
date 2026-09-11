@@ -95,6 +95,8 @@ model Agency {
   consentModeAudits    ConsentModeAudit[]
   apiKeys              ApiKey[]
   webhookEndpoints     WebhookEndpoint[]
+  sitemapCrawlConfigs  SitemapCrawlConfig[]
+  authenticatedScanConfigs AuthenticatedScanConfig[]
 
   @@index([clerkOrgId])
   @@index([slug])
@@ -514,6 +516,16 @@ model ScanPhase {
   bannerDismissed  Boolean?
   errorCode        String?
   errorMessage     String?
+
+  /// Cookie-wall / forcible gating facts (PDM-R029), measured in the phase.
+  /// JSON because the shape belongs to the instrumentation that measured it.
+  domGating      Json?
+  /// Accept-vs-reject button geometry facts (PDM-R041), measured in the phase.
+  buttonGeometry Json?
+  /// Canvas/audio/webgl fingerprinting facts (PDM-R045), recorded in the phase.
+  fingerprint    Json?
+  /// Synthetic form-interaction facts (PDM-R043), recorded in the phase.
+  formSubmission Json?
 
   scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
 
@@ -1887,6 +1899,11 @@ enum DeliveryStatus {
 
 model SitemapCrawlConfig {
   id              String    @id @default(uuid())
+  /// Tenant scope (F-011). Denormalized from the website relation so
+  /// `forAgency()` can scope every access at the data-access layer — the
+  /// prior global-only shape meant any future query resolving a websiteId
+  /// without re-checking ownership could read another tenant's crawl config.
+  agencyId        String
   websiteId       String    @unique
   maxPages        Int       @default(5)
   discoveredUrls  String[]  @default([])
@@ -1894,12 +1911,19 @@ model SitemapCrawlConfig {
   lastCrawledAt   DateTime?
   updatedAt       DateTime  @updatedAt
 
-  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  agency  Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
   @@map("sitemap_crawl_configs")
 }
 
 model AuthenticatedScanConfig {
   id                String   @id @default(uuid())
+  /// Tenant scope (F-011). This table holds AES-256-GCM login credentials for
+  /// member-area scanning; it is exactly the row that must never be readable
+  /// across tenants, so it carries agencyId and is enforced by `forAgency()`.
+  agencyId          String
   websiteId         String   @unique
   loginUrl          String
   usernameSelector  String
@@ -1909,7 +1933,10 @@ model AuthenticatedScanConfig {
   isActive          Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 
-  website           Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  agency  Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
   @@map("authenticated_scan_configs")
 }
 

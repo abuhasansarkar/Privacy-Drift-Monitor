@@ -192,6 +192,7 @@ async function summarise(
   });
 
   const phases: PhaseResult[] = result.phases;
+  const noConsent = phases.find((p) => p.phase === "NO_CONSENT");
   const findings = evaluateRules({
     phases,
     detections,
@@ -207,6 +208,16 @@ async function summarise(
       cmpId: result.cmp?.cmpId ?? null,
       cmpName: result.cmp?.cmpName ?? null,
     },
+    /*
+     * THE PHASE-15 FACTS (F-001). The free scan runs the NO_CONSENT phase
+     * only, which is exactly the phase that measures domGating, button
+     * geometry and fingerprinting. Passing them keeps the free result page's
+     * score consistent with what a paid scan of the same page would produce.
+     */
+    domGating: noConsent?.domGating ?? undefined,
+    buttonGeometry: noConsent?.buttonGeometry ?? undefined,
+    fingerprint: noConsent?.fingerprint ?? undefined,
+    formSubmission: noConsent?.formSubmission ?? undefined,
   });
 
   const vendorName = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));

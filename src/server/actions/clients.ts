@@ -7,7 +7,7 @@ import { client as clientSchemas } from "@pdm/schemas";
 import { t } from "@pdm/shared/copy";
 import { ValidationError } from "@pdm/shared/errors";
 import { requirePermission } from "@/server/auth/context";
-import { requireFeature } from "@/server/services/entitlement-guard";
+import { requireCapacity, requireFeature } from "@/server/services/entitlement-guard";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
 /**
@@ -35,6 +35,14 @@ export async function createClient(
         reason: `CREATE_CLIENT_SCHEMA:${parsed.error.issues[0]?.path.join(".")}`,
       });
     }
+
+    /*
+     * ⚠️ ENTITLEMENT ENFORCEMENT (F-004). The pricing table promises 10/40/120
+     * clients per plan; nothing checked it, so a Starter agency could grow its
+     * client roster unbounded. COUNTED metric, not consumed — archiving a
+     * client frees the slot, the same rule as websites and seats.
+     */
+    await requireCapacity(ctx.agencyId, "CLIENTS", 1);
 
     const repos = repositoriesFor(ctx.agencyId);
     // The repository derives the slug and retries once on a lost race against

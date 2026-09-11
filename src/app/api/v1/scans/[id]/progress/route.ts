@@ -48,6 +48,11 @@ async function handleGET(
   // would confirm the id exists somewhere the caller cannot see (§6.2).
   if (!scan) return Response.json({ error: "not_found" }, { status: 404 });
 
+  // Member website-scope check (F-014)
+  if (ctx.websiteScope.length > 0 && !ctx.websiteScope.includes(scan.websiteId)) {
+    return Response.json({ error: "not_found" }, { status: 404 });
+  }
+
   const payload: ScanProgressPayload = {
     status: scan.status,
     startedAt: scan.startedAt?.toISOString() ?? null,

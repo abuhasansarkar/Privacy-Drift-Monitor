@@ -10,6 +10,7 @@ for (const envPath of [resolve(process.cwd(), ".env"), resolve(process.cwd(), ".
 }
 
 import { repositoriesFor } from "@pdm/database/repositories";
+import { unsafeGlobalClient } from "@pdm/database/tenant";
 import { BrowserPool } from "@pdm/scanner/browser/pool";
 import {
   QUEUE_NAMES,
@@ -131,6 +132,17 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
       monitoredPaths: job.data.monitoredPaths,
       respectRobots: job.data.respectRobots,
       blockMedia: job.data.blockMedia,
+      /*
+       * ⚠️ THE PAID SCAN'S HARD DEADLINE (F-007). Unset, a hostile page could
+       * hang a phase forever — the pool permit and this BullMQ slot held
+       * indefinitely, the database reaper failing only the row. Bounded now:
+       * well past any legitimate scan (four phases × budgets plus slack), far
+       * short of the 30-minute reaper window, so the deadline fires FIRST and
+       * the job returns PARTIAL evidence instead of a reaper killing a live
+       * scan from outside.
+       */
+      timeoutMs: Number(process.env.SCAN_DEADLINE_MS ?? 20 * 60 * 1000),
+      maxPagesPerScan: job.data.maxPagesPerScan,
     },
     { pool, scannerVersion: SCANNER_VERSION, workerId: WORKER_ID },
   );
@@ -141,9 +153,33 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
    * three browser slots re-proving that a domain does not resolve, while the
    * queue backs up behind it. A deterministic failure is a RESULT — it is
    * returned, and the scan is recorded as FAILED once.
+   *
+   * ⚠️ TERMINAL EXHAUSTION FAILS THE ROW HERE (F-032). The previous code threw
+   * on every retryable failure and relied on the reaper — so after the LAST
+   * attempt, the row sat RUNNING for up to 30 minutes while the dashboard said
+   * "running", new scans were suppressed by the in-flight check, and the
+   * failure alert was delayed by half an hour. This is the final attempt
+   * (BullMQ's `attempts` minus the one being made) when the error is
+   * retryable-shaped: fail the row now, with the scanner's own error code.
    */
   if (result.status === "FAILED" && result.errorCode) {
     if (isRetryable(result.errorCode)) {
+      const attemptsAllowed = job.opts.attempts ?? 3;
+      const isFinalAttempt = job.attemptsMade + 1 >= attemptsAllowed;
+      if (isFinalAttempt) {
+        log.warn(
+          { errorCode: result.errorCode, attempt: job.attemptsMade + 1 },
+          "scan failed on final attempt; failing row immediately",
+        );
+        await repos.scans.fail(
+          result.scanId,
+          result.errorCode,
+          result.errorMessage ?? "scan failed after exhausting retries",
+        ).catch((err) => log.error({ err }, "could not fail scan row after terminal retry"));
+        // Do not rethrow: the row is terminal, and a throw would ask BullMQ to
+        // retry a decision that cannot change.
+        throw new ScanExhaustedError(result.scanId, result.errorCode);
+      }
       log.warn({ errorCode: result.errorCode }, "scan failed, retrying");
       // The row stays RUNNING for the retry. `recoverStuckScans` is what
       // reclaims it if every attempt dies (§7.4).
@@ -165,7 +201,28 @@ async function processScan(job: Job<ScanJobData>): Promise<ScanSummary> {
   );
 
   const screenshotKeys = await uploadScreenshots(job.data, result);
-  await persist(repos, result, screenshotKeys);
+  const persisted = await persist(repos, result, screenshotKeys);
+  if (!persisted) {
+    /*
+     * ⚠️ THE REAPER GOT HERE FIRST (F-031). `complete()` is compare-and-set on
+     * RUNNING; a false return means the 30-minute reaper already failed this
+     * row and analysis over it would resurrect a scan the state machine
+     * buried. The evidence bytes were recorded but the scan is over — log and
+     * move on. (Without this guard, a slow scan finishing after the reaper
+     * fired wrote COMPLETED over FAILED and re-ran analysis + alerts against a
+     * row the product had already reported as dead.)
+     */
+    log.warn(
+      { scanId: result.scanId, status: result.status },
+      "scan row was already reclaimed (reaper); discarding result",
+    );
+    return {
+      scanId: result.scanId,
+      status: "DISCARDED",
+      durationMs: result.durationMs,
+      requestCount: result.phases.reduce((n, phase) => n + phase.requests.length, 0),
+    };
+  }
 
   /*
    * ⚠️ ANALYSIS RUNS AFTER THE EVIDENCE IS COMMITTED, AND ITS FAILURE DOES NOT
@@ -289,13 +346,29 @@ interface ScanSummary {
    *
    * ⚠️ `DISCARDED` IS NOT A SCAN OUTCOME AND MUST NOT BE CONFUSED WITH ONE. It
    * means the job was dropped before any journey ran, because the scan row it
-   * names no longer exists. Reusing `FAILED` here would put "this scan failed"
+   * names no longer exists — or that the reaper claimed the row before the
+   * result landed (F-031). Reusing `FAILED` here would put "this scan failed"
    * into the job history for a scan that was never attempted — and a failure
    * count that includes deleted rows is a metric nobody can act on.
    */
   status: ScanResult["status"] | "DISCARDED";
   durationMs: number;
   requestCount: number;
+}
+
+/**
+ * Thrown when the scan failed on its FINAL attempt and the row has already
+ * been failed. Marks the error as terminal so the `failed` handler logs it as
+ * exhaustion rather than as a retryable blip (F-032).
+ */
+class ScanExhaustedError extends Error {
+  constructor(
+    readonly scanId: string,
+    readonly errorCode: string,
+  ) {
+    super(`scan ${scanId} failed terminally: ${errorCode}`);
+    this.name = "ScanExhaustedError";
+  }
 }
 
 /**
@@ -350,12 +423,17 @@ async function uploadScreenshots(
   return keys;
 }
 
+/**
+ * ⚠️ RETURNS WHETHER THE ROW WAS CLAIMED (F-031). False means the reaper
+ * already ended the scan; the caller must not run analysis or alerts over a
+ * resurrected row.
+ */
 async function persist(
   repos: ReturnType<typeof repositoriesFor>,
   result: ScanResult,
   screenshotKeys: Map<string, string>,
-): Promise<void> {
-  await repos.scans.complete(
+): Promise<boolean> {
+  return repos.scans.complete(
     result.scanId,
     {
       status: result.status,
@@ -394,6 +472,19 @@ async function persist(
         bannerDismissed: phase.bannerDismissed,
         errorCode: phase.errorCode,
         errorMessage: phase.errorMessage,
+        /*
+         * THE PHASE-15 FACTS (F-001). Dropped here once, PDM-R029, R041, R043
+         * and R045 went silent while still registered — the scanner measured,
+         * the database never kept, the rules never saw. Persisted as JSON so
+         * the shape belongs to the instrumentation that measured it. The
+         * `as never` casts are the same persistence-boundary cast the other
+         * columns use (the fact shapes are owned by @pdm/scanner, not by
+         * Prisma's JSON input type).
+         */
+        domGating: (phase.domGating ?? undefined) as never,
+        buttonGeometry: (phase.buttonGeometry ?? undefined) as never,
+        fingerprint: (phase.fingerprint ?? undefined) as never,
+        formSubmission: (phase.formSubmission ?? undefined) as never,
       })),
       requests: result.phases.flatMap((phase) => phase.requests),
       cookies: result.phases.flatMap((phase) => phase.cookies),
@@ -448,7 +539,6 @@ async function persist(
     },
   );
 }
-
 /**
  * ⚠️ ROLES SELECT WHAT THIS REPLICA CONSUMES (§7.2, §7.7). Scanning and report
  * rendering both own a Chromium, and running them on the same box means a
@@ -478,6 +568,33 @@ const scanWorker = hasRole("scan")
 
 if (scanWorker) {
   scanWorker.on("failed", (job, error) => {
+    /*
+     * ⚠️ TERMINAL EXHAUSTION IS NOT A WARNING CONDITION (F-032). The row was
+     * already failed with the scanner's own error code inside the processor;
+     * rethrowing a generic error here would double-count and lose the code.
+     * Logged at info with the code — the alert pipeline owns paging.
+     */
+    if (error instanceof ScanExhaustedError) {
+      childLogger({ jobId: job?.id, scanId: error.scanId }).info(
+        { errorCode: error.errorCode },
+        "scan job exhausted retries; row failed",
+      );
+      return;
+    }
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 3)) {
+      const db = unsafeGlobalClient("terminal scan failure in worker handler");
+      db.scan
+        .updateMany({
+          where: { id: job.data.scanId, status: "RUNNING" },
+          data: {
+            status: "FAILED",
+            finishedAt: new Date(),
+            errorCode: "SCAN_FAILED",
+            errorMessage: error instanceof Error ? error.message : String(error),
+          },
+        })
+        .catch((err: unknown) => logger.error({ err }, "could not fail scan row on terminal worker failure"));
+    }
     childLogger({ jobId: job?.id, scanId: job?.data.scanId }).error(
       { err: error },
       "scan job failed",
@@ -497,12 +614,19 @@ if (scanWorker) {
  * scans queue behind them for a browser slot.
  */
 if (hasRole("free-scan")) {
+  const freeConcurrency = Number(process.env.FREE_SCAN_CONCURRENCY ?? 1);
+  if (freeConcurrency >= CONCURRENCY) {
+    logger.warn(
+      { freeConcurrency, poolCapacity: CONCURRENCY },
+      "FREE_SCAN_CONCURRENCY should be strictly less than SCAN_CONCURRENCY to ensure free scans cannot monopolize pool capacity",
+    );
+  }
   const freeScanWorker = createFreeScanWorker(
     (job: Job<FreeScanJobData>) =>
       processFreeScan(job, { pool, scannerVersion: SCANNER_VERSION, workerId: WORKER_ID }),
     {
       connection,
-      concurrency: Number(process.env.FREE_SCAN_CONCURRENCY ?? 1),
+      concurrency: freeConcurrency,
     },
   );
   freeScanWorker.on("failed", (job, error) => {
@@ -683,6 +807,7 @@ async function shutdown(signal: string) {
     ]);
     await closeAiRedis();
     await connection.quit();
+    await unsafeGlobalClient("worker shutdown").$disconnect();
     logger.info("worker stopped cleanly");
     process.exit(0);
   } catch (error) {

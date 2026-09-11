@@ -261,6 +261,8 @@ export interface AnalysisResult {
   score: number;
   scoreConfidence: "FULL" | "PARTIAL";
   driftEvents: number;
+  /** True when the scan was not COMPLETED and drift was deliberately not evaluated (F-010). */
+  driftSkipped: boolean;
 }
 
 /**
@@ -307,7 +309,11 @@ export async function analyseScan(
   });
 
   // The rule engine reads PhaseResult; the stored rows carry the same fields
-  // minus the evidence arrays, which rules do not consult per phase.
+  // minus the evidence arrays, which rules do not consult per phase. The
+  // phase-15 facts (domGating, buttonGeometry, fingerprint, formSubmission)
+  // come from the ScanPhase JSON columns — they are what PDM-R029, R041, R043
+  // and R045 read, and dropping them here is how those rules went silent
+  // while registered (F-001).
   const phases: PhaseResult[] = scan.phases.map((phase) => ({
     phase: phase.phase as ConsentPhase,
     status: phase.status,
@@ -327,6 +333,10 @@ export async function analyseScan(
     storage: [],
     consoleLogs: [],
     screenshots: [],
+    domGating: (phase.domGating ?? null) as never,
+    buttonGeometry: (phase.buttonGeometry ?? null) as never,
+    fingerprint: (phase.fingerprint ?? null) as never,
+    formSubmission: (phase.formSubmission ?? null) as never,
   }));
 
   /*
@@ -387,11 +397,35 @@ export async function analyseScan(
       : undefined,
   };
 
+  /*
+   * ⚠️ THE PHASE-15 FACTS (F-001) FLOW THROUGH `phases`, NOT HERE. R029, R041,
+   * R043 and R045 read their facts off the PhaseResult of the phase that
+   * measured them (`context.domGating` etc. are populated from the ScanPhase
+   * JSON columns in the mapping above). This explicit list is the reminder
+   * that adding a NEW fact-reading rule means: persist the fact in
+   * `scan.job`'s phase mapping, map it in `withPhases`, and it appears here
+   * automatically — no second builder to forget.
+   */
+  populatePhaseFacts(ruleContext as never, phases);
+
   const findings = evaluateRules(ruleContext);
 
-  const confidenceByFingerprint = new Map(
-    detections.map((detection) => [detection.vendorId ?? "", detection.confidence]),
-  );
+  const confidenceBySubject = new Map<string, number>();
+  for (const d of detections) {
+    if (d.vendorId) {
+      confidenceBySubject.set(d.vendorId, d.confidence);
+      const v = ruleContext.vendorsById.get(d.vendorId);
+      if (v) {
+        confidenceBySubject.set(v.name, d.confidence);
+        confidenceBySubject.set(v.slug, d.confidence);
+        confidenceBySubject.set(v.name.toLowerCase(), d.confidence);
+      }
+    }
+    if (d.unknownDomain) {
+      confidenceBySubject.set(d.unknownDomain, d.confidence);
+      confidenceBySubject.set(d.unknownDomain.toLowerCase(), d.confidence);
+    }
+  }
 
   /*
    * ⚠️ EVIDENCE IS RESOLVED HERE, WHERE THE ROWS ARE ALREADY IN MEMORY. They
@@ -409,7 +443,12 @@ export async function analyseScan(
     scanId,
     detectedAt: scan.finishedAt ?? new Date(),
     findings: findings.map((finding) => ({
-      ...toIssue(finding, confidenceByFingerprint.get(finding.subject) ?? 0.9),
+      ...toIssue(
+        finding,
+        confidenceBySubject.get(finding.subject) ??
+          confidenceBySubject.get(finding.subject.toLowerCase()) ??
+          0.9,
+      ),
       evidence: resolveEvidence(finding, evidenceIndex),
     })),
   });
@@ -527,7 +566,22 @@ export async function analyseScan(
     data: { fingerprints: current as never },
   });
 
-  const driftEvents = await recordDrift(repos, agencyId, scan.website.id, scanId, current);
+  /*
+   * ⚠️ DRIFT IS COMPLETED-ONLY (F-010). A PARTIAL scan is missing evidence for
+   * one or more consent journeys. Diffing it against a complete baseline reports
+   * everything the incomplete scan missed as a removal — phantom drift events
+   * that trigger CRITICAL alerts. The fingerprint is still persisted (above) so
+   * we can retroactively compare it, but the diff and the events it spawns only
+   * run when the current scan is a full observation.
+   */
+  let driftEvents = 0;
+  let driftSkipped = false;
+  if (scan.status === "COMPLETED") {
+    driftEvents = await recordDrift(repos, agencyId, scan.website.id, scanId, current);
+  } else {
+    driftSkipped = true;
+    log.info({ scanId, status: scan.status }, "drift evaluation skipped — scan not COMPLETED");
+  }
 
   /*
    * ⚠️ THE SECOND RULE PASS (§4.11 R013–R019). Drift rules run only after the
@@ -583,6 +637,7 @@ export async function analyseScan(
     driftFindings,
     score: score.score,
     scoreConfidence: score.confidence,
+    driftSkipped,
   };
 
   log.info(result, "analysis complete");
@@ -655,6 +710,35 @@ async function recordDrift(
   return events.length;
 }
 
+
+/**
+ * Promotes the phase-15 facts from the phase results onto the rule context.
+ *
+ * The rule engine reads `context.domGating`, `context.buttonGeometry`,
+ * `context.fingerprint` and `context.formSubmission`; the scanner records them
+ * per phase. The convention: the NO_CONSENT phase's measurements are the ones
+ * the rules read (a cookie wall measured after consent was granted is not the
+ * fact R029 describes), falling back to the first phase that carries the fact.
+ */
+function populatePhaseFacts(
+  context: {
+    domGating?: unknown;
+    buttonGeometry?: unknown;
+    fingerprint?: unknown;
+    formSubmission?: unknown;
+  },
+  phases: readonly PhaseResult[],
+): void {
+  const pick = <T>(read: (phase: PhaseResult) => T | null | undefined): T | undefined => {
+    const noConsent = phases.find((phase) => phase.phase === "NO_CONSENT");
+    return noConsent && read(noConsent) ? read(noConsent)! : undefined;
+  };
+
+  context.domGating = pick((phase) => phase.domGating);
+  context.buttonGeometry = pick((phase) => phase.buttonGeometry);
+  context.fingerprint = pick((phase) => phase.fingerprint);
+  context.formSubmission = pick((phase) => phase.formSubmission);
+}
 
 /**
  * The first entry of a drift event's `addedItems` JSON array, as a string.

@@ -9,6 +9,7 @@ import { checkBrandColor, type ContrastCheck } from "@pdm/shared/branding";
 import { t } from "@pdm/shared/copy";
 import { ValidationError } from "@pdm/shared/errors";
 import { requirePermission } from "@/server/auth/context";
+import { requireFeature } from "@/server/services/entitlement-guard";
 import { actionFromError, actionOk, type ActionResult } from "./result";
 
 /**
@@ -40,6 +41,7 @@ export async function saveBranding(
 ): Promise<ActionResult<{ agencyId: string }>> {
   try {
     const ctx = await requirePermission("branding:update");
+    await requireFeature(ctx.agencyId, "whiteLabel");
 
     const parsed = brandingSchemas.brandingSchema.safeParse(raw);
     if (!parsed.success) {

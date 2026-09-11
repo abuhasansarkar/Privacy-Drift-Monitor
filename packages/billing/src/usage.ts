@@ -63,7 +63,7 @@ export function resolvePeriodEnd(
  *   SCANS, AI_CREDITS, REPORTS  — CONSUMED. They accumulate within a period and
  *                                 reset at the next one. A `UsageRecord` is the
  *                                 source of truth.
- *   WEBSITES, SEATS             — COUNTED. They are a live `COUNT(*)`, not an
+ *   WEBSITES, SEATS, CLIENTS    — COUNTED. They are a live `COUNT(*)`, not an
  *                                 accumulation: archiving a website frees a
  *                                 slot, and a `UsageRecord` would never learn
  *                                 that. Checking these against a stored counter
@@ -72,7 +72,7 @@ export function resolvePeriodEnd(
  *   STORAGE_BYTES               — COUNTED, and not yet enforced anywhere.
  */
 export const CONSUMED_METRICS = ["SCANS", "AI_CREDITS", "REPORTS"] as const;
-export const COUNTED_METRICS = ["WEBSITES", "SEATS", "STORAGE_BYTES"] as const;
+export const COUNTED_METRICS = ["WEBSITES", "SEATS", "STORAGE_BYTES", "CLIENTS"] as const;
 
 export type ConsumedMetric = (typeof CONSUMED_METRICS)[number];
 export type CountedMetric = (typeof COUNTED_METRICS)[number];
@@ -85,6 +85,7 @@ export function isConsumedMetric(metric: UsageMetric): metric is ConsumedMetric 
 export const METRIC_LIMIT_KEY = {
   WEBSITES: "maxWebsites",
   SEATS: "maxTeamMembers",
+  CLIENTS: "maxClients",
   SCANS: "maxScansPerMonth",
   AI_CREDITS: "aiCreditsPerMonth",
   REPORTS: "maxReportsPerMonth",

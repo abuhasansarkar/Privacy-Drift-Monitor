@@ -93,6 +93,7 @@ export type SubscriptionStatusName =
  * every piece of evidence it has already paid for.
  */
 const READ_ONLY_STATUSES: ReadonlySet<SubscriptionStatusName> = new Set([
+  "INCOMPLETE",
   "PAST_DUE",
   "UNPAID",
   "CANCELED",

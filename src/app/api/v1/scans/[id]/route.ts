@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { forAgency } from "@pdm/database/tenant";
 import { authenticateApiKey, requireApiScope } from "@/server/auth/api-auth";
 import { enforceApiRateLimit } from "@/server/services/api-rate-limit";
+import { withApiErrors } from "../../_lib/with-errors";
 
 /**
  * Get detailed scan results via public API.
  */
-export async function GET(
+async function handleGET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -109,3 +110,6 @@ export async function GET(
     },
   });
 }
+
+export const GET = withApiErrors(handleGET);
+
