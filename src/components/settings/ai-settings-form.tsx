@@ -92,7 +92,7 @@ export function AiSettingsForm({ initial }: { initial: AiSettingsInput }) {
                   modelTier: event.target.value as "STANDARD" | "ADVANCED",
                 })
               }
-              className="h-9 rounded-md border border-input bg-background px-3 text-small"
+              className="h-9 rounded-md border border-input bg-background px-3 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
             >
               <option value="STANDARD">{t("aiSettings.tierStandard")}</option>
               <option value="ADVANCED">{t("aiSettings.tierAdvanced")}</option>

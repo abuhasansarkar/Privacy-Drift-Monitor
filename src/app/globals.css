@@ -29,6 +29,7 @@
  */
 
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #0a0a0a;
   /*
@@ -149,6 +150,7 @@
  * override that choice.
  */
 .dark {
+  color-scheme: dark;
   --background: #09090b;
   --foreground: #fafafa;
   /* On dark, canvas and background converge — cards carry the separation. */
@@ -347,6 +349,16 @@
     font-family: var(--font-mono);
   }
 
+  select {
+    color-scheme: inherit;
+  }
+
+  select option {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    padding: 0.375rem 0.625rem;
+  }
+
   /*
    * §11.6: a 2px focus ring with 2px offset on every focusable element, and it
    * is NEVER removed. If you find yourself writing `outline: none`, stop.
@@ -431,6 +443,21 @@
  * ⚠️ MOTION-SAFE ONLY. The bar's width and its `aria-valuenow` already carry the
  * whole meaning, so a reader with reduced motion loses nothing by not seeing it.
  */
+@utility select-custom {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b74' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 1rem 1rem;
+  padding-right: 2.25rem;
+  cursor: pointer;
+}
+
+.dark .select-custom,
+.dark select.select-custom {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 @utility animate-shimmer {
   position: relative;
   overflow: hidden;

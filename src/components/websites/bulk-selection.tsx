@@ -197,7 +197,7 @@ export function BulkSelection({
             <select
               value={clientChoice}
               onChange={(event) => setClientChoice(event.target.value)}
-              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small max-sm:h-11"
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none max-sm:h-11"
             >
               {/* An empty value CLEARS the assignment — "unassign" is a real
                   request, not an accident. */}

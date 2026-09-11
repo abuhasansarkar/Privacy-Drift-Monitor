@@ -359,7 +359,7 @@ export function AlertRuleForm({
 }
 
 const INPUT =
-  "h-9 w-full rounded-md border border-border bg-background px-2.5 text-small max-sm:h-11";
+  "h-9 w-full rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none max-sm:h-11";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

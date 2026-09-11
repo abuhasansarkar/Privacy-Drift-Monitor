@@ -209,7 +209,7 @@ export function AddWebsiteWizard({ clients }: { clients: Array<{ id: string; nam
                   onChange={(event) =>
                     setFrequency(event.target.value as ScanFrequency)
                   }
-                  className="h-10 rounded-md border border-border bg-background px-3 text-small"
+                  className="h-10 rounded-md border border-border bg-background px-3 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
                 >
                   {FREQUENCIES.map((value) => (
                     <option key={value} value={value}>
@@ -226,7 +226,7 @@ export function AddWebsiteWizard({ clients }: { clients: Array<{ id: string; nam
                 <select
                   value={clientId}
                   onChange={(event) => setClientId(event.target.value)}
-                  className="h-10 rounded-md border border-border bg-background px-3 text-small"
+                  className="h-10 rounded-md border border-border bg-background px-3 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
                 >
                   <option value="">{t("addWebsite.noClient")}</option>
                   {clients.map((client) => (

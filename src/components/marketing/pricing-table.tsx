@@ -88,7 +88,7 @@ export function PricingTable() {
             onChange={(event) =>
               setCurrency(event.target.value as SupportedCurrency)
             }
-            className="h-9 rounded-md border border-border bg-background px-2 text-small text-foreground"
+            className="h-9 rounded-md border border-border bg-background px-2.5 text-small text-foreground transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
           >
             {SUPPORTED_CURRENCIES.map((code) => (
               <option key={code} value={code}>

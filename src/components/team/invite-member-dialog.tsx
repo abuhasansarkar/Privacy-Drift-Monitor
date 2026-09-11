@@ -169,7 +169,7 @@ export function InviteMemberDialog() {
                     value={role}
                     onChange={(e) => setRole(e.target.value as Exclude<AgencyRole, "OWNER">)}
                     disabled={pending}
-                    className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small outline-none focus:border-primary"
+                    className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>

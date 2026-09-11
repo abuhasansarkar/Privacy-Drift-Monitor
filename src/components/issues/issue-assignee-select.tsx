@@ -71,7 +71,7 @@ export function IssueAssigneeSelect({
               }
             });
           }}
-          className="h-8 rounded-md border border-border bg-background px-2.5 text-small text-foreground disabled:opacity-60 outline-none focus:ring-1 focus:ring-primary"
+          className="h-8 rounded-md border border-border bg-background px-2.5 text-small text-foreground transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none disabled:opacity-60"
         >
           <option value="">Unassigned</option>
           {members.map((member) => (

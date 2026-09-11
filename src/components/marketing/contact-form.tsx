@@ -177,7 +177,7 @@ export function ContactForm() {
 }
 
 const INPUT =
-  "h-10 w-full rounded-md border border-border bg-background px-3 text-body";
+  "h-10 w-full rounded-md border border-border bg-background px-3 text-body transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

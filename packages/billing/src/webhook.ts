@@ -33,6 +33,19 @@ export type WebhookIntent =
       cancelAtPeriodEnd: boolean;
       /** Present on `checkout.session.completed` — links the row to an agency. */
       agencyId: string | null;
+      /**
+       * The subscription id as the checkout session reported it, when this event
+       * is a `checkout.session.completed`. Stripe fires
+       * `customer.subscription.created` at (effectively) the same instant, and
+       * the two arrive in EITHER ORDER — our log shows both sequences. The
+       * subscription event carries the authoritative status/price/period but is
+       * keyed by customer only; when its row does not exist yet, the applier uses
+       * this to fetch the subscription directly and create the row RIGHT the
+       * first time, instead of creating it from the checkout event's deliberately
+       * conservative placeholder values (which left a paid customer parked on
+       * INCOMPLETE/Starter until the next Stripe event, which never came).
+       */
+      checkoutSubscriptionId?: string;
     }
   | { kind: "mark-past-due"; stripeCustomerId: string; invoiceUrl: string | null }
   | { kind: "mark-active"; stripeCustomerId: string }
@@ -56,6 +69,7 @@ export const HANDLED_EVENT_TYPES = [
   "customer.subscription.deleted",
   "customer.subscription.trial_will_end",
   "invoice.paid",
+  "invoice.payment_succeeded",
   "invoice.payment_failed",
   "invoice.payment_action_required",
   "customer.updated",
@@ -109,6 +123,10 @@ export function interpretEvent(event: Stripe.Event): WebhookIntent {
           trialEndsAt: null,
           cancelAtPeriodEnd: false,
           agencyId: session.client_reference_id ?? null,
+          // See the field's doc: lets the applier create the row from the real
+          // subscription when the `customer.subscription.created` event lost the
+          // arrival race.
+          checkoutSubscriptionId: subscriptionId,
         };
       }
 
@@ -160,7 +178,18 @@ export function interpretEvent(event: Stripe.Event): WebhookIntent {
         };
       }
 
-      case "invoice.paid": {
+      /*
+       * ⚠️ BOTH INVOICE-PAID NAMES ARE HANDLED, deliberately. The Stripe API
+       * version this SDK pins (2026-08-26.dahlia) sends
+       * `invoice.payment_succeeded`; older integrations and some dashboard
+       * configurations still deliver `invoice.paid`. Every live event of either
+       * name we have received (see `stripe_webhook_events`) was
+       * `invoice.payment_succeeded` — handling only `invoice.paid` left the
+       * `mark-active` recovery path dead code while every invoice "succeeded"
+       * into an `ignored` row.
+       */
+      case "invoice.paid":
+      case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = idOf(invoice.customer);
         if (!customerId) return { kind: "ignore", reason: "invoice has no customer" };

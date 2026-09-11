@@ -86,7 +86,7 @@ export function VendorForm({
         <select
           name="category"
           defaultValue="ANALYTICS"
-          className="h-9 w-full rounded-md border border-border bg-background px-2 text-small"
+          className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
         >
           {CATEGORIES.map((category) => (
             <option key={category} value={category}>
@@ -100,7 +100,7 @@ export function VendorForm({
         <select
           name="riskLevel"
           defaultValue="MEDIUM"
-          className="h-9 w-full rounded-md border border-border bg-background px-2 text-small"
+          className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
         >
           {RISKS.map((risk) => (
             <option key={risk} value={risk}>

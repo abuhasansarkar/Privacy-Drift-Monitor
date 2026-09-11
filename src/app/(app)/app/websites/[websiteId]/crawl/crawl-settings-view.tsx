@@ -198,7 +198,7 @@ export function CrawlSettingsView({
               </label>
               <select
                 id="max-pages-input"
-                className="h-9 rounded-md border border-border bg-background px-3 py-1 text-small shadow-sm"
+                className="h-9 rounded-md border border-border bg-background px-3 py-1 text-small shadow-xs transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
                 value={maxPages}
                 disabled={isPending}
                 onChange={(e) => setMaxPages(Number(e.target.value))}

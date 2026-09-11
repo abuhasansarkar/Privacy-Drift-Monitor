@@ -57,6 +57,36 @@ async function ensureCustomer(ctx: AgencyContext): Promise<string> {
   });
   if (existing?.stripeCustomerId) return existing.stripeCustomerId;
 
+  /*
+   * ⚠️ SEARCH STRIPE BEFORE CREATING, BY THE METADATA WE ALREADY WRITE. The
+   * subscription row is not the only record of a customer: an earlier checkout
+   * that never produced a row (the webhook lost, the agency later deleted and
+   * re-created) still left a live Stripe customer carrying
+   * `metadata.agencyId`. Creating a second one gives the same agency two
+   * customers — the old subscription keeps billing the orphan, the webhook for
+   * the new payment keys on the new customer, and the two halves of the
+   * customer's billing state never meet again. `client_reference_id` recovery
+   * (see the metadata comment) only works while there is exactly one customer
+   * per agency to recover.
+   */
+  const found = await stripe.customers.search({
+    query: `metadata["agencyId"]:"${ctx.agencyId}"`,
+    limit: 2,
+  });
+  if (found.data.length > 0) {
+    if (found.data.length > 1) {
+      // More than one already exists — the defect this search prevents has
+      // already happened once. Surface it rather than silently picking.
+      logger.warn(
+        { component: "billing-checkout", agencyId: ctx.agencyId, count: found.data.length },
+        "multiple Stripe customers carry this agencyId — picking the oldest",
+      );
+    }
+    // Oldest is the one any earlier subscription is attached to.
+    const oldest = found.data.reduce((a, b) => (a.created <= b.created ? a : b));
+    return oldest.id;
+  }
+
   const customer = await stripe.customers.create({
     name: ctx.agencyName,
     /*

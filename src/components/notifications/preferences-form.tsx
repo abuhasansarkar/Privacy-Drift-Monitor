@@ -97,7 +97,7 @@ export function NotificationPreferencesForm({
                       onChange={(event) =>
                         update(row.type, { digest: event.target.value as DigestFrequency })
                       }
-                      className="h-8 rounded-md border border-border bg-background px-2 text-caption disabled:opacity-50"
+                      className="h-8 rounded-md border border-border bg-background px-2.5 text-caption transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none disabled:opacity-50"
                     >
                       {Object.entries(DIGEST_LABEL).map(([digest, label]) => (
                         <option key={digest} value={digest}>
@@ -144,7 +144,7 @@ export function NotificationPreferencesForm({
                   onChange={(event) =>
                     update(row.type, { digest: event.target.value as DigestFrequency })
                   }
-                  className="h-9 rounded-md border border-border bg-background px-2 text-small disabled:opacity-50"
+                  className="h-9 rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none disabled:opacity-50"
                 >
                   {Object.entries(DIGEST_LABEL).map(([digest, label]) => (
                     <option key={digest} value={digest}>

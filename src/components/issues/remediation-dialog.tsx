@@ -123,7 +123,7 @@ export function RemediationDialog({
                   <select
                     value={selectedCmp}
                     onChange={(e) => setSelectedCmp(e.target.value as SupportedCmp)}
-                    className="rounded-md border border-border bg-card px-2.5 py-1 text-small"
+                    className="rounded-md border border-border bg-card px-2.5 py-1 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
                   >
                     <option value="cookiebot">Cookiebot</option>
                     <option value="onetrust">OneTrust</option>

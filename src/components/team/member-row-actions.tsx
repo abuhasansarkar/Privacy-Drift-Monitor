@@ -67,7 +67,7 @@ export function MemberRowActions({
                 else router.refresh();
               });
             }}
-            className="h-8 rounded-md border border-border bg-background px-2 text-small disabled:opacity-60"
+            className="h-8 rounded-md border border-border bg-background px-2.5 text-small transition-colors hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 outline-none disabled:opacity-60"
           >
             {ROLES.map((candidate) => (
               <option key={candidate} value={candidate}>

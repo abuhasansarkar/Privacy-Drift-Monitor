@@ -176,6 +176,41 @@ function SelectScrollDownButton({
   )
 }
 
+export interface NativeSelectProps extends Omit<React.ComponentProps<"select">, "size"> {
+  size?: "sm" | "default";
+  error?: boolean;
+}
+
+const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
+  ({ className, size = "default", error, children, disabled, ...props }, ref) => {
+    return (
+      <div className="relative w-full">
+        <select
+          ref={ref}
+          disabled={disabled}
+          data-slot="native-select"
+          className={cn(
+            "w-full cursor-pointer appearance-none bg-none rounded-md border border-input bg-transparent pl-3 pr-8 text-small shadow-xs transition-[color,box-shadow] outline-none",
+            "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+            "hover:border-muted-foreground/40",
+            "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "dark:bg-input/30 dark:hover:bg-input/50",
+            size === "default" && "h-9 max-sm:h-11",
+            size === "sm" && "h-8",
+            error && "border-destructive focus-visible:ring-destructive/20 dark:border-destructive",
+            className
+          )}
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
+      </div>
+    );
+  }
+);
+NativeSelect.displayName = "NativeSelect";
+
 export {
   Select,
   SelectContent,
@@ -187,4 +222,6 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
+  NativeSelect,
 }
+

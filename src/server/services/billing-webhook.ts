@@ -3,7 +3,13 @@ import type Stripe from "stripe";
 import { unsafeGlobalClient } from "@pdm/database";
 import { logger } from "@pdm/shared/logger";
 import { track } from "@pdm/shared/analytics";
-import type { WebhookIntent } from "@pdm/billing";
+import {
+  createStripeClient,
+  fromUnix,
+  mapStripeInterval,
+  mapStripeStatus,
+  type WebhookIntent,
+} from "@pdm/billing";
 
 /**
  * STRIPE WEBHOOK APPLICATION — PLAN.md Part IX §9.1, Phase 6 task 6.1.
@@ -107,6 +113,24 @@ async function apply(intent: WebhookIntent): Promise<WebhookOutcome> {
     select: { id: true, agencyId: true, planId: true, status: true },
   });
 
+  /*
+   * ⚠️ AN AGENCY REFERENCE IS VERIFIED, NOT TRUSTED — EVEN INSIDE A SIGNED
+   * EVENT. `client_reference_id` is attacker-unforgeable, but it is not
+   * environment-proof: a checkout completed against a different database (a
+   * branch pointing at staging, a reset local DB) carries an agencyId that does
+   * not exist here. Creating on it broke the foreign key on `subscriptions`,
+   * returned 500, and Stripe retried the unanswerable event for days — exactly
+   * the fate this file's own doctrine reserves for transient faults. An unknown
+   * agency is a permanent condition, so it is `ignored`, recorded, and retried
+   * never.
+   */
+  if (!subscription && "agencyId" in intent && intent.agencyId) {
+    const agencyExists = await db.agency.count({ where: { id: intent.agencyId } });
+    if (agencyExists === 0) {
+      return { status: "ignored", reason: "unknown agency reference" };
+    }
+  }
+
   switch (intent.kind) {
     case "sync-subscription": {
       /*
@@ -206,7 +230,100 @@ async function apply(intent: WebhookIntent): Promise<WebhookOutcome> {
         return { status: "processed" };
       }
 
-      // First subscription for this agency.
+      /*
+       * First subscription for this agency.
+       *
+       * ⚠️ CREATED FROM THE LIVE SUBSCRIPTION, NOT FROM THIS EVENT'S PLACEHOLDER
+       * VALUES — when the checkout session lets us. `checkout.session.completed`
+       * and `customer.subscription.created` fire at effectively the same instant
+       * and arrive in EITHER ORDER (our event log shows both sequences). When the
+       * subscription event arrives FIRST it creates the row correctly and the
+       * checkout event lands in the update branch above; when it arrives SECOND,
+       * the row it needs does not exist yet, it lands in `ignored`, and — before
+       * this resync — this branch created the row as INCOMPLETE on the cheapest
+       * plan: the checkout event deliberately carries no price, no period and no
+       * real status. The result was a paying customer whose entitlements never
+       * woke up, because nothing after that instant re-sends `created`. Fetching
+       * the subscription Stripe just created writes the row RIGHT the first time;
+       * the late `customer.subscription.created` event then finds the row
+       * already matching and updates nothing.
+       */
+      const fetched = intent.checkoutSubscriptionId
+        ? await fetchStripeSubscription(intent.checkoutSubscriptionId)
+        : null;
+
+      if (fetched) {
+        const syncPlan = fetched.priceId ? await findPlanByPriceId(fetched.priceId) : null;
+        if (!syncPlan) {
+          return {
+            status: "ignored",
+            reason: `unrecognised price on subscription ${fetched.id}`,
+          };
+        }
+        /*
+         * ⚠️ THE CREATE RACES THE PARALLEL `customer.subscription.created` EVENT,
+         * and `agencyId` is UNIQUE — the row the fetched subscription now
+         * describes may be created by that event between our `findFirst` above
+         * and this `create`. Losing that race threw P2002, the route returned
+         * 500, and Stripe retried into the same P2002 forever (it became
+         * `duplicate` only by luck of ordering). Retrying the read hands the
+         * decision to the winner's row — whichever write landed, the second
+         * arrival converges on it, which is what a projection must do.
+         */
+        const created = await db.subscription
+          .create({
+            data: {
+              agencyId: intent.agencyId!,
+              planId: syncPlan.id,
+              stripeCustomerId: intent.stripeCustomerId,
+              stripeSubscriptionId: fetched.id,
+              status: fetched.status as never,
+              interval: fetched.interval as never,
+              currentPeriodStart: fetched.currentPeriodStart,
+              currentPeriodEnd: fetched.currentPeriodEnd,
+              trialEndsAt: fetched.trialEndsAt,
+              cancelAtPeriodEnd: fetched.cancelAtPeriodEnd,
+            },
+          })
+          .catch(async (error: unknown) => {
+            if (!isUniqueViolation(error)) throw error;
+            // The concurrent event won. Re-read and fall through to the update
+            // branch's logic: converge the row we lost onto Stripe's values.
+            const winner = await db.subscription.findFirst({
+              where: { stripeCustomerId: intent.stripeCustomerId },
+              select: { id: true, agencyId: true, planId: true, status: true },
+            });
+            return winner;
+          });
+
+        if (created) {
+          void track(
+            "subscription_started",
+            {
+              plan: syncPlan.key,
+              interval: fetched.interval,
+              from_trial: fetched.status === "TRIALING",
+            },
+            { agencyId: intent.agencyId },
+          );
+          await db.subscription.update({
+            where: { id: created.id },
+            data: {
+              planId: syncPlan.id,
+              stripeSubscriptionId: fetched.id,
+              status: fetched.status as never,
+              interval: fetched.interval as never,
+              currentPeriodStart: fetched.currentPeriodStart,
+              currentPeriodEnd: fetched.currentPeriodEnd,
+              trialEndsAt: fetched.trialEndsAt,
+              cancelAtPeriodEnd: fetched.cancelAtPeriodEnd,
+            },
+          });
+          return { status: "processed" };
+        }
+        return { status: "ignored", reason: "subscription row vanished mid-create" };
+      }
+
       const fallbackPlan = plan ?? (await findCheapestPlan());
       if (!fallbackPlan) {
         return { status: "ignored", reason: "no plan rows exist to attach" };
@@ -294,9 +411,18 @@ async function apply(intent: WebhookIntent): Promise<WebhookOutcome> {
   }
 }
 
+/** Prisma's code for a violated unique constraint (P2002). */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
 /** The plan whose Stripe price the subscription is actually on. */
-async function findPlanByPriceId(priceId: string) {
-  return db.plan.findFirst({
+async function findPlanByPriceId(priceId: string) {  return db.plan.findFirst({
     where: {
       OR: [{ stripePriceMonthlyId: priceId }, { stripePriceAnnualId: priceId }],
     },
@@ -308,6 +434,47 @@ async function findPlanByPriceId(priceId: string) {
      */
     select: { id: true, key: true, sortOrder: true },
   });
+}
+
+/**
+ * Reads one subscription straight from Stripe, in the shape `sync-subscription`
+ * writes. Used only on row creation, where the placeholder values on
+ * `checkout.session.completed` would otherwise become the row's first state.
+ *
+ * ⚠️ A FAILURE HERE THROWS — deliberately. Row creation is the one moment a 500
+ * and a Stripe retry are correct: the payment is real, the event is real, and
+ * the next delivery will succeed the same way. This mirrors how the scanner
+ * treats transient provider errors, and it is why the fallback path below
+ * (placeholder values) still exists — if Stripe is down hard enough that even
+ * this read fails repeatedly, a Starter-shaped row that the next delivered
+ * `customer.subscription.updated` corrects beats no row at all.
+ */
+async function fetchStripeSubscription(subscriptionId: string) {
+  const stripe = createStripeClient();
+  if (!stripe) return null;
+  const sub = await stripe.subscriptions.retrieve(subscriptionId);
+  const item = sub.items?.data?.[0];
+  const priceId = item?.price?.id ?? null;
+  const periodStart = (
+    (item as unknown as { current_period_start?: number } | undefined)
+      ?.current_period_start ?? (sub as unknown as { current_period_start?: number })
+      .current_period_start ?? null
+  );
+  const periodEnd = (
+    (item as unknown as { current_period_end?: number } | undefined)
+      ?.current_period_end ?? (sub as unknown as { current_period_end?: number })
+      .current_period_end ?? null
+  );
+  return {
+    id: sub.id,
+    status: mapStripeStatus(sub.status),
+    interval: mapStripeInterval(item?.price?.recurring?.interval),
+    priceId,
+    currentPeriodStart: fromUnix(periodStart),
+    currentPeriodEnd: fromUnix(periodEnd),
+    trialEndsAt: fromUnix(sub.trial_end),
+    cancelAtPeriodEnd: sub.cancel_at_period_end === true,
+  };
 }
 
 /**
